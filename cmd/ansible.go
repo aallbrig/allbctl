@@ -23,13 +23,7 @@ import (
 
 var ansibleCmd = &cobra.Command{
 	Use:   "ansible",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Examples:
-allbctl
-`,
+	Short: "code generation for ansible runtime:",
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("ansible called")
 	},

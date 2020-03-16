@@ -23,12 +23,7 @@ import (
 
 var generateCmd = &cobra.Command{
 	Use:   "generate",
-	Short: "Generates anything (but mostly code)",
-	Long: `Generates anything (but mostly code). Invoke to see list of available generate commands
-
-Example:
-allbctl generate
-`,
+	Short: "root command for code generation commands",
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("generate called")
 	},
