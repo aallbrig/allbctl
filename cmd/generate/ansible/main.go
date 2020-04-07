@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package cmd
+package ansible
 
 import (
 	"fmt"
@@ -21,14 +21,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var scalaCmd = &cobra.Command{
-	Use:   "scala",
-	Short: "code generators for the scala runtime",
+var Cmd = &cobra.Command{
+	Use:   "ansible",
+	Short: "code generation for ansible runtime",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("scala called")
+		fmt.Println("ansible called")
 	},
 }
 
-func init() {
-	generateCmd.AddCommand(scalaCmd)
-}

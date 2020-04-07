@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package cmd
+package ruby
 
 import (
 	"fmt"
@@ -21,14 +21,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var nodeCmd = &cobra.Command{
-	Use:   "node",
-	Short: "code generators for the node runtime",
+var Cmd = &cobra.Command{
+	Use:   "ruby",
+	Short: "code generators for the ruby runtime",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("node called")
+		fmt.Println("ruby called")
 	},
-}
-
-func init() {
-	generateCmd.AddCommand(nodeCmd)
 }

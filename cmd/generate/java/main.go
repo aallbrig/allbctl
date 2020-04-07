@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package cmd
+package java
 
 import (
 	"fmt"
@@ -21,14 +21,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var kubernetesCmd = &cobra.Command{
-	Use:   "kubernetes",
-	Short: "code generators for the kubernetes runtime",
+var Cmd = &cobra.Command{
+	Use:   "java",
+	Short: "code generators for the java runtime",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("kubernetes called")
+		fmt.Println("java called")
 	},
-}
-
-func init() {
-	generateCmd.AddCommand(kubernetesCmd)
 }

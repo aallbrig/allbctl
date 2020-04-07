@@ -38,8 +38,8 @@ Example commands for allbctl:
 $ allbctl generate git init
 $ allbctl generate kubernetes deployment "html5videogame"
 $ allbctl generate ansible role "pi-with-touchscreen"
-$ allbctl generate go init
-$ allbctl generate go cobra init
+$ allbctl generate golang init
+$ allbctl generate golang cobra init
 $ allbctl youtube upload ./path/to/vid "Title of Video" tag
 `,
 	Run: func(cmd *cobra.Command, args []string) {
