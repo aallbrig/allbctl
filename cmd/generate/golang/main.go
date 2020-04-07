@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package cmd
+package golang
 
 import (
 	"fmt"
@@ -21,14 +21,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var rubyCmd = &cobra.Command{
-	Use:   "ruby",
-	Short: "code generators for the ruby runtime",
+var Cmd = &cobra.Command{
+	Use:   "golang",
+	Short: "code generators for the golang runtime",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("ruby called")
+		fmt.Println("golang called")
 	},
-}
-
-func init() {
-	generateCmd.AddCommand(rubyCmd)
 }

@@ -17,7 +17,15 @@ package cmd
 
 import (
 	"fmt"
-
+	"github.com/aallbrig/allbctl/cmd/generate/ansible"
+	"github.com/aallbrig/allbctl/cmd/generate/git"
+	"github.com/aallbrig/allbctl/cmd/generate/golang"
+	"github.com/aallbrig/allbctl/cmd/generate/java"
+	"github.com/aallbrig/allbctl/cmd/generate/kubernetes"
+	"github.com/aallbrig/allbctl/cmd/generate/node"
+	"github.com/aallbrig/allbctl/cmd/generate/python"
+	"github.com/aallbrig/allbctl/cmd/generate/ruby"
+	"github.com/aallbrig/allbctl/cmd/generate/scala"
 	"github.com/spf13/cobra"
 )
 
@@ -30,5 +38,14 @@ var generateCmd = &cobra.Command{
 }
 
 func init() {
+	generateCmd.AddCommand(ansible.Cmd)
+	generateCmd.AddCommand(git.Cmd)
+	generateCmd.AddCommand(golang.Cmd)
+	generateCmd.AddCommand(java.Cmd)
+	generateCmd.AddCommand(kubernetes.Cmd)
+	generateCmd.AddCommand(node.Cmd)
+	generateCmd.AddCommand(python.Cmd)
+	generateCmd.AddCommand(ruby.Cmd)
+	generateCmd.AddCommand(scala.Cmd)
 	rootCmd.AddCommand(generateCmd)
 }

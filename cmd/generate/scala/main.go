@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package cmd
+package scala
 
 import (
 	"fmt"
@@ -21,14 +21,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var gitCmd = &cobra.Command{
-	Use:   "git",
-	Short: "code generators for the git runtime",
+var Cmd = &cobra.Command{
+	Use:   "scala",
+	Short: "code generators for the scala runtime",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("git called")
+		fmt.Println("scala called")
 	},
-}
-
-func init() {
-	generateCmd.AddCommand(gitCmd)
 }
