@@ -5,6 +5,12 @@ allbctl --help
 allbctl
 allbctl generate
 allbctl generate ansible
+allbctl generate ansible init
+allbctl generate ansible config
+allbctl generate ansible inventory
+allbctl generate ansible hostVar
+allbctl generate ansible groupVar
+allbctl generate ansible role
 allbctl generate git
 allbctl generate golang
 allbctl generate java

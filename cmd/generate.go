@@ -29,7 +29,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var generateCmd = &cobra.Command{
+var GenerateCmd = &cobra.Command{
 	Use:   "generate",
 	Short: "root command for code generation commands",
 	Run: func(cmd *cobra.Command, args []string) {
@@ -37,15 +37,21 @@ var generateCmd = &cobra.Command{
 	},
 }
 
+var Directory string
+var Filename string
+
 func init() {
-	generateCmd.AddCommand(ansible.Cmd)
-	generateCmd.AddCommand(git.Cmd)
-	generateCmd.AddCommand(golang.Cmd)
-	generateCmd.AddCommand(java.Cmd)
-	generateCmd.AddCommand(kubernetes.Cmd)
-	generateCmd.AddCommand(node.Cmd)
-	generateCmd.AddCommand(python.Cmd)
-	generateCmd.AddCommand(ruby.Cmd)
-	generateCmd.AddCommand(scala.Cmd)
-	rootCmd.AddCommand(generateCmd)
+	GenerateCmd.PersistentFlags().StringVarP(&Directory, "directory", "d", "", "directory to copy to")
+	GenerateCmd.PersistentFlags().StringVarP(&Filename, "filename", "f", "", "name for file")
+
+	GenerateCmd.AddCommand(ansible.Cmd)
+	GenerateCmd.AddCommand(git.Cmd)
+	GenerateCmd.AddCommand(golang.Cmd)
+	GenerateCmd.AddCommand(java.Cmd)
+	GenerateCmd.AddCommand(kubernetes.Cmd)
+	GenerateCmd.AddCommand(node.Cmd)
+	GenerateCmd.AddCommand(python.Cmd)
+	GenerateCmd.AddCommand(ruby.Cmd)
+	GenerateCmd.AddCommand(scala.Cmd)
+	rootCmd.AddCommand(GenerateCmd)
 }
