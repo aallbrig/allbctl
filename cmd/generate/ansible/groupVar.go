@@ -1,7 +1,10 @@
 package ansible
 
 import (
-	"fmt"
+	"os"
+	"text/template"
+
+	"github.com/aallbrig/allbctl/templates/ansible"
 	"github.com/spf13/cobra"
 )
 
@@ -9,7 +12,8 @@ var groupVarCmd = &cobra.Command{
 	Use:   "groupVar",
 	Short: "code generation for ansible group var",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("ansible group var generator called")
+		tmpl := template.Must(template.New("groupVar").Parse(ansible.GroupVarFile))
+		_ = tmpl.Execute(os.Stdout, ansible.DefaultGroupValues)
 	},
 }
 

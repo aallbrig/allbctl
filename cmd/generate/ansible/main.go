@@ -28,4 +28,3 @@ var Cmd = &cobra.Command{
 		fmt.Println("ansible called")
 	},
 }
-
