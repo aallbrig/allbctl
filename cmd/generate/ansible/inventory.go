@@ -4,16 +4,25 @@ import (
 	"os"
 	"text/template"
 
-	"github.com/aallbrig/allbctl/templates/ansible"
 	"github.com/spf13/cobra"
 )
+
+type InventoryKeyValue struct{}
+
+type InventoryValues struct {
+	Values []InventoryKeyValue
+}
+
+var DefaultInventoryValues = InventoryValues{
+	Values: []InventoryKeyValue{},
+}
 
 var inventoryCmd = &cobra.Command{
 	Use:   "inventory",
 	Short: "initialize ansible project",
 	Run: func(cmd *cobra.Command, args []string) {
-		tmpl := template.Must(template.New("inventory").Parse(ansible.InventoryFile))
-		_ = tmpl.Execute(os.Stdout, ansible.DefaultInventoryValues)
+		tmpl := template.Must(template.ParseFiles("./templates/ansible/host_var.yaml.tmpl"))
+		_ = tmpl.Execute(os.Stdout, DefaultInventoryValues)
 	},
 }
 
