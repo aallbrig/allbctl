@@ -1,8 +1,13 @@
 package ansible
 
 import (
-	"os"
+	"bytes"
+	"io"
 	"text/template"
+
+	"github.com/aallbrig/allbctl/pkg"
+
+	"github.com/markbates/pkger"
 
 	"github.com/spf13/cobra"
 )
@@ -33,12 +38,31 @@ var DefaultGroupValues = GroupValues{
 	},
 }
 
+func GenerateGroupVar(filename string) {
+	if filename == "" {
+		filename = "host_var.yaml"
+	}
+
+	templateFile, _ := pkger.Open("/templates/ansible/group_var.yaml.tmpl")
+
+	buf := new(bytes.Buffer)
+	io.Copy(buf, templateFile)
+	tmpl, _ := template.New("groupVar").Parse(buf.String())
+	fileContents := new(bytes.Buffer)
+	_ = tmpl.Execute(fileContents, DefaultGroupValues)
+
+	pkg.FilesToGenerate = append(pkg.FilesToGenerate, pkg.GenerateFile{
+		RelativeDir:  "ansible/inventory/group_vars",
+		FileName:     "group_var.yaml",
+		FileContents: fileContents,
+	})
+}
+
 var groupVarCmd = &cobra.Command{
 	Use:   "groupVar",
 	Short: "code generation for ansible group var",
 	Run: func(cmd *cobra.Command, args []string) {
-		tmpl := template.Must(template.ParseFiles("./templates/ansible/group_var.yaml.tmpl"))
-		_ = tmpl.Execute(os.Stdout, DefaultGroupValues)
+		GenerateGroupVar("")
 	},
 }
 
