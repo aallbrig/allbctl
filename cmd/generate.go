@@ -2,9 +2,13 @@ package cmd
 
 import (
 	"fmt"
-	"path/filepath"
+	"io/ioutil"
+	"log"
+	"os"
+	"path"
 
 	"github.com/aallbrig/allbctl/cmd/generate/ansible"
+	"github.com/aallbrig/allbctl/cmd/generate/dockerfile"
 	"github.com/aallbrig/allbctl/cmd/generate/git"
 	"github.com/aallbrig/allbctl/cmd/generate/golang"
 	"github.com/aallbrig/allbctl/cmd/generate/java"
@@ -21,25 +25,39 @@ var GenerateCmd = &cobra.Command{
 	Use:   "generate",
 	Short: "root command for code generation commands",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("generate called")
+		fmt.Println("generate root called")
 	},
 	PersistentPostRun: func(cmd *cobra.Command, args []string) {
-		// TODO: Add option to output to stdout or write to filesystem
-		fmt.Println("Files to be generated:")
-		for _, file := range pkg.FilesToGenerate {
-			fmt.Println(filepath.Join(file.RelativeDir, file.FileName))
-		}
-		fmt.Println()
+		writeStdout, _ := cmd.Flags().GetBool("stdout")
 
 		for _, file := range pkg.FilesToGenerate {
-			fmt.Println(filepath.Join(file.RelativeDir, file.FileName))
-			fmt.Println(file.FileContents)
+			if writeStdout {
+				fmt.Println(file.FileContents)
+			} else {
+				cwd, err := os.Getwd()
+				if err != nil {
+					log.Fatalf("Unable to get current directory: %v", err)
+				}
+
+				err = os.MkdirAll(path.Join(cwd, file.RelativeDir), os.ModePerm)
+				if err != nil {
+					log.Fatalf("Unable to create directories: %v", err)
+				}
+
+				err = ioutil.WriteFile(path.Join(cwd, file.RelativeDir, file.FileName), file.FileContents.Bytes(), os.ModePerm)
+				if err != nil {
+					log.Fatalf("Unable to write file: %v", err)
+				}
+			}
 		}
 	},
 }
 
 func init() {
+	GenerateCmd.PersistentFlags().BoolP("stdout", "o", false, "")
+
 	GenerateCmd.AddCommand(ansible.Cmd)
+	GenerateCmd.AddCommand(dockerfile.Cmd)
 	GenerateCmd.AddCommand(git.Cmd)
 	GenerateCmd.AddCommand(golang.Cmd)
 	GenerateCmd.AddCommand(java.Cmd)
@@ -48,5 +66,6 @@ func init() {
 	GenerateCmd.AddCommand(python.Cmd)
 	GenerateCmd.AddCommand(ruby.Cmd)
 	GenerateCmd.AddCommand(scala.Cmd)
+
 	rootCmd.AddCommand(GenerateCmd)
 }
