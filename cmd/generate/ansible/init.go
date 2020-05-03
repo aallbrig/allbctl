@@ -1,6 +1,7 @@
 package ansible
 
 import (
+	"github.com/aallbrig/allbctl/cmd/generate/dockerfile"
 	"github.com/spf13/cobra"
 )
 
@@ -12,6 +13,7 @@ var initCmd = &cobra.Command{
 		GenerateConfig()
 		GenerateGroupVar("")
 		GenerateHostVar("")
+		dockerfile.GenerateAnsibleDockerfile("")
 	},
 }
 
