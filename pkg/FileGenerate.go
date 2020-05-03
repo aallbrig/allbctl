@@ -1,6 +1,8 @@
 package pkg
 
-import "bytes"
+import (
+	"bytes"
+)
 
 type GenerateFile struct {
 	RelativeDir  string

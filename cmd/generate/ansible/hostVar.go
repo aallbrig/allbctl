@@ -1,12 +1,7 @@
 package ansible
 
 import (
-	"bytes"
-	"io"
-	"text/template"
-
 	"github.com/aallbrig/allbctl/pkg"
-	"github.com/markbates/pkger"
 	"github.com/spf13/cobra"
 )
 
@@ -41,19 +36,16 @@ func GenerateHostVar(filename string) {
 		filename = "host_var.yaml"
 	}
 
-	templateFile, _ := pkger.Open("/templates/ansible/host_var.yaml.tmpl")
-
-	buf := new(bytes.Buffer)
-	io.Copy(buf, templateFile)
-	tmpl, _ := template.New("hostVar").Parse(buf.String())
-	fileContents := new(bytes.Buffer)
-	_ = tmpl.Execute(fileContents, DefaultHostValues)
-
-	pkg.FilesToGenerate = append(pkg.FilesToGenerate, pkg.GenerateFile{
-		RelativeDir:  "ansible/inventory/host_vars",
-		FileName:     filename,
-		FileContents: fileContents,
-	})
+	pkg.RenderTemplateByFile(
+		&pkg.TemplateFile{
+			Path:     "/templates/ansible/host_var.yaml.tmpl",
+			Defaults: DefaultHostValues,
+		},
+		&pkg.ResultingFile{
+			Filename:    filename,
+			RelativeDir: "ansible/inventory/host_vars",
+		},
+	)
 }
 
 var hostVarCmd = &cobra.Command{

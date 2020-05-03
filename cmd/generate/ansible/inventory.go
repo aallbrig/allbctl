@@ -1,13 +1,7 @@
 package ansible
 
 import (
-	"bytes"
-	"io"
-	"text/template"
-
 	"github.com/aallbrig/allbctl/pkg"
-
-	"github.com/markbates/pkger"
 
 	"github.com/spf13/cobra"
 )
@@ -23,19 +17,16 @@ var DefaultInventoryValues = InventoryValues{
 }
 
 func GenerateInventory() {
-	templateFile, _ := pkger.Open("/templates/ansible/inventory.yaml.tmpl")
-
-	buf := new(bytes.Buffer)
-	io.Copy(buf, templateFile)
-	tmpl, _ := template.New("inventory").Parse(buf.String())
-	fileContents := new(bytes.Buffer)
-	_ = tmpl.Execute(fileContents, DefaultInventoryValues)
-
-	pkg.FilesToGenerate = append(pkg.FilesToGenerate, pkg.GenerateFile{
-		RelativeDir:  "ansible/inventory",
-		FileName:     "hosts.yaml",
-		FileContents: fileContents,
-	})
+	pkg.RenderTemplateByFile(
+		&pkg.TemplateFile{
+			Path:     "/templates/ansible/inventory.yaml.tmpl",
+			Defaults: DefaultInventoryValues,
+		},
+		&pkg.ResultingFile{
+			Filename:    "hosts.yaml",
+			RelativeDir: "ansible/inventory",
+		},
+	)
 }
 
 var inventoryCmd = &cobra.Command{

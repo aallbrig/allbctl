@@ -25,6 +25,6 @@ var Cmd = &cobra.Command{
 	Use:   "ansible",
 	Short: "code generation for ansible runtime",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("ansible called")
+		fmt.Println("ansible root called")
 	},
 }

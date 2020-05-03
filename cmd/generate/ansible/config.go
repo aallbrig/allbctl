@@ -1,36 +1,28 @@
 package ansible
 
 import (
-	"bytes"
-	"fmt"
-	"io"
-	"text/template"
-
 	"github.com/aallbrig/allbctl/pkg"
-	"github.com/markbates/pkger"
 	"github.com/spf13/cobra"
 )
 
 func GenerateConfig() {
-	templateFile, _ := pkger.Open("/templates/ansible/ansible.cfg.tmpl")
-
-	buf := new(bytes.Buffer)
-	io.Copy(buf, templateFile)
-	tmpl, _ := template.New("config").Parse(buf.String())
-	fileContents := new(bytes.Buffer)
-	_ = tmpl.Execute(fileContents, nil)
-
-	pkg.FilesToGenerate = append(pkg.FilesToGenerate, pkg.GenerateFile{
-		FileName:     "ansible.cfg",
-		FileContents: fileContents,
-	})
+	pkg.RenderTemplateByFile(
+		&pkg.TemplateFile{
+			Path:     "/templates/ansible/ansible.cfg.tmpl",
+			Defaults: nil,
+		},
+		&pkg.ResultingFile{
+			Filename:    "ansible.cfg",
+			RelativeDir: "",
+		},
+	)
 }
 
 var configCmd = &cobra.Command{
 	Use:   "config",
 	Short: "code generation for ansible config",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("ansible config generator called")
+		GenerateConfig()
 	},
 }
 
