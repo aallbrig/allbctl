@@ -15,8 +15,12 @@ limitations under the License.
 */
 package main
 
-import "github.com/aallbrig/allbctl/cmd"
+import (
+	"github.com/aallbrig/allbctl/cmd"
+	"github.com/markbates/pkger"
+)
 
 func main() {
+	_ = pkger.Dir("/templates")
 	cmd.Execute()
 }
