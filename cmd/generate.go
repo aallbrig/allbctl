@@ -25,7 +25,10 @@ var GenerateCmd = &cobra.Command{
 	Use:   "generate",
 	Short: "root command for code generation commands",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("generate root called")
+		if len(args) == 0 {
+			cmd.Help()
+			os.Exit(0)
+		}
 	},
 	PersistentPostRun: func(cmd *cobra.Command, args []string) {
 		writeStdout, _ := cmd.Flags().GetBool("stdout")
