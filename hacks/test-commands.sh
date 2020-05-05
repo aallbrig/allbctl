@@ -23,3 +23,4 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 "${SCRIPT_DIR}"/../bin/allbctl generate ruby
 "${SCRIPT_DIR}"/../bin/allbctl generate scala
 "${SCRIPT_DIR}"/../bin/allbctl generate shell
+"${SCRIPT_DIR}"/../bin/allbctl youtube
