@@ -28,5 +28,6 @@ trap "popd" EXIT
     "${SCRIPT_DIR}"/../bin/allbctl generate scala
     "${SCRIPT_DIR}"/../bin/allbctl generate shell
     "${SCRIPT_DIR}"/../bin/allbctl youtube
+    "${SCRIPT_DIR}"/../bin/allbctl youtube list
 popd
 rm -rf tmp

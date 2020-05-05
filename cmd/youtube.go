@@ -3,6 +3,8 @@ package cmd
 import (
 	"os"
 
+	"github.com/aallbrig/allbctl/cmd/youtube"
+
 	"github.com/spf13/cobra"
 )
 
@@ -18,5 +20,7 @@ var YoutubeCmd = &cobra.Command{
 }
 
 func init() {
+	YoutubeCmd.AddCommand(youtube.ListCmd)
+
 	rootCmd.AddCommand(YoutubeCmd)
 }
