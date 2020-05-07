@@ -26,7 +26,10 @@ var GenerateCmd = &cobra.Command{
 	Short: "root command for code generation commands",
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) == 0 {
-			cmd.Help()
+			err := cmd.Help()
+			if err != nil {
+				log.Fatalf("Error generating help text: %v", err)
+			}
 			os.Exit(0)
 		}
 	},

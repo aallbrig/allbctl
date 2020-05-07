@@ -16,7 +16,8 @@ limitations under the License.
 package python
 
 import (
-	"fmt"
+	"log"
+	"os"
 
 	"github.com/spf13/cobra"
 )
@@ -25,6 +26,12 @@ var Cmd = &cobra.Command{
 	Use:   "python",
 	Short: "code generators for the python runtime",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("python called")
+		if len(args) == 0 {
+			err := cmd.Help()
+			if err != nil {
+				log.Fatalf("Error generating help text: %v", err)
+			}
+			os.Exit(0)
+		}
 	},
 }

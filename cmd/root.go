@@ -17,8 +17,10 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/spf13/cobra"
+	"log"
 	"os"
+
+	"github.com/spf13/cobra"
 
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/viper"
@@ -43,7 +45,13 @@ $ allbctl generate golang cobra init
 $ allbctl youtube upload ./path/to/vid "Title of Video" tag
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("allbctl called")
+		if len(args) == 0 {
+			err := cmd.Help()
+			if err != nil {
+				log.Fatalf("Error generating help text: %v", err)
+			}
+			os.Exit(0)
+		}
 	},
 }
 

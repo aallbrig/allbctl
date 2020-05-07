@@ -13,18 +13,25 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package golang
+package node
 
 import (
-	"fmt"
+	"log"
+	"os"
 
 	"github.com/spf13/cobra"
 )
 
 var Cmd = &cobra.Command{
-	Use:   "golang",
-	Short: "code generators for the golang runtime",
+	Use:   "node",
+	Short: "code generators for the node runtime",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("golang called")
+		if len(args) == 0 {
+			err := cmd.Help()
+			if err != nil {
+				log.Fatalf("Error generating help text: %v", err)
+			}
+			os.Exit(0)
+		}
 	},
 }

@@ -13,18 +13,25 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package kubernetes
+package ruby
 
 import (
-	"fmt"
+	"log"
+	"os"
 
 	"github.com/spf13/cobra"
 )
 
 var Cmd = &cobra.Command{
-	Use:   "kubernetes",
-	Short: "code generators for the kubernetes runtime",
+	Use:   "ruby",
+	Short: "code generators for the ruby runtime",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("kubernetes called")
+		if len(args) == 0 {
+			err := cmd.Help()
+			if err != nil {
+				log.Fatalf("Error generating help text: %v", err)
+			}
+			os.Exit(0)
+		}
 	},
 }

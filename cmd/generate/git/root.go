@@ -13,18 +13,25 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package ansible
+package git
 
 import (
-	"fmt"
+	"log"
+	"os"
 
 	"github.com/spf13/cobra"
 )
 
 var Cmd = &cobra.Command{
-	Use:   "ansible",
-	Short: "code generation for ansible runtime",
+	Use:   "git",
+	Short: "code generators for the git runtime",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("ansible root called")
+		if len(args) == 0 {
+			err := cmd.Help()
+			if err != nil {
+				log.Fatalf("Error generating help text: %v", err)
+			}
+			os.Exit(0)
+		}
 	},
 }
