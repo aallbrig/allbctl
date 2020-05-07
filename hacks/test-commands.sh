@@ -9,6 +9,8 @@ pushd "tmp"
 trap "popd" EXIT
     "${SCRIPT_DIR}"/../bin/allbctl --help
     "${SCRIPT_DIR}"/../bin/allbctl
+    "${SCRIPT_DIR}"/../bin/allbctl completion
+    "${SCRIPT_DIR}"/../bin/allbctl completion zsh
     "${SCRIPT_DIR}"/../bin/allbctl generate
     "${SCRIPT_DIR}"/../bin/allbctl generate ansible
     "${SCRIPT_DIR}"/../bin/allbctl generate ansible init
