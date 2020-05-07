@@ -13,7 +13,6 @@ var ListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "lists playlists and videos in playlist",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("")
 		ctx := context.Background()
 		youtubeService, err := youtube.NewService(ctx)
 		if err != nil {
