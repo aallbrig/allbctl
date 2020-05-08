@@ -11,7 +11,6 @@ import (
 )
 
 var roleName string
-// TODO: Get interactivity from global flag var
 var defaultRoleName = "defaultRoleName"
 
 func roleNamePrompt() (string, error) {
@@ -33,12 +32,6 @@ func roleNamePrompt() (string, error) {
 	}
 	return result, nil
 }
-type Template struct {
-	Values []struct {
-		key string
-		value string
-	}
-}
 
 type KeyValue struct {
 	Key   string
@@ -48,6 +41,7 @@ type KeyValue struct {
 type KeyValuePairs struct {
 	Values []KeyValue
 }
+
 var DefaultKeyValue = KeyValuePairs{
 	Values: []KeyValue{
 		{
@@ -125,5 +119,6 @@ var roleCmd = &cobra.Command{
 
 func init() {
 	roleCmd.Flags().StringVarP(&roleName, "roleName", "n", "", "Name of Ansible role")
+
 	Cmd.AddCommand(roleCmd)
 }
