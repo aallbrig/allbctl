@@ -1,63 +1,13 @@
 package ansible
 
 import (
-	"errors"
-	"fmt"
 	"github.com/aallbrig/allbctl/pkg"
-	"github.com/manifoldco/promptui"
+	"github.com/aallbrig/allbctl/pkg/ansible"
 	"github.com/spf13/cobra"
 	"log"
-	"path/filepath"
 )
 
 var roleName string
-var defaultRoleName = "defaultRoleName"
-
-func roleNamePrompt() (string, error) {
-	prompt := promptui.Prompt{
-		Label:    "Role name",
-		Validate: func(input string) error {
-			if input == "" {
-				return errors.New("empty input -- please provide role name for Ansible role")
-			}
-			return nil
-		},
-		Default:  defaultRoleName,
-	}
-
-	result, err := prompt.Run()
-	if err != nil {
-		fmt.Printf("Prompt failed %v\n", err)
-		return "", err
-	}
-	return result, nil
-}
-
-type KeyValue struct {
-	Key   string
-	Value string
-}
-
-type KeyValuePairs struct {
-	Values []KeyValue
-}
-
-var DefaultKeyValue = KeyValuePairs{
-	Values: []KeyValue{
-		{
-			Key:   "key1",
-			Value: "Value1",
-		},
-		{
-			Key:   "key2",
-			Value: "Value2",
-		},
-		{
-			Key:   "key3",
-			Value: "Value3",
-		},
-	},
-}
 
 var roleCmd = &cobra.Command{
 	Use:   "role",
@@ -66,54 +16,19 @@ var roleCmd = &cobra.Command{
 		if roleName == "" {
 			if pkg.Interactive {
 				var err error
-				roleName, err = roleNamePrompt()
+				roleName, err = ansible.RoleNamePrompt()
 				if err != nil {
 					log.Fatalf("Error acquiring role name: %v\n", err)
 				}
 			} else {
-				roleName = defaultRoleName
+				roleName = ansible.DefaultRoleName
 			}
 		}
-		pkg.RenderTemplateByFile(
-			&pkg.TemplateFile{
-				Path:     "/templates/ansible/key_value_dict.yaml.tmpl",
-				Defaults: DefaultKeyValue,
-			},
-			&pkg.ResultingFile{
-				Filename:    "main.yaml",
-				RelativeDir: filepath.Join("ansible/roles", roleName, "/vars"),
-			},
-		)
-		pkg.RenderTemplateByFile(
-			&pkg.TemplateFile{
-				Path:     "/templates/ansible/key_value_dict.yaml.tmpl",
-				Defaults: DefaultKeyValue,
-			},
-			&pkg.ResultingFile{
-				Filename:    "main.yaml",
-				RelativeDir: filepath.Join("ansible/roles", roleName, "/defaults"),
-			},
-		)
-		pkg.RenderTemplateByFile(
-			&pkg.TemplateFile{
-				Path:     "/templates/ansible/key_value_dict.yaml.tmpl",
-				Defaults: DefaultKeyValue,
-			},
-			&pkg.ResultingFile{
-				Filename:    "main.yaml",
-				RelativeDir: filepath.Join("ansible/roles", roleName, "/tasks"),
-			},
-		)
-		pkg.RenderTemplateByFile(
-			&pkg.TemplateFile{
-				Path:     "/templates/ansible/key_value_dict.yaml.tmpl",
-				Defaults: DefaultKeyValue,
-			},
-			&pkg.ResultingFile{
-				Filename:    "main.yaml",
-				RelativeDir: filepath.Join("ansible/roles", roleName, "/handlers"),
-			},
-		)
+
+		var role = &ansible.Role{
+			Name: roleName,
+		}
+		role.RenderFiles(ansible.DefaultKeyValue)
 	},
 }
 

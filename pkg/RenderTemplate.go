@@ -2,11 +2,10 @@ package pkg
 
 import (
 	"bytes"
+	"fmt"
+	"github.com/markbates/pkger"
 	"html/template"
 	"io"
-	"log"
-
-	"github.com/markbates/pkger"
 )
 
 type TemplateFile struct {
@@ -19,27 +18,31 @@ type ResultingFile struct {
 	RelativeDir string
 }
 
-func RenderTemplateByFile(tf *TemplateFile, rf *ResultingFile) {
+func RenderTemplateByFile(tf *TemplateFile, rf *ResultingFile) error {
 	templateFile, err := pkger.Open(tf.Path)
 	if err != nil {
-		log.Fatalf("Unable to open file: %v", err)
+		fmt.Printf("Unable to open file: %v", err)
+		return err
 	}
 
 	buf := new(bytes.Buffer)
 	_, err = io.Copy(buf, templateFile)
 	if err != nil {
-		log.Fatalf("Unable to copy template file into buffer: %v", err)
+		fmt.Printf("Unable to copy template file into buffer: %v", err)
+		return err
 	}
 
 	tmpl, err := template.New(rf.Filename).Parse(buf.String())
 	if err != nil {
-		log.Fatalf("Unable to load template: %v", err)
+		fmt.Printf("Unable to load template: %v", err)
+		return err
 	}
 
 	fileContents := new(bytes.Buffer)
 	err = tmpl.Execute(fileContents, tf.Defaults)
 	if err != nil {
-		log.Fatalf("Unable to render template: %v", err)
+		fmt.Printf("Unable to render template: %v", err)
+		return err
 	}
 
 	FilesToGenerate = append(FilesToGenerate, GenerateFile{
@@ -47,4 +50,5 @@ func RenderTemplateByFile(tf *TemplateFile, rf *ResultingFile) {
 		FileName:     rf.Filename,
 		FileContents: fileContents,
 	})
+	return nil
 }
