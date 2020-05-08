@@ -12,6 +12,6 @@ pushd "${SCRIPT_DIR}"
 pushd "${SCRIPT_DIR}/.."
 
 pkger
-go build -o bin/allbctl
+go build -v -o bin/allbctl
 
 cleanup
