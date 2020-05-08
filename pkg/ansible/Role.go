@@ -1,10 +1,8 @@
 package ansible
 
 import (
-	"errors"
 	"fmt"
 	"github.com/aallbrig/allbctl/pkg"
-	"github.com/manifoldco/promptui"
 	"path/filepath"
 )
 
@@ -78,24 +76,4 @@ func (role *Role) RenderFiles(defaults interface{}) error {
 
 	return nil
 
-}
-
-func RoleNamePrompt() (string, error) {
-	prompt := promptui.Prompt{
-		Label:    "Role name",
-		Validate: func(input string) error {
-			if input == "" {
-				return errors.New("empty input -- please provide role name for Ansible role")
-			}
-			return nil
-		},
-		Default: DefaultRoleName,
-	}
-
-	result, err := prompt.Run()
-	if err != nil {
-		fmt.Printf("Prompt failed %v\n", err)
-		return "", err
-	}
-	return result, nil
 }
