@@ -61,6 +61,7 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.allbctl.yaml)")
+	rootCmd.PersistentFlags().BoolVarP(&pkg.Interactive, "interactive", "i", true, "")
 
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }

@@ -53,7 +53,6 @@ var GenerateCmd = &cobra.Command{
 
 func init() {
 	GenerateCmd.PersistentFlags().BoolVarP(&pkg.WriteStdOut, "stdout", "o", false, "")
-	GenerateCmd.PersistentFlags().BoolVarP(&pkg.Interactive, "interactive", "i", true, "")
 
 	GenerateCmd.AddCommand(ansible.Cmd)
 	GenerateCmd.AddCommand(dockerfile.Cmd)
