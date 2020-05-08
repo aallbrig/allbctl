@@ -1,13 +1,28 @@
 package ansible
 
-import "github.com/aallbrig/allbctl/pkg"
+import (
+	"errors"
+	"github.com/aallbrig/allbctl/pkg"
+	"github.com/manifoldco/promptui"
+)
+
+var DefaultHostVarFilename = "localhost.yaml"
+
+var HostVarNamePrompt = promptui.Prompt{
+	Label:    "Host var file name",
+	Validate: func(input string) error {
+		if input == "" {
+			return errors.New("empty input -- please provide file name for Ansible host var file")
+		}
+		return nil
+	},
+	Default: DefaultHostVarFilename,
+}
 
 type HostVar struct {
 	Name string
 	Data interface{}
 }
-
-var DefaultHostVarFilename = "localhost.yaml"
 
 func (h *HostVar) RenderFiles() error {
 	err := pkg.RenderTemplateByFile(

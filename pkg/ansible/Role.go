@@ -1,12 +1,25 @@
 package ansible
 
 import (
+	"errors"
 	"fmt"
 	"github.com/aallbrig/allbctl/pkg"
+	"github.com/manifoldco/promptui"
 	"path/filepath"
 )
 
 var DefaultRoleName = "DefaultRoleName"
+
+var RoleNamePrompt = promptui.Prompt{
+	Label:    "Role name",
+	Validate: func(input string) error {
+		if input == "" {
+								 return errors.New("empty input -- please provide role name for Ansible role")
+								 }
+		return nil
+	},
+	Default: DefaultRoleName,
+}
 
 type Role struct {
 	Name string

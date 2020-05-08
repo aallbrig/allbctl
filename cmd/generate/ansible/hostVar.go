@@ -1,30 +1,17 @@
 package ansible
 
 import (
-	"errors"
 	"fmt"
 	"github.com/aallbrig/allbctl/pkg"
 	"github.com/aallbrig/allbctl/pkg/ansible"
-	"github.com/manifoldco/promptui"
 	"github.com/spf13/cobra"
 	"log"
 )
 
 var hostVarName string
 
-func hostVarNamePrompt() (string, error) {
-	prompt := promptui.Prompt{
-		Label:    "Host var file name",
-		Validate: func(input string) error {
-			if input == "" {
-				return errors.New("empty input -- please provide file name for Ansible host var file")
-			}
-			return nil
-		},
-		Default: ansible.DefaultHostVarFilename,
-	}
-
-	result, err := prompt.Run()
+func promptForHostVarName() (string, error) {
+	result, err := ansible.HostVarNamePrompt.Run()
 	if err != nil {
 		fmt.Printf("Prompt failed %v\n", err)
 		return "", err
@@ -39,7 +26,7 @@ var hostVarCmd = &cobra.Command{
 		var err error
 		if hostVarName == "" {
 			if pkg.Interactive {
-				hostVarName, err = hostVarNamePrompt()
+				hostVarName, err = promptForHostVarName()
 				if err != nil {
 					log.Fatalf("Error acquiring host var name: %v\n", err)
 				}

@@ -1,13 +1,28 @@
 package ansible
 
-import "github.com/aallbrig/allbctl/pkg"
+import (
+	"errors"
+	"github.com/aallbrig/allbctl/pkg"
+	"github.com/manifoldco/promptui"
+)
+
+var DefaultGroupVarFilename = "localhost.yaml"
+
+var GroupVarNamePrompt = promptui.Prompt{
+	Label:    "Group var file name",
+	Validate: func(input string) error {
+		if input == "" {
+			return errors.New("empty input -- please provide file name for Ansible group var file")
+		}
+		return nil
+	},
+	Default: DefaultGroupVarFilename,
+}
 
 type GroupVar struct {
 	Name string
 	Data interface{}
 }
-
-var DefaultGroupVarFilename = "localhost.yaml"
 
 func (h *GroupVar) RenderFiles() error {
 	err := pkg.RenderTemplateByFile(

@@ -1,30 +1,17 @@
 package ansible
 
 import (
-	"errors"
 	"fmt"
 	"github.com/aallbrig/allbctl/pkg"
 	"github.com/aallbrig/allbctl/pkg/ansible"
-	"github.com/manifoldco/promptui"
 	"github.com/spf13/cobra"
 	"log"
 )
 
 var roleName string
 
-func roleNamePrompt() (string, error) {
-	prompt := promptui.Prompt{
-		Label:    "Role name",
-		Validate: func(input string) error {
-			if input == "" {
-				return errors.New("empty input -- please provide role name for Ansible role")
-			}
-			return nil
-		},
-		Default: ansible.DefaultRoleName,
-	}
-
-	result, err := prompt.Run()
+func promptForRoleName() (string, error) {
+	result, err := ansible.RoleNamePrompt.Run()
 	if err != nil {
 		fmt.Printf("Prompt failed %v\n", err)
 		return "", err
@@ -39,7 +26,7 @@ var roleCmd = &cobra.Command{
 		if roleName == "" {
 			if pkg.Interactive {
 				var err error
-				roleName, err = roleNamePrompt()
+				roleName, err = promptForRoleName()
 				if err != nil {
 					log.Fatalf("Error acquiring role name: %v\n", err)
 				}

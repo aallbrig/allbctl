@@ -1,11 +1,9 @@
 package ansible
 
 import (
-	"errors"
 	"fmt"
 	"github.com/aallbrig/allbctl/pkg"
 	"github.com/aallbrig/allbctl/pkg/ansible"
-	"github.com/manifoldco/promptui"
 	"log"
 
 	"github.com/spf13/cobra"
@@ -13,19 +11,8 @@ import (
 
 var groupVarName string
 
-func groupVarNamePrompt() (string, error) {
-	prompt := promptui.Prompt{
-		Label:    "Host var file name",
-		Validate: func(input string) error {
-			if input == "" {
-				return errors.New("empty input -- please provide file name for Ansible group var file")
-			}
-			return nil
-		},
-		Default: ansible.DefaultHostVarFilename,
-	}
-
-	result, err := prompt.Run()
+func promptForGroupVarName() (string, error) {
+	result, err := ansible.GroupVarNamePrompt.Run()
 	if err != nil {
 		fmt.Printf("Prompt failed %v\n", err)
 		return "", err
@@ -40,7 +27,7 @@ var groupVarCmd = &cobra.Command{
 		var err error
 		if groupVarName == "" {
 			if pkg.Interactive {
-				groupVarName, err = groupVarNamePrompt()
+				groupVarName, err = promptForGroupVarName()
 				if err != nil {
 					log.Fatalf("Error acquiring host var name: %v\n", err)
 				}
