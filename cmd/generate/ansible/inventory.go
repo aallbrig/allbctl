@@ -1,39 +1,20 @@
 package ansible
 
 import (
-	"github.com/aallbrig/allbctl/pkg"
-
+	"github.com/aallbrig/allbctl/pkg/ansible"
 	"github.com/spf13/cobra"
+	"log"
 )
-
-type InventoryKeyValue struct{}
-
-type InventoryValues struct {
-	Values []InventoryKeyValue
-}
-
-var DefaultInventoryValues = InventoryValues{
-	Values: []InventoryKeyValue{},
-}
-
-func GenerateInventory() {
-	pkg.RenderTemplateByFile(
-		&pkg.TemplateFile{
-			Path:     "/templates/ansible/inventory.yaml.tmpl",
-			Defaults: DefaultInventoryValues,
-		},
-		&pkg.ResultingFile{
-			Filename:    "hosts.yaml",
-			RelativeDir: "ansible/inventory",
-		},
-	)
-}
 
 var inventoryCmd = &cobra.Command{
 	Use:   "inventory",
 	Short: "initialize ansible project",
 	Run: func(cmd *cobra.Command, args []string) {
-		GenerateInventory()
+		inventory := ansible.Inventory{}
+		err := inventory.RenderFiles()
+		if err != nil {
+			log.Fatalf("Error rendering ansible inventory file: %v\n", err)
+		}
 	},
 }
 

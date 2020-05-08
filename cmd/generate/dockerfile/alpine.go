@@ -14,7 +14,7 @@ func GenerateAlpineDockerfile(filename string) {
 	pkg.RenderTemplateByFile(
 		&pkg.TemplateFile{
 			Path: "/templates/docker/Dockerfile.tmpl",
-			Defaults: Dockerfile{
+			Data: Dockerfile{
 				Image:   "alpine",
 				Version: "latest",
 			},

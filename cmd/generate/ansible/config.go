@@ -1,28 +1,20 @@
 package ansible
 
 import (
-	"github.com/aallbrig/allbctl/pkg"
+	"github.com/aallbrig/allbctl/pkg/ansible"
 	"github.com/spf13/cobra"
+	"log"
 )
-
-func GenerateConfig() {
-	pkg.RenderTemplateByFile(
-		&pkg.TemplateFile{
-			Path:     "/templates/ansible/ansible.cfg.tmpl",
-			Defaults: nil,
-		},
-		&pkg.ResultingFile{
-			Filename:    "ansible.cfg",
-			RelativeDir: "",
-		},
-	)
-}
 
 var configCmd = &cobra.Command{
 	Use:   "config",
 	Short: "code generation for ansible config",
 	Run: func(cmd *cobra.Command, args []string) {
-		GenerateConfig()
+		var config = ansible.Config{}
+		err := config.RenderFiles()
+		if err != nil {
+			log.Fatalf("Error rendering ansible config file: %v\n", err)
+		}
 	},
 }
 

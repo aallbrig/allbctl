@@ -18,8 +18,8 @@ func GenerateAnsibleDockerfile(filename string) {
 
 	pkg.RenderTemplateByFile(
 		&pkg.TemplateFile{
-			Path:     "/templates/docker/Dockerfile.tmpl",
-			Defaults: defaults,
+			Path: "/templates/docker/Dockerfile.tmpl",
+			Data: defaults,
 		},
 		&pkg.ResultingFile{
 			Filename:    filename,

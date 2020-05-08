@@ -9,8 +9,8 @@ import (
 )
 
 type TemplateFile struct {
-	Path     string
-	Defaults interface{}
+	Path string
+	Data interface{}
 }
 
 type ResultingFile struct {
@@ -39,7 +39,7 @@ func RenderTemplateByFile(tf *TemplateFile, rf *ResultingFile) error {
 	}
 
 	fileContents := new(bytes.Buffer)
-	err = tmpl.Execute(fileContents, tf.Defaults)
+	err = tmpl.Execute(fileContents, tf.Data)
 	if err != nil {
 		fmt.Printf("Unable to render template: %v", err)
 		return err

@@ -12,12 +12,12 @@ type Role struct {
 	Name string
 }
 
-func (role *Role) RenderFiles(defaults interface{}) error {
+func (role *Role) RenderFiles(data interface{}) error {
 	// TODO: opportunity to further decompose this function?
 	err := pkg.RenderTemplateByFile(
 		&pkg.TemplateFile{
-			Path:     "/templates/ansible/key_value_dict.yaml.tmpl",
-			Defaults: defaults,
+			Path: "/templates/ansible/key_value_dict.yaml.tmpl",
+			Data: data,
 		},
 		&pkg.ResultingFile{
 			Filename:    "main.yaml",
@@ -31,23 +31,23 @@ func (role *Role) RenderFiles(defaults interface{}) error {
 
 	err = pkg.RenderTemplateByFile(
 		&pkg.TemplateFile{
-			Path:     "/templates/ansible/key_value_dict.yaml.tmpl",
-			Defaults: defaults,
+			Path: "/templates/ansible/key_value_dict.yaml.tmpl",
+			Data: data,
 		},
 		&pkg.ResultingFile{
 			Filename:    "main.yaml",
-			RelativeDir: filepath.Join("ansible/roles", role.Name, "/defaults"),
+			RelativeDir: filepath.Join("ansible/roles", role.Name, "/Data"),
 		},
 	)
 	if err != nil {
-		fmt.Println("Error creating defaults main file")
+		fmt.Println("Error creating Data main file")
 		return err
 	}
 
 	err = pkg.RenderTemplateByFile(
 		&pkg.TemplateFile{
-			Path:     "/templates/ansible/key_value_dict.yaml.tmpl",
-			Defaults: defaults,
+			Path: "/templates/ansible/key_value_dict.yaml.tmpl",
+			Data: data,
 		},
 		&pkg.ResultingFile{
 			Filename:    "main.yaml",
@@ -61,8 +61,8 @@ func (role *Role) RenderFiles(defaults interface{}) error {
 
 	err = pkg.RenderTemplateByFile(
 		&pkg.TemplateFile{
-			Path:     "/templates/ansible/key_value_dict.yaml.tmpl",
-			Defaults: defaults,
+			Path: "/templates/ansible/key_value_dict.yaml.tmpl",
+			Data: data,
 		},
 		&pkg.ResultingFile{
 			Filename:    "main.yaml",

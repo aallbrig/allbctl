@@ -19,11 +19,11 @@ pushd "tmp"
 "${SCRIPT_DIR}"/../bin/allbctl completion zsh
 "${SCRIPT_DIR}"/../bin/allbctl generate
 "${SCRIPT_DIR}"/../bin/allbctl generate ansible
-"${SCRIPT_DIR}"/../bin/allbctl generate ansible init
-"${SCRIPT_DIR}"/../bin/allbctl generate ansible config
-"${SCRIPT_DIR}"/../bin/allbctl generate ansible inventory
-"${SCRIPT_DIR}"/../bin/allbctl generate ansible hostVar
-"${SCRIPT_DIR}"/../bin/allbctl generate ansible groupVar
+"${SCRIPT_DIR}"/../bin/allbctl generate ansible init --interactive=false
+"${SCRIPT_DIR}"/../bin/allbctl generate ansible config --interactive=false
+"${SCRIPT_DIR}"/../bin/allbctl generate ansible inventory --interactive=false
+"${SCRIPT_DIR}"/../bin/allbctl generate ansible hostVar --interactive=false
+"${SCRIPT_DIR}"/../bin/allbctl generate ansible groupVar --interactive=false
 "${SCRIPT_DIR}"/../bin/allbctl generate ansible role --interactive=false
 "${SCRIPT_DIR}"/../bin/allbctl generate dockerfile ansible
 "${SCRIPT_DIR}"/../bin/allbctl generate dockerfile alpine
