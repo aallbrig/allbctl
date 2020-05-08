@@ -1,23 +1,18 @@
 package youtube
 
 import (
-	"context"
-	"fmt"
-	"log"
-
+	yt "github.com/aallbrig/allbctl/pkg/youtube"
 	"github.com/spf13/cobra"
-	"google.golang.org/api/youtube/v3"
+	"log"
 )
 
 var ListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "lists playlists and videos in playlist",
 	Run: func(cmd *cobra.Command, args []string) {
-		ctx := context.Background()
-		youtubeService, err := youtube.NewService(ctx)
+		err := yt.List()
 		if err != nil {
-			log.Fatalf("Error initializing youtube service: %v", err)
+			log.Fatalf("error executing list command: %v", err)
 		}
-		fmt.Printf("%v", youtubeService)
 	},
 }
