@@ -28,10 +28,8 @@ var GenerateCmd = &cobra.Command{
 		pkg.HelpTextIfEmpty(cmd, args)
 	},
 	PersistentPostRun: func(cmd *cobra.Command, args []string) {
-		writeStdout, _ := cmd.Flags().GetBool("stdout")
-
 		for _, file := range pkg.FilesToGenerate {
-			if writeStdout {
+			if pkg.WriteStdOut {
 				fmt.Println(file.FileContents)
 			} else {
 				cwd, err := os.Getwd()
@@ -54,7 +52,8 @@ var GenerateCmd = &cobra.Command{
 }
 
 func init() {
-	GenerateCmd.PersistentFlags().BoolP("stdout", "o", false, "")
+	GenerateCmd.PersistentFlags().BoolVarP(&pkg.WriteStdOut, "stdout", "o", false, "")
+	GenerateCmd.PersistentFlags().BoolVarP(&pkg.Interactive, "interactive", "i", true, "")
 
 	GenerateCmd.AddCommand(ansible.Cmd)
 	GenerateCmd.AddCommand(dockerfile.Cmd)

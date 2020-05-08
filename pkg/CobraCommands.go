@@ -7,6 +7,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var Interactive bool
+var WriteStdOut bool
+
 func HelpTextIfEmpty(cmd *cobra.Command, args []string) {
 	if len(args) == 0 {
 		err := cmd.Help()

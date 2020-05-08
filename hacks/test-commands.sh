@@ -18,7 +18,7 @@ trap "popd" EXIT
     "${SCRIPT_DIR}"/../bin/allbctl generate ansible inventory
     "${SCRIPT_DIR}"/../bin/allbctl generate ansible hostVar
     "${SCRIPT_DIR}"/../bin/allbctl generate ansible groupVar
-    "${SCRIPT_DIR}"/../bin/allbctl generate ansible role
+    "${SCRIPT_DIR}"/../bin/allbctl generate ansible role --interactive=false
     "${SCRIPT_DIR}"/../bin/allbctl generate dockerfile ansible
     "${SCRIPT_DIR}"/../bin/allbctl generate git
     "${SCRIPT_DIR}"/../bin/allbctl generate golang

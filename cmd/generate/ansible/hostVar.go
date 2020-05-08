@@ -38,7 +38,7 @@ func GenerateHostVar(filename string) {
 
 	pkg.RenderTemplateByFile(
 		&pkg.TemplateFile{
-			Path:     "/templates/ansible/host_var.yaml.tmpl",
+			Path:     "/templates/ansible/key_value_dict.yaml.tmpl",
 			Defaults: DefaultHostValues,
 		},
 		&pkg.ResultingFile{

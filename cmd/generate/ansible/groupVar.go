@@ -39,7 +39,7 @@ func GenerateGroupVar(filename string) {
 
 	pkg.RenderTemplateByFile(
 		&pkg.TemplateFile{
-			Path:     "/templates/ansible/group_var.yaml.tmpl",
+			Path:     "/templates/ansible/key_value_dict.yaml.tmpl",
 			Defaults: DefaultGroupValues,
 		},
 		&pkg.ResultingFile{
