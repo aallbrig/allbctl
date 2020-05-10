@@ -25,8 +25,8 @@ pushd "tmp"
 "${SCRIPT_DIR}"/../bin/allbctl generate ansible hostVar --interactive=false
 "${SCRIPT_DIR}"/../bin/allbctl generate ansible groupVar --interactive=false
 "${SCRIPT_DIR}"/../bin/allbctl generate ansible role --interactive=false
-"${SCRIPT_DIR}"/../bin/allbctl generate dockerfile ansible
-"${SCRIPT_DIR}"/../bin/allbctl generate dockerfile alpine
+"${SCRIPT_DIR}"/../bin/allbctl generate dockerfile --name=Ansible --interactive=false
+"${SCRIPT_DIR}"/../bin/allbctl generate dockerfile --name=Alpine --interactive=false
 "${SCRIPT_DIR}"/../bin/allbctl generate git
 "${SCRIPT_DIR}"/../bin/allbctl generate golang
 "${SCRIPT_DIR}"/../bin/allbctl generate java
