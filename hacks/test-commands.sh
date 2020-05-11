@@ -37,6 +37,7 @@ pushd "tmp"
 "${SCRIPT_DIR}"/../bin/allbctl generate scala
 "${SCRIPT_DIR}"/../bin/allbctl generate shell
 "${SCRIPT_DIR}"/../bin/allbctl youtube
-"${SCRIPT_DIR}"/../bin/allbctl youtube list
+"${SCRIPT_DIR}"/../bin/allbctl youtube playlists
+"${SCRIPT_DIR}"/../bin/allbctl youtube videos
 
 cleanup
