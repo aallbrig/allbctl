@@ -8,6 +8,12 @@ import (
 	"io"
 )
 
+type GenerateFile struct {
+	FileName     string
+	FileContents *bytes.Buffer
+	RelativeDir  string
+}
+
 type TemplateFile struct {
 	Path string
 	Data interface{}
@@ -16,6 +22,12 @@ type TemplateFile struct {
 type ResultingFile struct {
 	Filename    string
 	RelativeDir string
+}
+
+var FilesToGenerate []GenerateFile
+
+func AddFileToRenderQueue(f GenerateFile) {
+	FilesToGenerate = append(FilesToGenerate, f)
 }
 
 func RenderTemplateByFile(tf *TemplateFile, rf *ResultingFile) error {
@@ -45,10 +57,13 @@ func RenderTemplateByFile(tf *TemplateFile, rf *ResultingFile) error {
 		return err
 	}
 
-	FilesToGenerate = append(FilesToGenerate, GenerateFile{
-		RelativeDir:  rf.RelativeDir,
-		FileName:     rf.Filename,
-		FileContents: fileContents,
-	})
+	AddFileToRenderQueue(
+		GenerateFile{
+			RelativeDir:  rf.RelativeDir,
+			FileName:     rf.Filename,
+			FileContents: fileContents,
+		},
+	)
+
 	return nil
 }
