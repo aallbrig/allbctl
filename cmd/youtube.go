@@ -16,7 +16,8 @@ var YoutubeCmd = &cobra.Command{
 }
 
 func init() {
-	YoutubeCmd.AddCommand(youtube.ListCmd)
+	YoutubeCmd.AddCommand(youtube.PlaylistsCmd)
+	YoutubeCmd.AddCommand(youtube.VideosCmd)
 
 	rootCmd.AddCommand(YoutubeCmd)
 }
