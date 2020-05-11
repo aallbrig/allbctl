@@ -15,4 +15,3 @@ var VideosCmd = &cobra.Command{
 		}
 	},
 }
-
