@@ -48,6 +48,15 @@ var GenerateCmd = &cobra.Command{
 				}
 			}
 		}
+		for _, action := range pkg.ActionsToExecute {
+			fmt.Printf("Executing action: %s\n", action.Name)
+
+			out, err := action.Cmd.Output()
+			if err != nil {
+				log.Fatalf("Unable to execute action: %v", err)
+			}
+			fmt.Printf("Action output:\n%v", string(out))
+		}
 	},
 }
 

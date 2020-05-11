@@ -1,22 +1,45 @@
 package docker
 
+import (
+	"github.com/aallbrig/allbctl/pkg"
+	"log"
+	"os"
+	"path/filepath"
+)
+
 type Dockerfile struct {
-	Name    string
-	Image   string
-	Version string
+	Name          string
+	Image         string
+	Version       string
+	ResultingFile *pkg.ResultingFile
+}
+
+var genericDockerfile = &pkg.ResultingFile{
+	Filename:    "Dockerfile",
+	RelativeDir: ".",
 }
 
 var Dockerfiles = []Dockerfile{
 	{
-		Name:    "Ansible",
-		Image:   "ansible/ansible",
-		Version: "ubuntu1604",
+		Name:          "Ansible",
+		Image:         "ansible/ansible",
+		Version:       "ubuntu1604",
+		ResultingFile: genericDockerfile,
 	},
 	{
-		Name:    "Alpine",
-		Image:   "alpine",
-		Version: "latest",
+		Name:          "Alpine",
+		Image:         "alpine",
+		Version:       "latest",
+		ResultingFile: genericDockerfile,
 	},
+}
+
+func (df *Dockerfile) Filepath() string {
+	cwd, err := os.Getwd()
+	if err != nil {
+		log.Fatalf("Error getting current working directory:\n%v", err)
+	}
+	return filepath.Join(cwd, df.ResultingFile.RelativeDir, df.ResultingFile.Filename)
 }
 
 func ListDockerFileNames(dfs []Dockerfile) []string {
@@ -46,4 +69,3 @@ func GetDockerfileByName(dfs []Dockerfile, name string) Dockerfile {
 	}
 	return dockerfile
 }
-

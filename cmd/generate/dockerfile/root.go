@@ -1,11 +1,13 @@
 package dockerfile
 
 import (
+	"fmt"
 	"github.com/aallbrig/allbctl/pkg"
 	"github.com/aallbrig/allbctl/pkg/docker"
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/cobra"
 	"log"
+	"os/exec"
 )
 
 var dockerfileName string
@@ -38,11 +40,16 @@ var Cmd = &cobra.Command{
 				Path: "/templates/docker/Dockerfile.tmpl",
 				Data: dockerfile,
 			},
-			&pkg.ResultingFile{
-				Filename:    "Dockerfile",
-				RelativeDir: ".",
-			},
+			dockerfile.ResultingFile,
 		)
+
+		if !pkg.WriteStdOut {
+			action := pkg.Action{
+				Name: fmt.Sprintf("Build the dockerfile at %s", dockerfile.Filepath()),
+				Cmd:  exec.Command("docker", "build", "-f", dockerfile.Filepath(), "-t", "localdev", "."),
+			}
+			pkg.AddActionToQueue(action)
+		}
 	},
 }
 
