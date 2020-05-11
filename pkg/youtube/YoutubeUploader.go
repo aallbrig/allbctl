@@ -6,6 +6,7 @@ import (
 	"google.golang.org/api/youtube/v3"
 	"os"
 )
+
 var channelId = os.Getenv("YOUTUBE_CHANNEL_ID")
 
 func getYoutubeService() (*youtube.Service, error) {

@@ -9,7 +9,7 @@ import (
 var DefaultHostVarFilename = "localhost.yaml"
 
 var HostVarNamePrompt = promptui.Prompt{
-	Label:    "Host var file name",
+	Label: "Host var file name",
 	Validate: func(input string) error {
 		if input == "" {
 			return errors.New("empty input -- please provide file name for Ansible host var file")

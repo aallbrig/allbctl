@@ -11,7 +11,7 @@ import (
 var DefaultRoleName = "DefaultRoleName"
 
 var RoleNamePrompt = promptui.Prompt{
-	Label:    "Role name",
+	Label: "Role name",
 	Validate: func(input string) error {
 		if input == "" {
 			return errors.New("empty input -- please provide role name for Ansible role")

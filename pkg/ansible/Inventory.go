@@ -2,9 +2,9 @@ package ansible
 
 import "github.com/aallbrig/allbctl/pkg"
 
-type Inventory struct {}
+type Inventory struct{}
 
-func (c *Inventory) RenderFiles () error {
+func (c *Inventory) RenderFiles() error {
 	err := pkg.RenderTemplateByFile(
 		&pkg.TemplateFile{
 			Path: "/templates/ansible/ansible.cfg.tmpl",

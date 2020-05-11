@@ -9,7 +9,7 @@ import (
 var DefaultGroupVarFilename = "localhost.yaml"
 
 var GroupVarNamePrompt = promptui.Prompt{
-	Label:    "Group var file name",
+	Label: "Group var file name",
 	Validate: func(input string) error {
 		if input == "" {
 			return errors.New("empty input -- please provide file name for Ansible group var file")

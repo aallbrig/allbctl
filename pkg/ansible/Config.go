@@ -2,9 +2,9 @@ package ansible
 
 import "github.com/aallbrig/allbctl/pkg"
 
-type Config struct {}
+type Config struct{}
 
-func (c *Config) RenderFiles () error {
+func (c *Config) RenderFiles() error {
 	err := pkg.RenderTemplateByFile(
 		&pkg.TemplateFile{
 			Path: "/templates/ansible/ansible.cfg.tmpl",
