@@ -11,9 +11,8 @@ var Interactive bool
 var WriteStdOut bool
 
 func HelpText(cmd *cobra.Command, args []string) {
-	err := cmd.Help()
-	if err != nil {
-		log.Fatalf("Error generating help text: %v", err)
+	if err := cmd.Help(); err != nil {
+		log.Fatalf("error executing list command: %v", err)
 	}
 	os.Exit(0)
 }
