@@ -18,6 +18,8 @@ jobs:
         run: make build
       - name: Run testing
         run: make test
+      - name: Lint source
+        run: make lint
       - name: Build all artifacts
         run: make build-all
       - name: Upload binaries to release
