@@ -1,4 +1,4 @@
-package computer_setup
+package computersetup
 
 import (
 	"errors"
@@ -9,6 +9,7 @@ import (
 // TODO: .allbctl config should drive this
 var sourceCodeDirectoryName = "src"
 
+// DirectoryForSourceCode used to create directory for personal source code
 func DirectoryForSourceCode(homeDir string) (err error) {
 	srcDirFilePath := filepath.Join(homeDir, sourceCodeDirectoryName)
 	srcDirStat, err := os.Stat(srcDirFilePath)
@@ -20,7 +21,7 @@ func DirectoryForSourceCode(homeDir string) (err error) {
 		// Source code directory already exists, no need for work
 		return
 	} else if srcDirStat != nil && !srcDirStat.IsDir() {
-		err = errors.New("Desired source code directory cannot be created due to conflicting file")
+		err = errors.New("desired source code directory cannot be created due to conflicting file")
 		return
 	}
 
