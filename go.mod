@@ -3,9 +3,11 @@ module github.com/aallbrig/allbctl
 go 1.14
 
 require (
+	github.com/hashicorp/go-version v1.2.1 // indirect
 	github.com/manifoldco/promptui v0.7.0
 	github.com/markbates/pkger v0.15.1
 	github.com/mitchellh/go-homedir v1.1.0
+	github.com/mitchellh/gox v1.0.1 // indirect
 	github.com/spf13/cobra v1.0.0
 	github.com/spf13/viper v1.6.3
 	github.com/stretchr/testify v1.4.0

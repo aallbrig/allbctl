@@ -13,6 +13,9 @@ build-windows:
 build-linux:
 	gox -osarch="linux/amd64"
 
+build-all:
+	gox -osarch="linux/amd64" -osarch="windows/amd64" -osarch="darwin/amd64"
+
 test:
 	go test -v ./...
 
