@@ -1,6 +1,6 @@
 name: Release Artifacts
 on:
-  create:
+  push:
     tags:
       - v*
 jobs:
