@@ -19,5 +19,7 @@ jobs:
         run: make install-dependencies
       - name: Run build
         run: make build
+      - name: Lint source
+        run: make lint
       - name: Run testing
         run: make test
