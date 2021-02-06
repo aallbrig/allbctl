@@ -19,11 +19,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/aallbrig/allbctl/pkg"
-
 	"github.com/spf13/cobra"
 
-	homedir "github.com/mitchellh/go-homedir"
+	computerSetup "github.com/aallbrig/allbctl/cmd/computer-setup"
+	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/viper"
 )
 
@@ -34,19 +33,11 @@ var rootCmd = &cobra.Command{
 	Short: "allbctl (aka allbrightctl) is a CLI for Andrew Allbright specific tasks",
 	Long: `allbctl (aka allbrightctl) is a CLI for Andrew Allbright specific tasks.
 
-Tasks like generating code or interacting with web services (like YT)
-
 Example commands for allbctl:
 
-$ allbctl generate git init
-$ allbctl generate kubernetes deployment "html5videogame"
-$ allbctl generate ansible role "pi-with-touchscreen"
-$ allbctl generate golang init
-$ allbctl generate golang cobra init
-$ allbctl youtube upload ./path/to/vid "Title of Video" tag
+$ allbctl computer-setup
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		pkg.HelpTextIfEmpty(cmd, args)
 	},
 }
 
@@ -59,11 +50,9 @@ func Execute() {
 
 func init() {
 	cobra.OnInitialize(initConfig)
+	rootCmd.AddCommand(computerSetup.RootCmd)
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.allbctl.yaml)")
-	rootCmd.PersistentFlags().BoolVarP(&pkg.Interactive, "interactive", "i", true, "")
-
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
 
 func initConfig() {
