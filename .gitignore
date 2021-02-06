@@ -1,5 +1,6 @@
 # build artifacts
 bin
+allbctl_*
 
 # General
 .DS_Store
