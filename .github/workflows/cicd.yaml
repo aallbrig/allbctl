@@ -19,7 +19,5 @@ jobs:
         run: make install-dependencies
       - name: Run build
         run: make build
-      - name: Run golangci-lint
-        uses: actions-contrib/golangci-lint@v1
       - name: Run testing
         run: make test
