@@ -1,4 +1,4 @@
-package computer_setup
+package computersetup
 
 import (
 	"github.com/stretchr/testify/assert"

@@ -16,5 +16,8 @@ build-linux:
 test:
 	go test -v ./...
 
+lint:
+	golint ./...
+
 run:
 	go run main.go
