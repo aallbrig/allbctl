@@ -1,4 +1,4 @@
-package cmd
+package computersetup
 
 import (
 	computerSetup "github.com/aallbrig/allbctl/pkg/computersetup"
@@ -7,20 +7,31 @@ import (
 	"log"
 )
 
-// RootCmd used in allbctl root
+// RootCmd defines the root of computer setup
 var RootCmd = &cobra.Command{
-	Use:   "computersetup",
-	Short: "Setup computer in expected way",
+	Use: "computer-setup",
+	Aliases: []string{
+		"computersetup",
+		"cs",
+		"setup",
+	},
+	Short: "Configure host to developer preferences (cross platform)",
 	Run: func(cmd *cobra.Command, args []string) {
 		usrHomeDir, err := homedir.Dir()
 		if err != nil {
 			log.Fatal("Error getting user home directory")
 		}
+
 		err = computerSetup.DirectoryForSourceCode(usrHomeDir)
 		if err != nil {
 			log.Fatal("Error creating src directory")
 		}
+		log.Println("$HOME/src is available")
 
-		log.Println("src directory exists in home directory")
+		err = computerSetup.DirectoryForUserBin(usrHomeDir)
+		if err != nil {
+			log.Fatal("Error creating src directory")
+		}
+		log.Println("$HOME/bin is available")
 	},
 }

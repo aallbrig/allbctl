@@ -6,7 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	computerSetup "github.com/aallbrig/allbctl/cmd/computer-setup"
+	computerSetup "github.com/aallbrig/allbctl/cmd/computersetup"
 	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/viper"
 )
