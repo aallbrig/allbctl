@@ -1,7 +1,7 @@
 package computersetup
 
 import (
-	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 )
@@ -13,21 +13,14 @@ var userBinDirectoryName = "bin"
 func createDirectory(homeDir string, desiredDirectory string) (err error) {
 	dirFilepath := filepath.Join(homeDir, desiredDirectory)
 
-	// Does the directory already exist?
-	stat, err := os.Stat(dirFilepath)
-	if err != nil && !os.IsNotExist(err) {
-		return
-	}
-
-	if stat != nil && stat.IsDir() {
-		// Source code directory already exists, no need for work
-		return
+	if stat, statErr := os.Stat(dirFilepath); statErr != nil && !os.IsNotExist(statErr) {
+		err = statErr
 	} else if stat != nil && !stat.IsDir() {
-		err = errors.New("desired source code directory cannot be created due to conflicting file")
-		return
+		err = fmt.Errorf("directory %s cannot be created due to conflict", dirFilepath)
+	} else if stat == nil {
+		err = os.Mkdir(dirFilepath, 0755)
 	}
 
-	err = os.Mkdir(dirFilepath, os.ModeDir)
 	return
 }
 

@@ -3,70 +3,18 @@ package computersetup
 import (
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 	"testing"
 )
 
-func TestCreateSrcDirWhenNotExist(t *testing.T) {
-	// Arrange
-	dir, err := ioutil.TempDir("", "")
-	if err != nil {
-		log.Fatal("[Testing] Error creating a temporary directory")
-		t.Fail()
-	}
-	defer os.RemoveAll(dir)
-
-	// Execute
-	err = DirectoryForSourceCode(dir)
-	if err != nil {
-		log.Fatal("[Testing] Error source code directory", err)
-		t.Fail()
-	}
-
-	// Assert
-	srcDir, err := os.Stat(filepath.Join(dir, "src"))
-	if err != nil && os.IsNotExist(err) {
-		t.Fail()
-	}
-
-	assert.Equal(t, srcDir.Name(), "src")
-	assert.Equal(t, srcDir.IsDir(), true)
-	assert.Equal(t, srcDir.Mode(), os.ModeDir)
+type testCase struct {
+	dirName        string
+	functionToTest func(string) (err error)
+	testExisting   bool
 }
 
-func TestCreateSrcDirWhenExist(t *testing.T) {
-	// Arrange
-	dir, err := ioutil.TempDir("", "")
-	if err != nil {
-		t.Error("[Testing] Error creating a temporary directory")
-	}
-	defer os.RemoveAll(dir)
-
-	err = os.Mkdir(filepath.Join(dir, "src"), os.ModeDir)
-	if err != nil {
-		t.Error("[Testing] Error creating preexisting src directory")
-	}
-
-	// Execute
-	err = DirectoryForSourceCode(dir)
-	if err != nil {
-		t.Error("[Testing] Error source code directory")
-	}
-
-	// Assert
-	srcDir, err := os.Stat(filepath.Join(dir, "src"))
-	if err != nil && os.IsNotExist(err) {
-		t.Error("[Testing] Error getting stat on directory")
-	}
-
-	assert.Equal(t, srcDir.Name(), "src")
-	assert.Equal(t, srcDir.IsDir(), true)
-	assert.Equal(t, srcDir.Mode(), os.ModeDir)
-}
-
-func TestCreateUserBinWhenNotExist(t *testing.T) {
+func handleCreateDirectoriesTestCase(tc testCase, t *testing.T) {
 	// Arrange
 	tempDir, err := ioutil.TempDir("", "")
 	if err != nil {
@@ -74,53 +22,43 @@ func TestCreateUserBinWhenNotExist(t *testing.T) {
 	}
 	defer os.RemoveAll(tempDir)
 
+	if tc.testExisting {
+		err = os.Mkdir(filepath.Join(tempDir, tc.dirName), 0755)
+		if err != nil {
+			t.Error("[Testing] Error creating preexisting directory")
+		}
+	}
+
 	// Execute
-	err = DirectoryForUserBin(tempDir)
+	err = tc.functionToTest(tempDir)
 	if err != nil {
-		t.Error("[Testing] Error source code directory")
+		t.Error("[Testing] Error executing test function")
 	}
 
 	// Assert
-	srcDir, err := os.Stat(filepath.Join(tempDir, "bin"))
+	srcDir, err := os.Stat(filepath.Join(tempDir, tc.dirName))
 	if err != nil && os.IsNotExist(err) {
 		t.Error("[Testing] Error getting stat on directory")
 	}
+
 	if srcDir == nil {
 		t.Error("[Testing] Error getting stat on directory")
 	}
-	assert.Equal(t, srcDir.Name(), "bin")
+
+	assert.Equal(t, srcDir.Name(), tc.dirName)
 	assert.Equal(t, srcDir.IsDir(), true)
-	assert.Equal(t, srcDir.Mode(), os.ModeDir)
+	assert.Equal(t, srcDir.Mode().String(), "drwxr-xr-x")
 }
 
-func TestCreateUserBinWhenAlreadyExist(t *testing.T) {
-	// Arrange
-	tempDir, err := ioutil.TempDir("", "")
-	if err != nil {
-		t.Error("[Testing] Error creating a temporary directory")
-	}
-	defer os.RemoveAll(tempDir)
-
-	err = os.Mkdir(filepath.Join(tempDir, "bin"), os.ModeDir)
-	if err != nil {
-		t.Error("[Testing] Error creating preexisting src directory")
+func TestCreateDirectoriesInHome(t *testing.T) {
+	testCases := []testCase{
+		{"src", DirectoryForSourceCode, false},
+		{"src", DirectoryForSourceCode, true},
+		{"bin", DirectoryForUserBin, false},
+		{"bin", DirectoryForUserBin, true},
 	}
 
-	// Execute
-	err = DirectoryForUserBin(tempDir)
-	if err != nil {
-		t.Error("[Testing] Error source code directory")
+	for _, tc := range testCases {
+		handleCreateDirectoriesTestCase(tc, t)
 	}
-
-	// Assert
-	srcDir, err := os.Stat(filepath.Join(tempDir, "bin"))
-	if err != nil && os.IsNotExist(err) {
-		t.Error("[Testing] Error getting stat on directory")
-	}
-	if srcDir == nil {
-		t.Error("[Testing] Error getting stat on directory")
-	}
-	assert.Equal(t, srcDir.Name(), "bin")
-	assert.Equal(t, srcDir.IsDir(), true)
-	assert.Equal(t, srcDir.Mode(), os.ModeDir)
 }
