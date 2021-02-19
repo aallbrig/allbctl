@@ -1,6 +1,7 @@
 package externalapi
 
 import (
+	"context"
 	"fmt"
 	"github.com/google/go-github/github"
 	"github.com/stretchr/testify/assert"
@@ -10,7 +11,7 @@ import (
 
 type MockGHAuthTokenProviderEmpty struct{}
 
-func (authTokenProvider *MockGHAuthTokenProviderEmpty) GetAuthToken() (authToken string, err error) {
+func (provider *MockGHAuthTokenProviderEmpty) GetAuthToken() (authToken string, err error) {
 	authToken = os.Getenv("")
 
 	if authToken == "" {
@@ -20,45 +21,68 @@ func (authTokenProvider *MockGHAuthTokenProviderEmpty) GetAuthToken() (authToken
 	return
 }
 
-type MockGHAuthTokenProviderWrong struct{}
+type MockGHAuthTokenProviderFake struct{}
 
-func (authTokenProviderWrong *MockGHAuthTokenProviderWrong) GetAuthToken() (authToken string, err error) {
-	authToken = ""
+func (provider *MockGHAuthTokenProviderFake) GetAuthToken() (authToken string, err error) {
+	authToken = "foobar"
+	return
+}
+
+type MockUsersService struct{}
+
+func (userService *MockUsersService) Get(_ context.Context, _ string) (user *github.User,
+	response *github.Response, err error) {
+
+	login := "mock user"
+	user = &github.User{
+		Login: &login,
+	}
+
+	return
+}
+
+type MockSearchService struct{}
+
+func (searchService *MockSearchService) Repositories(_ context.Context, _ string,
+	_ *github.SearchOptions) (*github.RepositoriesSearchResult, *github.Response, error) {
+	return &github.RepositoriesSearchResult{
+		Repositories: nil,
+	}, nil, nil
+}
+
+type MockGHProvider struct{}
+
+func (provider *MockGHProvider) GetGithubClient(_ string) (client GithubClient, err error) {
+	mockUsersService := MockUsersService{}
+	mockSearchService := MockSearchService{}
+
+	client = GithubClient{
+		Users:  &mockUsersService,
+		Search: &mockSearchService,
+	}
 	return
 }
 
 func Test_ErrorWhenNoEnvVarSet(t *testing.T) {
 	// ARRANGE
 	authTokenProvider := MockGHAuthTokenProviderEmpty{}
+	ghClient := MockGHProvider{}
 
 	// EXECUTE
-	_, err := GetMyDotfiles(&authTokenProvider)
+	_, err := GetMyDotfiles(&authTokenProvider, &ghClient)
 
 	// ASSERT
 	assert.NotEqual(t, nil, err, "Error should NOT be nil")
-}
-
-func Test_ErrorWhenIncorrectEnvVarSet(t *testing.T) {
-	// ARRANGE
-	authTokenProvider := MockGHAuthTokenProviderWrong{}
-
-	// EXECUTE
-	_, err := GetMyDotfiles(&authTokenProvider)
-
-	// ASSERT
-	assert.NotEqual(t, nil, err, "Error should NOT be nil")
-	assert.Equal(t, 401, err.(*github.ErrorResponse).Response.StatusCode)
 }
 
 func Test_SuccessWhenCorrectEnvVarSet(t *testing.T) {
 	// ARRANGE
-	// Use the real provider (for now)
-	authTokenProvider := GithubAuthTokenProvider{}
+	authTokenProvider := MockGHAuthTokenProviderFake{}
+	ghClient := MockGHProvider{}
 
 	// EXECUTE
-	repos, err := GetMyDotfiles(&authTokenProvider)
+	_, err := GetMyDotfiles(&authTokenProvider, &ghClient)
 
 	// ASSERT
 	assert.Equal(t, nil, err, "No error should have returned")
-	assert.Equal(t, 2, len(repos))
 }
