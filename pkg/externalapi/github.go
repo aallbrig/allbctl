@@ -21,15 +21,6 @@ func (t *tokenSource) Token() (*oauth2.Token, error) {
 	return token, nil
 }
 
-func newGithubClient(githubAPIAuthToken string) (client *github.Client) {
-	tokenSource := &tokenSource{
-		AccessToken: githubAPIAuthToken,
-	}
-	oauthClient := oauth2.NewClient(oauth2.NoContext, tokenSource)
-	client = github.NewClient(oauthClient)
-	return
-}
-
 type githubAuthTokenProvider interface {
 	GetAuthToken() (string, error)
 }
@@ -38,7 +29,7 @@ type githubAuthTokenProvider interface {
 type GithubAuthTokenProvider struct{}
 
 // GetAuthToken gets github auth token
-func (authTokenProvider *GithubAuthTokenProvider) GetAuthToken() (authToken string, err error) {
+func (provider *GithubAuthTokenProvider) GetAuthToken() (authToken string, err error) {
 	authToken = os.Getenv(githubAuthTokenEnvVar)
 
 	if authToken == "" {
@@ -48,22 +39,67 @@ func (authTokenProvider *GithubAuthTokenProvider) GetAuthToken() (authToken stri
 	return
 }
 
+type githubUsersService interface {
+	Get(ctx context.Context, userName string) (user *github.User, response *github.Response, err error)
+}
+
+type githubSearchService interface {
+	Repositories(ctx context.Context, query string, opt *github.SearchOptions) (*github.RepositoriesSearchResult,
+		*github.Response, error)
+}
+
+// GithubClient is this program's facade of github API client
+type GithubClient struct {
+	Users  githubUsersService
+	Search githubSearchService
+}
+
+type githubClientProvider interface {
+	GetGithubClient(accessToken string) (client GithubClient, err error)
+}
+
+// GithubClientProvider allows consumer to get a GithubClient
+type GithubClientProvider struct{}
+
+// GetGithubClient implements providing GithubClient
+func (provider *GithubClientProvider) GetGithubClient(accessToken string) (client GithubClient, err error) {
+	// TODO: Check access token against some rules? (e.g. "not empty")
+	tokenSource := &tokenSource{
+		AccessToken: accessToken,
+	}
+
+	oauthClient := oauth2.NewClient(oauth2.NoContext, tokenSource)
+	ghClient := github.NewClient(oauthClient)
+
+	client = GithubClient{
+		Users:  ghClient.Users,
+		Search: ghClient.Search,
+	}
+
+	return
+}
+
 // GetMyDotfiles gets dotfile repos from my github
-func GetMyDotfiles(authTokenProvider githubAuthTokenProvider) (repositories []github.Repository, err error) {
+func GetMyDotfiles(tokenProvider githubAuthTokenProvider, ghProvider githubClientProvider) (repositories []github.Repository, err error) {
 	ctx := context.TODO()
-	githubAuthToken, err := authTokenProvider.GetAuthToken()
 
+	githubAuthToken, err := tokenProvider.GetAuthToken()
 	if err != nil {
 		return
 	}
 
-	client := newGithubClient(githubAuthToken)
-	user, _, err := client.Users.Get(ctx, "")
+	ghClient, err := ghProvider.GetGithubClient(githubAuthToken)
 	if err != nil {
 		return
 	}
 
-	reposResponse, _, err := client.Search.Repositories(ctx, fmt.Sprintf("dotfiles user:%s", *user.Login), nil)
+	user, _, err := ghClient.Users.Get(ctx, "")
+	if err != nil {
+		return
+	}
+
+	searchQuery := fmt.Sprintf("dotfiles user:%s", *user.Login)
+	reposResponse, _, err := ghClient.Search.Repositories(ctx, searchQuery, nil)
 	if err != nil {
 		return
 	}
