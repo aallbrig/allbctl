@@ -1,10 +1,15 @@
 package computersetup
 
 import (
+	"context"
 	computerSetup "github.com/aallbrig/allbctl/pkg/computersetup"
+	"github.com/aallbrig/allbctl/pkg/externalapi"
+	"github.com/aallbrig/allbctl/pkg/externalcmd"
+	"github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	"log"
+	"path"
 )
 
 // RootCmd defines the root of computer setup
@@ -33,5 +38,37 @@ var RootCmd = &cobra.Command{
 			log.Fatal("Error creating src directory")
 		}
 		log.Println("$HOME/bin is available")
+
+		tokenProvider := externalapi.GithubAuthTokenProvider{}
+		githubClientProvider := externalapi.GithubClientProvider{}
+		dotfiles, err := externalapi.GetMyDotfiles(&tokenProvider, &githubClientProvider)
+		if err != nil {
+			log.Fatalf("Error getting dotfiles %v", err)
+		}
+
+		token, err := tokenProvider.GetAuthToken()
+		if err != nil {
+			log.Fatalf("Error getting github auth token %v", err)
+		}
+		ghClient, err := githubClientProvider.GetGithubClient(token)
+		if err != nil {
+			log.Fatalf("Error getting github client %v", err)
+		}
+		user, _, err := ghClient.Users.Get(context.TODO(), "")
+		if err != nil {
+			log.Fatalf("Error getting github user %v", err)
+		}
+
+		gitProvider := externalcmd.GitClientProvider{}
+		auth := &http.BasicAuth{
+			Username: *user.Login,
+			Password: token,
+		}
+		for _, repo := range dotfiles {
+			_, innerErr := externalcmd.CloneGithubRepo(path.Join(usrHomeDir, "src"), &gitProvider, &repo, auth)
+			if innerErr != nil {
+				log.Fatalf("Error cloning repo %v", innerErr)
+			}
+		}
 	},
 }
