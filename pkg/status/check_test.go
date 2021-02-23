@@ -17,10 +17,7 @@ func Test_MissingStatusForDirectory(t *testing.T) {
 	defer os.RemoveAll(tempDir)
 
 	stringBuf := bytes.NewBufferString("")
-	err = CheckForDirectory(stringBuf, tempDir, "src")
-	if err != nil {
-		t.Fatal(err)
-	}
+	_ = CheckForDirectory(stringBuf, tempDir, "src")
 
 	if !strings.Contains(stringBuf.String(), "Missing") {
 		t.Fail()
@@ -40,10 +37,7 @@ func Test_PresentStatusForDirectory(t *testing.T) {
 	}
 
 	stringBuf := bytes.NewBufferString("")
-	err = CheckForDirectory(stringBuf, tempDir, "src")
-	if err != nil {
-		t.Fatal(err)
-	}
+	_ = CheckForDirectory(stringBuf, tempDir, "src")
 
 	if !strings.Contains(stringBuf.String(), "Present") {
 		t.Fail()
