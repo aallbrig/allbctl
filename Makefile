@@ -1,6 +1,7 @@
 install-dependencies:
 	go get -u golang.org/x/lint/golint
 	go get -u github.com/mitchellh/gox
+	go get -u github.com/fatih/color
 	go mod download
 
 build:

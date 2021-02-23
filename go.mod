@@ -3,6 +3,7 @@ module github.com/aallbrig/allbctl
 go 1.14
 
 require (
+	github.com/fatih/color v1.10.0
 	github.com/go-git/go-git/v5 v5.2.0
 	github.com/golang/protobuf v1.3.5 // indirect
 	github.com/google/go-cmp v0.4.0 // indirect
