@@ -6,6 +6,7 @@ import (
 	"github.com/fatih/color"
 	"os"
 	"path/filepath"
+	"runtime"
 )
 
 // CheckForDirectory adds to output buffer based on if directory exists or not
@@ -24,5 +25,32 @@ func CheckForDirectory(w *bytes.Buffer, dir string, dirToFind string) (err error
 	}
 
 	w.WriteString("\n")
+	return
+}
+
+var goos = runtime.GOOS
+
+// SystemInfo outputs basic system information
+func SystemInfo(buf *bytes.Buffer) (err error) {
+	hostname, err := os.Hostname()
+	if err != nil {
+		return
+	}
+
+	buf.WriteString(fmt.Sprintf("Hostname:         %s\n", hostname))
+	buf.WriteString("Operating System: ")
+
+	switch goos {
+	case "windows":
+		buf.WriteString("Windows")
+	case "darwin":
+		buf.WriteString("MAC OS")
+	case "linux":
+		buf.WriteString("Linux")
+	default:
+		buf.WriteString(fmt.Sprintf("%s", goos))
+	}
+	buf.WriteString("\n")
+
 	return
 }

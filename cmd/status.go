@@ -20,8 +20,12 @@ var StatusCmd = &cobra.Command{
 		}
 
 		output := bytes.NewBufferString("")
-		directoriesToCheck := []string{"src", "bin"}
+		output.WriteString("System Info\n")
+		output.WriteString("-----\n")
+		err = status.SystemInfo(output)
+		output.WriteString("\n")
 
+		directoriesToCheck := []string{"src", "bin"}
 		output.WriteString("Directory Expectations\n")
 		output.WriteString("-----\n")
 		for _, dir := range directoriesToCheck {
