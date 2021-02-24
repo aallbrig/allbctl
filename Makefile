@@ -19,7 +19,6 @@ build-linux:
 build-all:
 	gox -osarch="linux/amd64" -osarch="windows/amd64" -osarch="darwin/amd64"
 	chmod +x allbctl_*
-	ls -la allbctl_*
 
 test:
 	go test -v ./...

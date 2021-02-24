@@ -43,3 +43,28 @@ func Test_PresentStatusForDirectory(t *testing.T) {
 		t.Fail()
 	}
 }
+
+func Test_SystemInfo(t *testing.T) {
+	testCases := []struct {
+		goos     string
+		expected string
+	}{
+		{"windows", "Windows"},
+		{"darwin", "MAC OS"},
+		{"linux", "Linux"},
+		{"random", "random"},
+	}
+
+	stringBuf := bytes.NewBufferString("")
+	oldGoos := goos
+
+	for _, testCase := range testCases {
+		goos = testCase.goos
+
+		_ = SystemInfo(stringBuf)
+		if !strings.Contains(stringBuf.String(), testCase.expected) {
+			t.Errorf("Expected %s to contain %s", stringBuf.String(), testCase.expected)
+		}
+	}
+	goos = oldGoos
+}
