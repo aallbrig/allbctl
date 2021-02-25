@@ -6,7 +6,6 @@ import (
 
 	"github.com/spf13/cobra"
 
-	computerSetup "github.com/aallbrig/allbctl/cmd/computersetup"
 	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/viper"
 )
@@ -36,7 +35,7 @@ func Execute() {
 
 func init() {
 	cobra.OnInitialize(initConfig)
-	rootCmd.AddCommand(computerSetup.RootCmd)
+	rootCmd.AddCommand(ComputerSetupCmd)
 	rootCmd.AddCommand(StatusCmd)
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.allbctl.yaml)")
