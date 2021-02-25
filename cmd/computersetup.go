@@ -1,4 +1,4 @@
-package computersetup
+package cmd
 
 import (
 	"context"
@@ -12,8 +12,8 @@ import (
 	"path"
 )
 
-// RootCmd defines the root of computer setup
-var RootCmd = &cobra.Command{
+// ComputerSetupCmd defines the root of computer setup
+var ComputerSetupCmd = &cobra.Command{
 	Use: "computer-setup",
 	Aliases: []string{
 		"computersetup",
