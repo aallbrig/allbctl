@@ -3,10 +3,11 @@ package cmd
 import (
 	"bytes"
 	"fmt"
+	"log"
+
 	"github.com/aallbrig/allbctl/pkg/status"
 	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
-	"log"
 )
 
 // StatusCmd represents status command
@@ -31,6 +32,13 @@ var StatusCmd = &cobra.Command{
 		for _, dir := range directoriesToCheck {
 			_ = status.CheckForDirectory(output, usrHomeDir, dir)
 		}
+		output.WriteString("\n")
+
+		output.WriteString("Package Manager\n")
+		output.WriteString("-----\n")
+		err = status.PackageManager(output)
+
+		output.WriteString("\n")
 
 		fmt.Print(output)
 	},
