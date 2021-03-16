@@ -9,16 +9,16 @@ import (
 )
 
 var gitProvider gitClientProvider = &GitClientProvider{}
+var Auth transport.AuthMethod
 
 // GitClient is a facade for git operations
 type GitClient struct{}
 
 // PlainClone is a facade for git plain clone
-func (gitClient *GitClient) PlainClone(dir string, url string, auth transport.AuthMethod) (repo *git.Repository, err error) {
-
+func (gitClient *GitClient) PlainClone(dir string, url string) (repo *git.Repository, err error) {
 	repo, err = git.PlainClone(dir, false, &git.CloneOptions{
 		URL:  url,
-		Auth: auth,
+		Auth: Auth,
 	})
 
 	return
@@ -38,7 +38,7 @@ func (provider *GitClientProvider) GetGitClient() (client GitClient, err error) 
 }
 
 // CloneGithubRepo is the function that actually clones a github repo
-func CloneGithubRepo(targetDir string, repository *github.Repository, auth transport.AuthMethod) (localrepo *git.Repository, err error) {
+func CloneGithubRepo(targetDir string, repository *github.Repository) (localRepo *git.Repository, err error) {
 	client, err := gitProvider.GetGitClient()
 	if err != nil {
 		return
@@ -46,7 +46,7 @@ func CloneGithubRepo(targetDir string, repository *github.Repository, auth trans
 
 	repositoryDir := path.Join(targetDir, *repository.Name)
 	if _, statErr := os.Stat(repositoryDir); os.IsNotExist(statErr) {
-		localrepo, err = client.PlainClone(repositoryDir, *repository.CloneURL, auth)
+		localRepo, err = client.PlainClone(repositoryDir, *repository.CloneURL)
 	}
 
 	return
