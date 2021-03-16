@@ -41,7 +41,7 @@ var ComputerSetupCmd = &cobra.Command{
 
 		tokenProvider := externalapi.GithubAuthTokenProvider{}
 		githubClientProvider := externalapi.GithubClientProvider{}
-		dotfiles, err := externalapi.GetMyDotfiles(&tokenProvider, &githubClientProvider)
+		dotfiles, err := externalapi.GetMyDotfiles()
 		if err != nil {
 			log.Fatalf("Error getting dotfiles %v", err)
 		}

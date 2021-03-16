@@ -9,6 +9,8 @@ import (
 )
 
 var githubAuthTokenEnvVar = "GH_AUTH_TOKEN"
+var tokenProvider githubAuthTokenProvider = &GithubAuthTokenProvider{}
+var ghProvider githubClientProvider = &GithubClientProvider{}
 
 type tokenSource struct {
 	AccessToken string
@@ -80,7 +82,7 @@ func (provider *GithubClientProvider) GetGithubClient(accessToken string) (clien
 }
 
 // GetMyDotfiles gets dotfile repos from my github
-func GetMyDotfiles(tokenProvider githubAuthTokenProvider, ghProvider githubClientProvider) (repositories []github.Repository, err error) {
+func GetMyDotfiles() (repositories []github.Repository, err error) {
 	ctx := context.TODO()
 
 	githubAuthToken, err := tokenProvider.GetAuthToken()
