@@ -59,13 +59,12 @@ var ComputerSetupCmd = &cobra.Command{
 			log.Fatalf("Error getting github user %v", err)
 		}
 
-		gitProvider := externalcmd.GitClientProvider{}
 		auth := &http.BasicAuth{
 			Username: *user.Login,
 			Password: token,
 		}
 		for _, repo := range dotfiles {
-			_, innerErr := externalcmd.CloneGithubRepo(path.Join(usrHomeDir, "src"), &gitProvider, &repo, auth)
+			_, innerErr := externalcmd.CloneGithubRepo(path.Join(usrHomeDir, "src"), &repo, auth)
 			if innerErr != nil {
 				log.Fatalf("Error cloning repo %v", innerErr)
 			}
