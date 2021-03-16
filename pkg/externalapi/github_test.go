@@ -65,11 +65,11 @@ func (provider *MockGHProvider) GetGithubClient(_ string) (client GithubClient, 
 
 func Test_ErrorWhenNoEnvVarSet(t *testing.T) {
 	// ARRANGE
-	authTokenProvider := MockGHAuthTokenProviderEmpty{}
-	ghClient := MockGHProvider{}
+	tokenProvider = &MockGHAuthTokenProviderEmpty{}
+	ghProvider = &MockGHProvider{}
 
 	// EXECUTE
-	_, err := GetMyDotfiles(&authTokenProvider, &ghClient)
+	_, err := GetMyDotfiles()
 
 	// ASSERT
 	assert.NotEqual(t, nil, err, "Error should NOT be nil")
@@ -77,11 +77,11 @@ func Test_ErrorWhenNoEnvVarSet(t *testing.T) {
 
 func Test_SuccessWhenCorrectEnvVarSet(t *testing.T) {
 	// ARRANGE
-	authTokenProvider := MockGHAuthTokenProviderFake{}
-	ghClient := MockGHProvider{}
+	tokenProvider = &MockGHAuthTokenProviderFake{}
+	ghProvider = &MockGHProvider{}
 
 	// EXECUTE
-	_, err := GetMyDotfiles(&authTokenProvider, &ghClient)
+	_, err := GetMyDotfiles()
 
 	// ASSERT
 	assert.Equal(t, nil, err, "No error should have returned")
