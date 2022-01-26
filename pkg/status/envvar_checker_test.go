@@ -32,9 +32,9 @@ func TestCheckerCheckResult_CanOutputStringRepresentation(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	checker := NewEnvironmentVariableChecker()
+	sut := NewEnvironmentVariableChecker()
 
-	err, result := checker.Check(fakeKey)
+	err, result := sut.Check(fakeKey)
 	if err != nil {
 		t.Error(err)
 	}
