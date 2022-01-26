@@ -34,6 +34,16 @@ var StatusCmd = &cobra.Command{
 		}
 		output.WriteString("\n")
 
+		envVarsToCheck := []string{"GH_AUTH_TOKEN"}
+		checker := status.NewEnvironmentVariableChecker()
+		output.WriteString("Directory Expectations\n")
+		output.WriteString("-----\n")
+		for _, envVarKey := range envVarsToCheck {
+			_, result := checker.Check(envVarKey)
+			output.WriteString(result.String())
+		}
+		output.WriteString("\n")
+
 		output.WriteString("Package Manager\n")
 		output.WriteString("-----\n")
 		err = status.PackageManager(output)
