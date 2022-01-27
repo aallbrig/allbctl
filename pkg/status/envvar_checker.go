@@ -11,7 +11,7 @@ type CheckEnvVarResult struct {
 }
 
 func (result CheckEnvVarResult) String() string {
-	return fmt.Sprintf("Name: %s\tExists: %t", result.Name, result.Exists)
+	return fmt.Sprintf("ConfigName: %s\tExists: %t", result.Name, result.Exists)
 }
 
 type EnvironmentVariableChecker struct{}

@@ -39,6 +39,15 @@ var ComputerSetupCmd = &cobra.Command{
 		}
 		log.Println("$HOME/bin is available")
 
+		identifier := computerSetup.MachineIdentifier{}
+		configProvider := identifier.ConfigurationForMachine()
+		if configProvider != nil {
+			tweaker := computerSetup.MachineTweaker{
+				MachineConfiguration: configProvider.GetConfiguration(),
+			}
+			tweaker.ApplyConfiguration()
+		}
+
 		tokenProvider := externalapi.GithubAuthTokenProvider{}
 		githubClientProvider := externalapi.GithubClientProvider{}
 		dotfiles, err := externalapi.GetMyDotfiles()
