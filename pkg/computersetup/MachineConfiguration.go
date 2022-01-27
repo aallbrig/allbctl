@@ -1,11 +1,12 @@
 package computersetup
 
-type ValidateResult struct {
-	Name         string
-	AlreadySetup bool
-}
 type IMachineConfiguration interface {
-	Validate() ValidateResult
+	Name() string
+	Validate() error
 	Install() error
 	Uninstall() error
+}
+
+type IMachineConfigurationProvider interface {
+	GetConfiguration() []IMachineConfiguration
 }

@@ -39,7 +39,7 @@ func TestCheckerCheckResult_CanOutputStringRepresentation(t *testing.T) {
 		t.Error(err)
 	}
 
-	assert.Equal(t, fmt.Sprintf("Name: %s\tExists: %t", fakeKey, true), result.String())
+	assert.Equal(t, fmt.Sprintf("ConfigName: %s\tExists: %t", fakeKey, true), result.String())
 
 	os.Unsetenv(fakeKey)
 }
