@@ -1,4 +1,4 @@
-package computersetup
+package providers
 
 import (
 	"github.com/aallbrig/allbctl/pkg/computersetup/macbook"

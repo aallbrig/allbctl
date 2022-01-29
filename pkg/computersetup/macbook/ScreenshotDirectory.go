@@ -26,7 +26,7 @@ func (s ScreenshotDirectory) Validate() error {
 }
 
 func (s ScreenshotDirectory) Install() error {
-	cmd := exec.Command("mkdir", "-p", "~/Desktop/ScreenShots")
+	cmd := exec.Command("mkdir", "-p", screenshotsDirectory)
 	err := cmd.Run()
 	if err != nil {
 		return err
