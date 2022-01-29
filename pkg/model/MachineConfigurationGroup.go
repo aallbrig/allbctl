@@ -1,8 +1,8 @@
 package model
 
 import (
+	"bytes"
 	"fmt"
-	"log"
 )
 import "github.com/pkg/errors"
 
@@ -15,68 +15,83 @@ func (m MachineConfigurationGroup) Name() string {
 	return m.GroupName
 }
 
-func (m MachineConfigurationGroup) Validate() error {
+func (m MachineConfigurationGroup) Validate() (error, *bytes.Buffer) {
+	out := bytes.NewBufferString("")
 	if len(m.Configs) == 0 {
-		return fmt.Errorf("%s No configuration for section", m.GroupName)
+		return fmt.Errorf("%s No configuration for section", m.GroupName), out
 	}
 
 	var errs []error
 	for _, config := range m.Configs {
-		err := config.Validate()
+		err, validateOut := config.Validate()
+		out.WriteString(validateOut.String() + "\n")
+
 		if err != nil {
 			errs = append(errs, err)
 		}
 	}
 
 	if len(errs) != 0 {
-		return WrapErrors(errors.New(m.GroupName), errs)
+		return WrapErrors(errors.New(m.GroupName), errs), out
 	}
 
-	return nil
+	return nil, out
 }
 
-func (m MachineConfigurationGroup) Install() error {
+func (m MachineConfigurationGroup) Install() (error, *bytes.Buffer) {
+	out := bytes.NewBufferString("")
 	if len(m.Configs) == 0 {
-		return fmt.Errorf("%s No configuration for section", m.GroupName)
+		return fmt.Errorf("%s No configuration for section", m.GroupName), out
 	}
 
 	var errs []error
 	for _, config := range m.Configs {
-		if err := config.Validate(); err != nil {
-			log.Println(fmt.Sprintf("Installing configuration for %s", config.Name()))
-			if err := config.Install(); err != nil {
+		err, validateOut := config.Validate()
+		out.WriteString(validateOut.String())
+
+		if err != nil {
+			err, installOut := config.Install()
+			out.WriteString(installOut.String())
+
+			if err != nil {
 				errs = append(errs, err)
 			}
 		}
 	}
 
 	if len(errs) != 0 {
-		return WrapErrors(errors.New(m.GroupName), errs)
+		return WrapErrors(errors.New(m.GroupName), errs), out
 	}
 
-	return nil
+	return nil, out
 }
 
-func (m MachineConfigurationGroup) Uninstall() error {
+func (m MachineConfigurationGroup) Uninstall() (error, *bytes.Buffer) {
+	out := bytes.NewBufferString("")
 	if len(m.Configs) == 0 {
-		return fmt.Errorf("%s No configuration for section", m.GroupName)
+		return fmt.Errorf("%s No configuration for section", m.GroupName), out
 	}
 
 	var errs []error
 	for _, config := range m.Configs {
-		if err := config.Validate(); err == nil {
-			log.Println(fmt.Sprintf("Uninstalling configuration for %s", config.Name()))
-			if err := config.Uninstall(); err != nil {
+		err, validateOut := config.Validate()
+		out.WriteString(validateOut.String())
+
+		if err != nil {
+			err, installOut := config.Install()
+			out.WriteString(installOut.String())
+
+			if err != nil {
 				errs = append(errs, err)
 			}
 		}
 	}
 
 	if len(errs) != 0 {
-		return WrapErrors(errors.New(m.GroupName), errs)
+		return WrapErrors(errors.New(m.GroupName), errs), out
 	}
 
-	return nil
+	return nil, out
 }
 
 func WrapErrors(err error, errs []error) error {

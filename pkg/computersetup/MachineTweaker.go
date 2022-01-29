@@ -1,9 +1,9 @@
 package computersetup
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/aallbrig/allbctl/pkg/model"
-	"log"
 )
 
 type MachineTweaker struct {
@@ -21,7 +21,7 @@ func (t MachineTweaker) CheckCurrentMachine() []ValidateResult {
 			Name:  machineConfig.Name(),
 			Valid: false,
 		}
-		err := machineConfig.Validate()
+		err, _ := machineConfig.Validate()
 		if err == nil {
 			result.Valid = true
 		}
@@ -30,19 +30,25 @@ func (t MachineTweaker) CheckCurrentMachine() []ValidateResult {
 	return report
 }
 
-func (t MachineTweaker) ApplyConfiguration() []error {
+func (t MachineTweaker) ApplyConfiguration() ([]error, *bytes.Buffer) {
+	out := bytes.NewBufferString("")
 	var errs []error
 	for _, configuration := range t.MachineConfiguration {
-		log.Println(fmt.Sprintf("Applying configuration for %s", configuration.Name()))
-		err := configuration.Validate()
+		out.WriteString(fmt.Sprintf("Applying configuration: %s\n", configuration.Name()))
+		err, validateOut := configuration.Validate()
+		out.WriteString(validateOut.String() + "\n")
+
 		if err != nil {
-			err = configuration.Install()
+			err, installOut := configuration.Install()
+			out.WriteString(installOut.String() + "\n")
+
 			if err != nil {
 				errs = append(errs, err)
 			}
 		}
 	}
-	return errs
+
+	return errs, out
 }
 
 func NewMachineTweaker(configs []model.IMachineConfiguration) *MachineTweaker {

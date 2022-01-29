@@ -1,5 +1,7 @@
 package macbook
 
+import "bytes"
+
 type TrackpadTwoFingerRightClick struct {
 	ConfigName    string
 	ExpectedState DefaultsCommand
@@ -17,18 +19,27 @@ var rightClickExpectedState = DefaultsCommand{
 }
 
 func NewTrackpadTwoFingerRightClick() *TrackpadTwoFingerRightClick {
-	rightClickExpectedState.SyncCurrentValue()
+	rightClickExpectedState.ReadCurrentValue()
 	return &TrackpadTwoFingerRightClick{ConfigName: "Trackpad Two Finger Right Click", ExpectedState: rightClickExpectedState}
 }
 
-func (t TrackpadTwoFingerRightClick) Validate() error {
-	return t.ExpectedState.Validate()
+func (t TrackpadTwoFingerRightClick) Validate() (error, *bytes.Buffer) {
+	out := bytes.NewBufferString("")
+	err, validateOut := t.ExpectedState.Validate()
+	out.WriteString(validateOut.String())
+	return err, out
 }
 
-func (t TrackpadTwoFingerRightClick) Install() error {
-	return t.ExpectedState.Install()
+func (t TrackpadTwoFingerRightClick) Install() (error, *bytes.Buffer) {
+	out := bytes.NewBufferString("")
+	err, installOut := t.ExpectedState.Install()
+	out.WriteString(installOut.String())
+	return err, out
 }
 
-func (t TrackpadTwoFingerRightClick) Uninstall() error {
-	return t.ExpectedState.Uninstall()
+func (t TrackpadTwoFingerRightClick) Uninstall() (error, *bytes.Buffer) {
+	out := bytes.NewBufferString("")
+	err, uninstallOut := t.ExpectedState.Uninstall()
+	out.WriteString(uninstallOut.String())
+	return err, out
 }
