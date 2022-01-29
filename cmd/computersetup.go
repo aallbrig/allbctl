@@ -2,11 +2,12 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	computerSetup "github.com/aallbrig/allbctl/pkg/computersetup"
+	"github.com/aallbrig/allbctl/pkg/computersetup/os_agnostic"
 	"github.com/aallbrig/allbctl/pkg/externalapi"
 	"github.com/aallbrig/allbctl/pkg/externalcmd"
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
-	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	"log"
 	"path"
@@ -22,31 +23,16 @@ var ComputerSetupCmd = &cobra.Command{
 	},
 	Short: "Configure host to developer preferences (cross platform)",
 	Run: func(cmd *cobra.Command, args []string) {
-		usrHomeDir, err := homedir.Dir()
-		if err != nil {
-			log.Fatal("Error getting user home directory")
-		}
-
-		err = computerSetup.DirectoryForSourceCode(usrHomeDir)
-		if err != nil {
-			log.Fatal("Error creating src directory")
-		}
-		log.Println("$HOME/src is available")
-
-		err = computerSetup.DirectoryForUserBin(usrHomeDir)
-		if err != nil {
-			log.Fatal("Error creating src directory")
-		}
-		log.Println("$HOME/bin is available")
-
+		os := os_agnostic.OperatingSystem{}
 		identifier := computerSetup.MachineIdentifier{}
-		configProvider := identifier.ConfigurationForMachine()
-		if configProvider != nil {
-			tweaker := computerSetup.MachineTweaker{
-				MachineConfiguration: configProvider.GetConfiguration(),
-			}
-			tweaker.ApplyConfiguration()
+		err, name := os.GetName()
+		configProvider := identifier.ConfigurationProviderForOperatingSystem(name)
+		if configProvider == nil {
+			log.Fatal(fmt.Sprintf("No configuration provider found for operationg system %s", os))
 		}
+
+		tweaker := computerSetup.NewMachineTweaker(configProvider.GetConfiguration())
+		tweaker.ApplyConfiguration()
 
 		tokenProvider := externalapi.GithubAuthTokenProvider{}
 		githubClientProvider := externalapi.GithubClientProvider{}
@@ -73,8 +59,9 @@ var ComputerSetupCmd = &cobra.Command{
 			Password: token,
 		}
 
+		_, homeDir := os.HomeDir()
 		for _, repo := range dotfiles {
-			_, innerErr := externalcmd.CloneGithubRepo(path.Join(usrHomeDir, "src"), &repo)
+			_, innerErr := externalcmd.CloneGithubRepo(path.Join(homeDir, "src"), &repo)
 			if innerErr != nil {
 				log.Fatalf("Error cloning repo %v", innerErr)
 			}

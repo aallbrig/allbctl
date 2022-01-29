@@ -8,9 +8,7 @@ import (
 
 type MachineIdentifier struct{}
 
-func (m MachineIdentifier) ConfigurationForMachine() model.IMachineConfigurationProvider {
-	os := runtime.GOOS
-
+func (m MachineIdentifier) ConfigurationProviderForOperatingSystem(os string) model.IMachineConfigurationProvider {
 	switch os {
 	case "windows":
 		return nil
@@ -21,4 +19,8 @@ func (m MachineIdentifier) ConfigurationForMachine() model.IMachineConfiguration
 	default:
 		return nil
 	}
+}
+
+func (m MachineIdentifier) GetCurrentOperatingSystem() string {
+	return runtime.GOOS
 }
