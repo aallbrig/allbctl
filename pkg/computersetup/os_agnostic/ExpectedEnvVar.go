@@ -1,7 +1,9 @@
 package os_agnostic
 
 import (
+	"bytes"
 	"fmt"
+	"github.com/fatih/color"
 	"os"
 )
 
@@ -14,38 +16,44 @@ type ExpectedEnvVar struct {
 }
 
 func (e ExpectedEnvVar) Name() string {
-	return fmt.Sprintf("Expected envvar %s", e.Key)
+	return fmt.Sprintf("Envvar %s", e.Key)
 }
 
-func (e ExpectedEnvVar) Validate() (err error) {
+func (e ExpectedEnvVar) Validate() (err error, out *bytes.Buffer) {
+	out = bytes.NewBufferString(fmt.Sprintf("%s ", e.Name()))
 	_, exists := os.LookupEnv(e.Key)
 	if !exists {
+		_, _ = color.New(color.FgRed).Fprint(out, "MISSING")
 		err = fmt.Errorf("envvar does not exist")
+	} else {
+		_, _ = color.New(color.FgGreen).Fprint(out, "PRESENT")
 	}
-	return err
+	return err, out
 }
 
-func (e ExpectedEnvVar) Install() error {
-	err := e.Validate()
+func (e ExpectedEnvVar) Install() (error, *bytes.Buffer) {
+	out := bytes.NewBufferString("")
+	err, _ := e.Validate()
 	if err == nil {
-		return err
+		return err, out
 	}
 	if e.OnInstall != nil {
-		return e.OnInstall()
+		return e.OnInstall(), out
 	}
 
-	return fmt.Errorf("no install lambda defined for envvar %s", e.Key)
+	return fmt.Errorf("no install lambda defined for envvar %s", e.Key), out
 }
 
-func (e ExpectedEnvVar) Uninstall() error {
-	err := e.Validate()
+func (e ExpectedEnvVar) Uninstall() (error, *bytes.Buffer) {
+	out := bytes.NewBufferString("")
+	err, _ := e.Validate()
 	if err == nil {
-		return err
+		return err, out
 	}
 
 	if e.OnUninstall != nil {
-		return e.OnUninstall()
+		return e.OnUninstall(), out
 	}
 
-	return fmt.Errorf("no uninstall lambda defined for envvar %s", e.Key)
+	return fmt.Errorf("no uninstall lambda defined for envvar %s", e.Key), out
 }

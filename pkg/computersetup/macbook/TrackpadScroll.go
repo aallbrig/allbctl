@@ -1,5 +1,7 @@
 package macbook
 
+import "bytes"
+
 type TrackpadScroll struct {
 	ConfigName string
 }
@@ -26,41 +28,53 @@ func NewTrackpadScrolling() *TrackpadScroll {
 	return &TrackpadScroll{ConfigName: "Trackpad Scroll"}
 }
 
-func (t TrackpadScroll) Validate() error {
-	err := scrollDirection.Validate()
+func (t TrackpadScroll) Validate() (error, *bytes.Buffer) {
+	out := bytes.NewBufferString("")
+
+	err, validateOut := scrollDirection.Validate()
+	out.WriteString(validateOut.String() + "\n")
 	if err != nil {
-		return err
+		return err, out
 	}
 
-	err = scrollingEnabled.Validate()
+	err, validateOut = scrollingEnabled.Validate()
+	out.WriteString(validateOut.String())
 	if err != nil {
-		return err
+		return err, out
 	}
-	return nil
+
+	return nil, out
 }
 
-func (t TrackpadScroll) Install() error {
-	err := scrollDirection.Install()
+func (t TrackpadScroll) Install() (error, *bytes.Buffer) {
+	out := bytes.NewBufferString("")
+	err, installOut := scrollDirection.Install()
+	out.WriteString(installOut.String() + "\n")
 	if err != nil {
-		return err
+		return err, out
 	}
 
-	err = scrollingEnabled.Uninstall()
+	err, installOut = scrollingEnabled.Uninstall()
+	out.WriteString(installOut.String())
 	if err != nil {
-		return err
+		return err, out
 	}
-	return nil
+	return nil, out
 }
 
-func (t TrackpadScroll) Uninstall() error {
-	err := scrollDirection.Uninstall()
+func (t TrackpadScroll) Uninstall() (error, *bytes.Buffer) {
+	out := bytes.NewBufferString("")
+	err, uninstallOut := scrollDirection.Uninstall()
+	out.WriteString(uninstallOut.String() + "\n")
 	if err != nil {
-		return err
+		return err, out
 	}
 
-	err = scrollingEnabled.Uninstall()
+	err, uninstallOut = scrollingEnabled.Uninstall()
+	out.WriteString(uninstallOut.String())
 	if err != nil {
-		return err
+		return err, out
 	}
-	return nil
+
+	return nil, out
 }

@@ -32,7 +32,8 @@ var ComputerSetupCmd = &cobra.Command{
 		}
 
 		tweaker := computerSetup.NewMachineTweaker(configProvider.GetConfiguration())
-		tweaker.ApplyConfiguration()
+		_, out := tweaker.ApplyConfiguration()
+		log.Print(out)
 
 		tokenProvider := externalapi.GithubAuthTokenProvider{}
 		githubClientProvider := externalapi.GithubClientProvider{}

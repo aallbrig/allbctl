@@ -1,8 +1,10 @@
 package model
 
+import "bytes"
+
 type IMachineConfiguration interface {
 	Name() string
-	Validate() error
-	Install() error
-	Uninstall() error
+	Validate() (err error, out *bytes.Buffer)
+	Install() (err error, out *bytes.Buffer)
+	Uninstall() (err error, out *bytes.Buffer)
 }

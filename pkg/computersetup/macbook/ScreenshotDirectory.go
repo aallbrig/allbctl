@@ -1,6 +1,7 @@
 package macbook
 
 import (
+	"bytes"
 	"os/exec"
 )
 
@@ -21,20 +22,29 @@ func NewScreenshotDirectory() *ScreenshotDirectory {
 	return &ScreenshotDirectory{}
 }
 
-func (s ScreenshotDirectory) Validate() error {
-	return screenshotDirectoryExpectedState.Validate()
+func (s ScreenshotDirectory) Validate() (error, *bytes.Buffer) {
+	out := bytes.NewBufferString("")
+	err, validateOut := screenshotDirectoryExpectedState.Validate()
+	out.WriteString(validateOut.String())
+	return err, out
 }
 
-func (s ScreenshotDirectory) Install() error {
+func (s ScreenshotDirectory) Install() (error, *bytes.Buffer) {
+	out := bytes.NewBufferString("")
 	cmd := exec.Command("mkdir", "-p", screenshotsDirectory)
 	err := cmd.Run()
 	if err != nil {
-		return err
+		return err, out
 	}
-	err = screenshotDirectoryExpectedState.Install()
-	return err
+
+	err, installOut := screenshotDirectoryExpectedState.Install()
+	out.WriteString(installOut.String())
+	return err, out
 }
 
-func (s ScreenshotDirectory) Uninstall() error {
-	return screenshotDirectoryExpectedState.Uninstall()
+func (s ScreenshotDirectory) Uninstall() (error, *bytes.Buffer) {
+	out := bytes.NewBufferString("")
+	err, uninstallOut := screenshotDirectoryExpectedState.Uninstall()
+	out.WriteString(uninstallOut.String())
+	return err, out
 }

@@ -1,6 +1,7 @@
 package computersetup
 
 import (
+	"bytes"
 	"github.com/aallbrig/allbctl/pkg/model"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -16,16 +17,19 @@ func (s SpyMachineConfiguration) Name() string {
 	return "Spy Machine Configuration"
 }
 
-func (s SpyMachineConfiguration) Validate() error {
-	return s.OnValidate()
+func (s SpyMachineConfiguration) Validate() (error, *bytes.Buffer) {
+	out := bytes.NewBufferString("")
+	return s.OnValidate(), out
 }
 
-func (s SpyMachineConfiguration) Install() error {
-	return s.OnInstall()
+func (s SpyMachineConfiguration) Install() (error, *bytes.Buffer) {
+	out := bytes.NewBufferString("")
+	return s.OnInstall(), out
 }
 
-func (s SpyMachineConfiguration) Uninstall() error {
-	return s.OnUninstall()
+func (s SpyMachineConfiguration) Uninstall() (error, *bytes.Buffer) {
+	out := bytes.NewBufferString("")
+	return s.OnUninstall(), out
 }
 
 func TestTweaker_CanReport(t *testing.T) {
