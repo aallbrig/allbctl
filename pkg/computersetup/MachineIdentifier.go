@@ -1,6 +1,7 @@
 package computersetup
 
 import (
+	"github.com/aallbrig/allbctl/pkg/computersetup/providers"
 	"github.com/aallbrig/allbctl/pkg/model"
 	"runtime"
 )
@@ -14,7 +15,7 @@ func (m MachineIdentifier) ConfigurationForMachine() model.IMachineConfiguration
 	case "windows":
 		return nil
 	case "darwin":
-		return MacbookConfigurationProvider{}
+		return providers.MacbookConfigurationProvider{}
 	case "linux":
 		return nil
 	default:
