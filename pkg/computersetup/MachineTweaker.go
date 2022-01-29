@@ -2,11 +2,12 @@ package computersetup
 
 import (
 	"fmt"
+	"github.com/aallbrig/allbctl/pkg/model"
 	"log"
 )
 
 type MachineTweaker struct {
-	MachineConfiguration []IMachineConfiguration
+	MachineConfiguration []model.IMachineConfiguration
 }
 type ValidateResult struct {
 	Name  string
@@ -21,10 +22,10 @@ func (t MachineTweaker) CheckCurrentMachine() []ValidateResult {
 			Valid: false,
 		}
 		err := machineConfig.Validate()
-		if err != nil {
+		if err == nil {
 			result.Valid = true
 		}
-		report = append(report)
+		report = append(report, *result)
 	}
 	return report
 }
@@ -44,7 +45,7 @@ func (t MachineTweaker) ApplyConfiguration() []error {
 	return errs
 }
 
-func NewMachineTweaker(configs []IMachineConfiguration) *MachineTweaker {
+func NewMachineTweaker(configs []model.IMachineConfiguration) *MachineTweaker {
 	return &MachineTweaker{
 		MachineConfiguration: configs,
 	}

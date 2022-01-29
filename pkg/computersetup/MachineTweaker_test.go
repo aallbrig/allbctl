@@ -1,17 +1,22 @@
 package computersetup
 
 import (
+	"github.com/aallbrig/allbctl/pkg/model"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
 type SpyMachineConfiguration struct {
-	OnValidate  func() ValidateResult
+	OnValidate  func() error
 	OnInstall   func() error
 	OnUninstall func() error
 }
 
-func (s SpyMachineConfiguration) Validate() ValidateResult {
+func (s SpyMachineConfiguration) Name() string {
+	return "Spy Machine Configuration"
+}
+
+func (s SpyMachineConfiguration) Validate() error {
 	return s.OnValidate()
 }
 
@@ -25,20 +30,17 @@ func (s SpyMachineConfiguration) Uninstall() error {
 
 func TestTweaker_CanReport(t *testing.T) {
 	called := false
-	name := "test_name"
-	exists := true
 	spy := new(SpyMachineConfiguration)
-	spy.OnValidate = func() ValidateResult {
+	spy.OnValidate = func() error {
 		called = true
-		return ValidateResult{name, exists}
+		return nil
 	}
-	machineConfigs := []IMachineConfiguration{spy}
+	machineConfigs := []model.IMachineConfiguration{spy}
 	sut := NewMachineTweaker(machineConfigs)
 
-	result := sut.CheckCurrentMachine()[0]
+	_ = sut.CheckCurrentMachine()[0]
 
 	assert.True(t, called)
-	assert.Equal(t, name, result.Name)
 }
 
 // func TestTweaker_CanApplyValidMachineConfiguration(t *testing.T) {
