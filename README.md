@@ -4,15 +4,16 @@
 
 ### Build
 ```bash
-hacks/build.sh
+make install-dependencies
+make build
 ```
 
 ### Tests
 ```bash
-hacks/test-commands.sh
-hacks/test-dockerfiles.sh
+make lint
+make test
 ```
 
 ### Contributing
-Please reference the CONTRIBUTING.md file!
+Please reference the `CONTRIBUTING.md` file.
 
