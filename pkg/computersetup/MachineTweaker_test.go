@@ -42,7 +42,7 @@ func TestTweaker_CanReport(t *testing.T) {
 	machineConfigs := []model.IMachineConfiguration{spy}
 	sut := NewMachineTweaker(machineConfigs)
 
-	_ = sut.CheckCurrentMachine()[0]
+	_, _ = sut.ConfigurationStatus()
 
 	assert.True(t, called)
 }

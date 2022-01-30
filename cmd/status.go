@@ -3,10 +3,11 @@ package cmd
 import (
 	"bytes"
 	"fmt"
+	computerSetup "github.com/aallbrig/allbctl/pkg/computersetup"
+	"github.com/aallbrig/allbctl/pkg/computersetup/os_agnostic"
+	"github.com/aallbrig/allbctl/pkg/status"
 	"log"
 
-	"github.com/aallbrig/allbctl/pkg/status"
-	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 )
 
@@ -15,41 +16,29 @@ var StatusCmd = &cobra.Command{
 	Use:   "status",
 	Short: "Checks the status of the machine for expected setup",
 	Run: func(cmd *cobra.Command, args []string) {
-		usrHomeDir, err := homedir.Dir()
+		out := bytes.NewBufferString("")
+		out.WriteString("System Info\n")
+		out.WriteString("-----\n")
+		err := status.SystemInfo(out)
+		out.WriteString("\n")
+
+		os := os_agnostic.OperatingSystem{}
+		identifier := computerSetup.MachineIdentifier{}
+		err, name := os.GetName()
 		if err != nil {
-			log.Fatal("Error getting user home directory")
+			log.Fatalf("Issues getting operating system identifier")
 		}
 
-		output := bytes.NewBufferString("")
-		output.WriteString("System Info\n")
-		output.WriteString("-----\n")
-		err = status.SystemInfo(output)
-		output.WriteString("\n")
-
-		directoriesToCheck := []string{"src", "bin"}
-		output.WriteString("Directory Expectations\n")
-		output.WriteString("-----\n")
-		for _, dir := range directoriesToCheck {
-			_ = status.CheckForDirectory(output, usrHomeDir, dir)
+		configProvider := identifier.ConfigurationProviderForOperatingSystem(name)
+		if configProvider == nil {
+			log.Fatal(fmt.Sprintf("No configuration provider found for operationg system %s", os))
 		}
-		output.WriteString("\n")
 
-		envVarsToCheck := []string{"GH_AUTH_TOKEN"}
-		checker := status.NewEnvironmentVariableChecker()
-		output.WriteString("Directory Expectations\n")
-		output.WriteString("-----\n")
-		for _, envVarKey := range envVarsToCheck {
-			_, result := checker.Check(envVarKey)
-			output.WriteString(result.String())
-		}
-		output.WriteString("\n")
+		tweaker := computerSetup.NewMachineTweaker(configProvider.GetConfiguration())
+		_, statusOut := tweaker.ConfigurationStatus()
+		out.WriteString(statusOut.String())
 
-		output.WriteString("Package Manager\n")
-		output.WriteString("-----\n")
-		err = status.PackageManager(output)
+		log.Print(out)
 
-		output.WriteString("\n")
-
-		fmt.Print(output)
 	},
 }
