@@ -9,26 +9,6 @@ import (
 type MachineTweaker struct {
 	MachineConfiguration []model.IMachineConfiguration
 }
-type ValidateResult struct {
-	Name  string
-	Valid bool
-}
-
-func (t MachineTweaker) CheckCurrentMachine() []ValidateResult {
-	var report []ValidateResult
-	for _, machineConfig := range t.MachineConfiguration {
-		result := &ValidateResult{
-			Name:  machineConfig.Name(),
-			Valid: false,
-		}
-		err, _ := machineConfig.Validate()
-		if err == nil {
-			result.Valid = true
-		}
-		report = append(report, *result)
-	}
-	return report
-}
 
 func (t MachineTweaker) ApplyConfiguration() ([]error, *bytes.Buffer) {
 	out := bytes.NewBufferString("")
@@ -49,6 +29,21 @@ func (t MachineTweaker) ApplyConfiguration() ([]error, *bytes.Buffer) {
 	}
 
 	return errs, out
+}
+
+func (t MachineTweaker) ConfigurationStatus() (errs []error, out *bytes.Buffer) {
+	out = bytes.NewBufferString("")
+
+	for _, configuration := range t.MachineConfiguration {
+		err, validateOut := configuration.Validate()
+		out.WriteString(validateOut.String() + "\n")
+
+		if err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	return
 }
 
 func NewMachineTweaker(configs []model.IMachineConfiguration) *MachineTweaker {

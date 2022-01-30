@@ -26,6 +26,10 @@ var ComputerSetupCmd = &cobra.Command{
 		os := os_agnostic.OperatingSystem{}
 		identifier := computerSetup.MachineIdentifier{}
 		err, name := os.GetName()
+		if err != nil {
+			log.Fatalf("Issues getting operating system identifier")
+		}
+
 		configProvider := identifier.ConfigurationProviderForOperatingSystem(name)
 		if configProvider == nil {
 			log.Fatal(fmt.Sprintf("No configuration provider found for operationg system %s", os))
