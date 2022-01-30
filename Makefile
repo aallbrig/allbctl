@@ -4,6 +4,7 @@ install-dependencies:
 	go get -u github.com/fatih/color
 	go get -u github.com/pkg/errors
 	go mod download
+	go mod vendor
 
 build:
 	go build -o bin/allbctl main.go

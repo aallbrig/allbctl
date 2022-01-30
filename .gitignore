@@ -1,3 +1,5 @@
+# vendor folder
+vendor
 # build artifacts
 bin
 allbctl_*
