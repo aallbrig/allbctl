@@ -33,14 +33,10 @@ jobs:
       - uses: actions/setup-go@v2
         with:
           go-version: '^1.13.1'
-      - uses: actions/cache@v2
-        with:
-          path: ./vendor
-          key: vendor
-          restore-keys: |
-            vendor
       - name: Go version
         run: go version
+      - name: Install dependencies
+        run: make install-dependencies
       - name: Lint source code
         run: make lint
 
@@ -52,14 +48,10 @@ jobs:
       - uses: actions/setup-go@v2
         with:
           go-version: '^1.13.1'
-      - uses: actions/cache@v2
-        with:
-          path: ./vendor
-          key: vendor
-          restore-keys: |
-            vendor
       - name: Go version
         run: go version
+      - name: Install dependencies
+        run: make install-dependencies
       - name: Lint source code
         run: make lint
 
@@ -74,17 +66,9 @@ jobs:
       - uses: actions/setup-go@v2
         with:
           go-version: '^1.13.1'
-      - uses: actions/cache@v2
-        with:
-          path: ./vendor
-          key: vendor
-          restore-keys: |
-            vendor
       - name: Go version
         run: go version
       - name: Install dependencies
         run: make install-dependencies
-      - name: Run testing
-        run: make test
       - name: Run build
         run: make build
