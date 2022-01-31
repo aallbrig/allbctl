@@ -35,6 +35,7 @@ func (t MachineTweaker) ConfigurationStatus() (errs []error, out *bytes.Buffer) 
 	out = bytes.NewBufferString("")
 
 	for _, configuration := range t.MachineConfiguration {
+		out.WriteString(fmt.Sprintf("%s\n-----\n", configuration.Name()))
 		err, validateOut := configuration.Validate()
 		out.WriteString(validateOut.String() + "\n")
 

@@ -42,6 +42,7 @@ func (m MacbookConfigurationProvider) GetConfiguration() []model.IMachineConfigu
 				macbook.NewScreenshotDirectory(),
 				macbook.NewTrackpadScrolling(),
 				macbook.NewTrackpadTwoFingerRightClick(),
+				macbook.NewDockOnLeft(),
 			},
 		},
 	}

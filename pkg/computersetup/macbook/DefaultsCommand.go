@@ -56,18 +56,17 @@ func (d DefaultsCommand) ReadCurrentValue() (error, string) {
 }
 
 func (d DefaultsCommand) Validate() (error, *bytes.Buffer) {
-	out := bytes.NewBufferString(fmt.Sprintf("Defaults setting %s %s ", d.Domain, d.Key))
+	out := bytes.NewBufferString("")
 	err, currentValue := d.ReadCurrentValue()
-	if err != nil {
-		return err, out
-	}
 
-	if currentValue != d.ExpectedValue {
+	if err != nil || currentValue != d.ExpectedValue {
 		_, _ = color.New(color.FgRed).Fprint(out, "INCORRECT")
 		err = errors.New("current value is not expected value")
 	} else {
 		_, _ = color.New(color.FgGreen).Fprint(out, "CORRECT")
 	}
+
+	out.WriteString(fmt.Sprintf(" defaults setting %s %s ", d.Domain, d.Key))
 
 	return err, out
 }

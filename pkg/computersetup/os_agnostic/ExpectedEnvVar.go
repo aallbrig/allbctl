@@ -20,7 +20,7 @@ func (e ExpectedEnvVar) Name() string {
 }
 
 func (e ExpectedEnvVar) Validate() (err error, out *bytes.Buffer) {
-	out = bytes.NewBufferString(fmt.Sprintf("%s ", e.Name()))
+	out = bytes.NewBufferString("")
 	_, exists := os.LookupEnv(e.Key)
 	if !exists {
 		_, _ = color.New(color.FgRed).Fprint(out, "MISSING")
@@ -28,6 +28,7 @@ func (e ExpectedEnvVar) Validate() (err error, out *bytes.Buffer) {
 	} else {
 		_, _ = color.New(color.FgGreen).Fprint(out, "PRESENT")
 	}
+	out.WriteString(fmt.Sprintf(" %s", e.Name()))
 	return err, out
 }
 
