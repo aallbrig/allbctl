@@ -1,6 +1,9 @@
 package macbook
 
-import "bytes"
+import (
+	"bytes"
+	"os/exec"
+)
 
 type TrackpadTwoFingerRightClick struct {
 	ConfigName    string
@@ -15,11 +18,10 @@ var rightClickExpectedState = DefaultsCommand{
 	Domain:        "com.apple.AppleMultitouchTrackpad",
 	Key:           "TrackpadRightClick",
 	ExpectedValue: "1",
-	DefaultValue:  "0",
+	ValueType:     DefaultsInt,
 }
 
 func NewTrackpadTwoFingerRightClick() *TrackpadTwoFingerRightClick {
-	rightClickExpectedState.ReadCurrentValue()
 	return &TrackpadTwoFingerRightClick{ConfigName: "Trackpad Two Finger Right Click", ExpectedState: rightClickExpectedState}
 }
 
@@ -32,14 +34,29 @@ func (t TrackpadTwoFingerRightClick) Validate() (error, *bytes.Buffer) {
 
 func (t TrackpadTwoFingerRightClick) Install() (error, *bytes.Buffer) {
 	out := bytes.NewBufferString("")
-	err, installOut := t.ExpectedState.Install()
+	err, validateOut := t.Validate()
+	if err == nil {
+		out.WriteString(validateOut.String())
+		return nil, out
+	}
+	err, installOut := t.ExpectedState.WriteExpectedValue()
 	out.WriteString(installOut.String())
+
+	cmd := exec.Command("killall", "SystemUIServer")
+	cmd.Stdout = out
+	cmd.Stderr = out
+	err = cmd.Run()
 	return err, out
 }
 
 func (t TrackpadTwoFingerRightClick) Uninstall() (error, *bytes.Buffer) {
 	out := bytes.NewBufferString("")
-	err, uninstallOut := t.ExpectedState.Uninstall()
+	err, uninstallOut := t.ExpectedState.Delete()
 	out.WriteString(uninstallOut.String())
+
+	cmd := exec.Command("killall", "SystemUIServer")
+	cmd.Stdout = out
+	cmd.Stderr = out
+	err = cmd.Run()
 	return err, out
 }

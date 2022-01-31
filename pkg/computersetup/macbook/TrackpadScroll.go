@@ -14,14 +14,14 @@ var scrollingEnabled = DefaultsCommand{
 	Domain:        "com.apple.AppleMultitouchTrackpad",
 	Key:           "TrackpadScroll",
 	ExpectedValue: "1",
-	DefaultValue:  "1",
+	ValueType:     DefaultsInt,
 }
 
 var scrollDirection = DefaultsCommand{
 	Domain:        "'Apple Global Domain'",
 	Key:           "com.apple.swipescrolldirection",
 	ExpectedValue: "0",
-	DefaultValue:  "1",
+	ValueType:     DefaultsInt,
 }
 
 func NewTrackpadScrolling() *TrackpadScroll {
@@ -38,7 +38,7 @@ func (t TrackpadScroll) Validate() (error, *bytes.Buffer) {
 	}
 
 	err, validateOut = scrollingEnabled.Validate()
-	out.WriteString(validateOut.String())
+	out.WriteString(validateOut.String() + "\n")
 	if err != nil {
 		return err, out
 	}
@@ -48,30 +48,41 @@ func (t TrackpadScroll) Validate() (error, *bytes.Buffer) {
 
 func (t TrackpadScroll) Install() (error, *bytes.Buffer) {
 	out := bytes.NewBufferString("")
-	err, installOut := scrollDirection.Install()
-	out.WriteString(installOut.String() + "\n")
-	if err != nil {
-		return err, out
+	err, validateOut := scrollDirection.Validate()
+	if err == nil {
+		out.WriteString(validateOut.String() + "\n")
+	} else {
+		err, installOut := scrollDirection.WriteExpectedValue()
+		out.WriteString(installOut.String() + "\n")
+		if err != nil {
+			return err, out
+		}
 	}
 
-	err, installOut = scrollingEnabled.Uninstall()
-	out.WriteString(installOut.String())
-	if err != nil {
-		return err, out
+	err, validateOut = scrollingEnabled.Validate()
+	if err == nil {
+		out.WriteString(validateOut.String() + "\n")
+	} else {
+		err, installOut := scrollingEnabled.WriteExpectedValue()
+		out.WriteString(installOut.String() + "\n")
+		if err != nil {
+			return err, out
+		}
 	}
+
 	return nil, out
 }
 
 func (t TrackpadScroll) Uninstall() (error, *bytes.Buffer) {
 	out := bytes.NewBufferString("")
-	err, uninstallOut := scrollDirection.Uninstall()
+	err, uninstallOut := scrollDirection.Delete()
 	out.WriteString(uninstallOut.String() + "\n")
 	if err != nil {
 		return err, out
 	}
 
-	err, uninstallOut = scrollingEnabled.Uninstall()
-	out.WriteString(uninstallOut.String())
+	err, uninstallOut = scrollingEnabled.Delete()
+	out.WriteString(uninstallOut.String() + "\n")
 	if err != nil {
 		return err, out
 	}

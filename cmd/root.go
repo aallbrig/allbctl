@@ -37,6 +37,7 @@ func init() {
 	cobra.OnInitialize(initConfig)
 	rootCmd.AddCommand(ComputerSetupCmd)
 	rootCmd.AddCommand(StatusCmd)
+	rootCmd.AddCommand(ResetCmd)
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.allbctl.yaml)")
 }

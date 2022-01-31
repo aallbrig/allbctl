@@ -73,17 +73,14 @@ func (m MachineConfigurationGroup) Uninstall() (error, *bytes.Buffer) {
 	}
 
 	var errs []error
-	for _, config := range m.Configs {
-		err, validateOut := config.Validate()
-		out.WriteString(validateOut.String())
+	for i := len(m.Configs) - 1; i >= 0; i-- {
+		config := m.Configs[i]
+
+		err, uninstallOut := config.Uninstall()
+		out.WriteString(uninstallOut.String())
 
 		if err != nil {
-			err, installOut := config.Install()
-			out.WriteString(installOut.String())
-
-			if err != nil {
-				errs = append(errs, err)
-			}
+			errs = append(errs, err)
 		}
 	}
 

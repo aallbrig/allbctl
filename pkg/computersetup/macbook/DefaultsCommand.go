@@ -9,15 +9,36 @@ import (
 	"strings"
 )
 
+type DefaultsType int
+
+const (
+	DefaultsBool DefaultsType = iota
+	DefaultsString
+	DefaultsInt
+)
+
+func (t DefaultsType) String() string {
+	switch t {
+	case DefaultsBool:
+		return "-bool"
+	case DefaultsString:
+		return "-string"
+	case DefaultsInt:
+		return "-int"
+	}
+	return ""
+}
+
+func (t DefaultsType) EnumIndex() int {
+	return int(t)
+}
+
+type UninstallDefaults func(d DefaultsCommand) (error, *bytes.Buffer)
 type DefaultsCommand struct {
 	Domain        string
 	Key           string
 	ExpectedValue string
-	DefaultValue  string
-}
-
-func NewDefaultsCommand(domain string, key string) *DefaultsCommand {
-	return &DefaultsCommand{Domain: domain, Key: key}
+	ValueType     DefaultsType
 }
 
 func (d DefaultsCommand) ReadCurrentValue() (error, string) {
@@ -51,28 +72,40 @@ func (d DefaultsCommand) Validate() (error, *bytes.Buffer) {
 	return err, out
 }
 
-func (d DefaultsCommand) Install() (error, *bytes.Buffer) {
+func (d DefaultsCommand) WriteExpectedValue() (error, *bytes.Buffer) {
 	out := bytes.NewBufferString("")
-	validationError, _ := d.Validate()
+	validationError, validateOut := d.Validate()
 
 	// already valid -- no need to reinstall
 	if validationError == nil {
+		out.WriteString(validateOut.String())
 		return nil, out
 	}
 
-	cmd := exec.Command("defaults", "write", d.Domain, d.Key, d.ExpectedValue)
+	cmd := exec.Command(
+		"defaults",
+		"write",
+		d.Domain,
+		fmt.Sprintf("\"%s\"", d.Key),
+		d.ValueType.String(),
+		fmt.Sprintf("\"%s\"", d.ExpectedValue),
+	)
+	cmd.Stdout = out
+	cmd.Stderr = out
 	err := cmd.Run()
 	if err != nil {
 		return err, out
 	}
 
-	return nil, nil
+	return nil, out
 }
 
-func (d DefaultsCommand) Uninstall() (error, *bytes.Buffer) {
+func (d DefaultsCommand) Delete() (error, *bytes.Buffer) {
 	out := bytes.NewBufferString("")
 
-	cmd := exec.Command("defaults", "write", d.Domain, d.Key, d.DefaultValue)
+	cmd := exec.Command("defaults", "delete", d.Domain, d.Key)
+	cmd.Stdout = out
+	cmd.Stderr = out
 	err := cmd.Run()
 	if err != nil {
 		return err, out
