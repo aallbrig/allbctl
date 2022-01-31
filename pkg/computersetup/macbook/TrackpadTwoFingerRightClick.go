@@ -6,12 +6,11 @@ import (
 )
 
 type TrackpadTwoFingerRightClick struct {
-	ConfigName    string
 	ExpectedState DefaultsCommand
 }
 
 func (t TrackpadTwoFingerRightClick) Name() string {
-	return t.ConfigName
+	return "Trackpad Two Finger Right Click"
 }
 
 var rightClickExpectedState = DefaultsCommand{
@@ -22,7 +21,7 @@ var rightClickExpectedState = DefaultsCommand{
 }
 
 func NewTrackpadTwoFingerRightClick() *TrackpadTwoFingerRightClick {
-	return &TrackpadTwoFingerRightClick{ConfigName: "Trackpad Two Finger Right Click", ExpectedState: rightClickExpectedState}
+	return &TrackpadTwoFingerRightClick{ExpectedState: rightClickExpectedState}
 }
 
 func (t TrackpadTwoFingerRightClick) Validate() (error, *bytes.Buffer) {

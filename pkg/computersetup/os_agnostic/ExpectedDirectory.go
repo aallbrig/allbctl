@@ -22,7 +22,6 @@ func (e ExpectedDirectory) Name() string {
 
 func (e ExpectedDirectory) Validate() (err error, out *bytes.Buffer) {
 	out = bytes.NewBufferString("")
-	out.WriteString(fmt.Sprintf("%s ", e.Path))
 	if stat, statErr := os.Stat(e.Path); statErr != nil && !os.IsNotExist(statErr) {
 		_, _ = color.New(color.FgRed).Fprint(out, "stat error")
 		err = statErr
@@ -32,6 +31,7 @@ func (e ExpectedDirectory) Validate() (err error, out *bytes.Buffer) {
 	} else {
 		_, _ = color.New(color.FgGreen).Fprint(out, "PRESENT")
 	}
+	out.WriteString(fmt.Sprintf(" %s", e.Path))
 
 	return
 }
