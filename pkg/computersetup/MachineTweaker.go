@@ -46,6 +46,23 @@ func (t MachineTweaker) ConfigurationStatus() (errs []error, out *bytes.Buffer) 
 	return
 }
 
+func (t MachineTweaker) ResetConfiguration() (errs []error, out *bytes.Buffer) {
+	out = bytes.NewBufferString("")
+
+	// Uninstall in reverse
+	for i := len(t.MachineConfiguration) - 1; i >= 0; i-- {
+		configuration := t.MachineConfiguration[i]
+		err, uninstallOut := configuration.Uninstall()
+		out.WriteString(uninstallOut.String() + "\n")
+
+		if err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	return
+}
+
 func NewMachineTweaker(configs []model.IMachineConfiguration) *MachineTweaker {
 	return &MachineTweaker{
 		MachineConfiguration: configs,
