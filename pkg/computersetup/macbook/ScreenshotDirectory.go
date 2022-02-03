@@ -33,32 +33,44 @@ func (s ScreenshotDirectory) Validate() (error, *bytes.Buffer) {
 
 func (s ScreenshotDirectory) Install() (error, *bytes.Buffer) {
 	out := bytes.NewBufferString("")
-	cmd := exec.Command("mkdir", "-p", screenshotsDirectory)
-	cmd.Stdout = out
-	cmd.Stderr = out
-	err := cmd.Run()
+	err, createOut := CreateScreenshotsDirectory()
+	out.WriteString(createOut.String())
 	if err != nil {
 		return err, out
 	}
 
 	err, installOut := screenshotDirectoryExpectedState.WriteExpectedValue()
 	out.WriteString(installOut.String())
+	if err != nil {
+		return err, out
+	}
 
-	cmd = exec.Command("killall", "SystemUIServer")
-	cmd.Stdout = out
-	cmd.Stderr = out
-	err = cmd.Run()
+	err, _ = RestartSystemUIServer()
+
+	err, validateOut := s.Validate()
+	out.WriteString(validateOut.String())
+	if err != nil {
+		return err, out
+	}
 	return err, out
+}
+
+func CreateScreenshotsDirectory() (error, *bytes.Buffer) {
+	out := bytes.NewBufferString("Creating screenshots directory")
+	cmd := exec.Command("mkdir", "-p", screenshotsDirectory)
+	err := cmd.Run()
+	if err != nil {
+		out.WriteString(" create fail ❌\n")
+		return err, out
+	}
+	out.WriteString(" success ✅\n")
+	return nil, out
 }
 
 func (s ScreenshotDirectory) Uninstall() (error, *bytes.Buffer) {
 	out := bytes.NewBufferString("")
-	err, uninstallOut := screenshotDirectoryExpectedState.Delete()
-	out.WriteString(uninstallOut.String())
+	err, _ := screenshotDirectoryExpectedState.Delete()
 
-	cmd := exec.Command("killall", "SystemUIServer")
-	cmd.Stdout = out
-	cmd.Stderr = out
-	err = cmd.Run()
+	err, _ = RestartSystemUIServer()
 	return err, out
 }
