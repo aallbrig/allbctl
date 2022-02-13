@@ -8,9 +8,11 @@ import (
 	"os"
 )
 
-var githubAuthTokenEnvVar = "GH_AUTH_TOKEN"
-var tokenProvider githubAuthTokenProvider = &GithubAuthTokenProvider{}
-var ghProvider githubClientProvider = &GithubClientProvider{}
+// GithubAuthTokenEnvVar https://cli.github.com/manual/gh_help_environment
+// default environment variables: GH_TOKEN, GITHUB_TOKEN
+var GithubAuthTokenEnvVar = "GITHUB_TOKEN"
+var tokenProvider IGithubTokenProvider = &GithubAuthTokenProvider{}
+var ghProvider IGithubClientProvider = &GithubClientProvider{}
 
 type tokenSource struct {
 	AccessToken string
@@ -23,7 +25,7 @@ func (t *tokenSource) Token() (*oauth2.Token, error) {
 	return token, nil
 }
 
-type githubAuthTokenProvider interface {
+type IGithubTokenProvider interface {
 	GetAuthToken() (string, error)
 }
 
@@ -32,10 +34,10 @@ type GithubAuthTokenProvider struct{}
 
 // GetAuthToken gets github auth token
 func (provider *GithubAuthTokenProvider) GetAuthToken() (authToken string, err error) {
-	authToken = os.Getenv(githubAuthTokenEnvVar)
+	authToken = os.Getenv(GithubAuthTokenEnvVar)
 
 	if authToken == "" {
-		err = fmt.Errorf("%s envvar not set", githubAuthTokenEnvVar)
+		err = fmt.Errorf("%s envvar not set", GithubAuthTokenEnvVar)
 	}
 
 	return
@@ -56,7 +58,7 @@ type GithubClient struct {
 	Search githubSearchService
 }
 
-type githubClientProvider interface {
+type IGithubClientProvider interface {
 	GetGithubClient(accessToken string) (client GithubClient, err error)
 }
 

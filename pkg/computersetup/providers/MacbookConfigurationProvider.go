@@ -1,9 +1,11 @@
 package providers
 
 import (
-	"github.com/aallbrig/allbctl/pkg/computersetup/macbook"
+	"github.com/aallbrig/allbctl/pkg/computersetup/dotfiles"
 	"github.com/aallbrig/allbctl/pkg/computersetup/os_agnostic"
+	"github.com/aallbrig/allbctl/pkg/externalapi"
 	"github.com/aallbrig/allbctl/pkg/model"
+	"log"
 	"path/filepath"
 )
 
@@ -25,25 +27,18 @@ func (m MacbookConfigurationProvider) GetConfiguration() []model.IMachineConfigu
 			GroupName: "Expected Environment Variables",
 			Configs: []model.IMachineConfiguration{
 				os_agnostic.ExpectedEnvVar{
-					Key: "GH_AUTH_TOKEN",
+					Key: externalapi.GithubAuthTokenEnvVar,
 					OnInstall: func() error {
-						// log out instructions/link to documentation for what this envvar is
+						log.Println("Read documentation: https://cli.github.com/manual/gh_help_environment")
 						return nil
 					},
 					OnUninstall: func() error {
+						log.Println("❌ It is up to the user to uninstall this environment variable")
 						return nil
 					},
 				},
 			},
 		},
-		model.MachineConfigurationGroup{
-			GroupName: "Macbook Configuration",
-			Configs: []model.IMachineConfiguration{
-				macbook.NewScreenshotDirectory(),
-				macbook.NewTrackpadScrolling(),
-				macbook.NewTrackpadTwoFingerRightClick(),
-				macbook.NewDockOnLeft(),
-			},
-		},
+		dotfiles.NewDotfilesGremlin(),
 	}
 }

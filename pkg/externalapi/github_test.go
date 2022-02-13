@@ -15,7 +15,7 @@ func (provider *MockGHAuthTokenProviderEmpty) GetAuthToken() (authToken string, 
 	authToken = os.Getenv("")
 
 	if authToken == "" {
-		err = fmt.Errorf("%s envvar not set", githubAuthTokenEnvVar)
+		err = fmt.Errorf("%s envvar not set", GithubAuthTokenEnvVar)
 	}
 
 	return
