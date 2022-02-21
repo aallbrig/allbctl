@@ -29,7 +29,7 @@ test:
 	go test -v ./...
 
 lint:
-	golint ./...
+	golint `go list ./... | grep -v vendor/`
 
 run:
 	go run main.go
