@@ -1,0 +1,9 @@
+vendor
+Dockerfile
+README.md
+LICENSE
+.git
+.github
+bin
+.DS_Store
+.idea
