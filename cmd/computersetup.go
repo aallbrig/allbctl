@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 	computerSetup "github.com/aallbrig/allbctl/pkg/computersetup"
-	"github.com/aallbrig/allbctl/pkg/computersetup/os_agnostic"
+	"github.com/aallbrig/allbctl/pkg/computersetup/osagnostic"
 	"github.com/spf13/cobra"
 	"log"
 )
@@ -18,9 +18,9 @@ var ComputerSetupCmd = &cobra.Command{
 	},
 	Short: "Configure host to developer preferences (cross platform)",
 	Run: func(cmd *cobra.Command, args []string) {
-		os := os_agnostic.OperatingSystem{}
+		os := osagnostic.OperatingSystem{}
 		identifier := computerSetup.MachineIdentifier{}
-		err, name := os.GetName()
+		name, err := os.GetName()
 		if err != nil {
 			log.Fatalf("Issues getting operating system identifier")
 		}

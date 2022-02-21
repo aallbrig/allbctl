@@ -17,7 +17,7 @@ func TestCheckerCanFindExistingEnvVar(t *testing.T) {
 	}
 	checker := NewEnvironmentVariableChecker()
 
-	err, result := checker.Check(fakeKey)
+	result, err := checker.Check(fakeKey)
 	if err != nil {
 		t.Error(err)
 	}
@@ -34,7 +34,7 @@ func TestCheckerCheckResult_CanOutputStringRepresentation(t *testing.T) {
 	}
 	sut := NewEnvironmentVariableChecker()
 
-	err, result := sut.Check(fakeKey)
+	result, err := sut.Check(fakeKey)
 	if err != nil {
 		t.Error(err)
 	}

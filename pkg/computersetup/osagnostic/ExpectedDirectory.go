@@ -1,4 +1,4 @@
-package os_agnostic
+package osagnostic
 
 import (
 	"bytes"
@@ -20,7 +20,7 @@ func (e ExpectedDirectory) Name() string {
 	return fmt.Sprintf("Expected Directory %s", e.Path)
 }
 
-func (e ExpectedDirectory) Validate() (err error, out *bytes.Buffer) {
+func (e ExpectedDirectory) Validate() (out *bytes.Buffer, err error) {
 	out = bytes.NewBufferString("")
 	if stat, statErr := os.Stat(e.Path); statErr != nil && !os.IsNotExist(statErr) {
 		_, _ = color.New(color.FgRed).Fprint(out, "stat error")
@@ -36,12 +36,12 @@ func (e ExpectedDirectory) Validate() (err error, out *bytes.Buffer) {
 	return
 }
 
-func (e ExpectedDirectory) Install() (error, *bytes.Buffer) {
+func (e ExpectedDirectory) Install() (*bytes.Buffer, error) {
 	out := bytes.NewBufferString("")
-	err, validateOut := e.Validate()
+	validateOut, err := e.Validate()
 	out.WriteString(validateOut.String() + "\n")
 	if err != nil {
-		return err, out
+		return out, err
 	}
 
 	err = os.Mkdir(e.Path, e.Permission)
@@ -51,17 +51,17 @@ func (e ExpectedDirectory) Install() (error, *bytes.Buffer) {
 		_, _ = color.New(color.FgGreen).Fprint(out, fmt.Sprintf("Create success %s", e.Path))
 	}
 
-	return err, out
+	return out, err
 }
 
-func (e ExpectedDirectory) Uninstall() (error, *bytes.Buffer) {
+func (e ExpectedDirectory) Uninstall() (*bytes.Buffer, error) {
 	out := bytes.NewBufferString("")
-	err, _ := e.Validate()
+	_, err := e.Validate()
 	if err != nil {
-		return nil, out
+		return out, nil
 	}
 
 	err = os.RemoveAll(e.Path)
 
-	return err, out
+	return out, err
 }

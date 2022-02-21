@@ -17,19 +17,19 @@ func (s SpyMachineConfiguration) Name() string {
 	return "Spy Machine Configuration"
 }
 
-func (s SpyMachineConfiguration) Validate() (error, *bytes.Buffer) {
+func (s SpyMachineConfiguration) Validate() (*bytes.Buffer, error) {
 	out := bytes.NewBufferString("")
-	return s.OnValidate(), out
+	return out, s.OnValidate()
 }
 
-func (s SpyMachineConfiguration) Install() (error, *bytes.Buffer) {
+func (s SpyMachineConfiguration) Install() (*bytes.Buffer, error) {
 	out := bytes.NewBufferString("")
-	return s.OnInstall(), out
+	return out, s.OnInstall()
 }
 
-func (s SpyMachineConfiguration) Uninstall() (error, *bytes.Buffer) {
+func (s SpyMachineConfiguration) Uninstall() (*bytes.Buffer, error) {
 	out := bytes.NewBufferString("")
-	return s.OnUninstall(), out
+	return out, s.OnUninstall()
 }
 
 func TestTweaker_CanReport(t *testing.T) {

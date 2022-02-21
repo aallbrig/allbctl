@@ -4,14 +4,14 @@ import (
 	"bytes"
 	"fmt"
 	computerSetup "github.com/aallbrig/allbctl/pkg/computersetup"
-	"github.com/aallbrig/allbctl/pkg/computersetup/os_agnostic"
+	"github.com/aallbrig/allbctl/pkg/computersetup/osagnostic"
 	"github.com/aallbrig/allbctl/pkg/status"
 	"log"
 
 	"github.com/spf13/cobra"
 )
 
-// StatusCmd represents status command
+// ResetCmd represents status command
 var ResetCmd = &cobra.Command{
 	Use:   "reset",
 	Short: "Resets machine",
@@ -22,9 +22,9 @@ var ResetCmd = &cobra.Command{
 		err := status.SystemInfo(out)
 		out.WriteString("\n")
 
-		os := os_agnostic.OperatingSystem{}
+		os := osagnostic.OperatingSystem{}
 		identifier := computerSetup.MachineIdentifier{}
-		err, name := os.GetName()
+		name, err := os.GetName()
 		if err != nil {
 			log.Fatalf("Issues getting operating system identifier")
 		}

@@ -1,4 +1,4 @@
-package os_agnostic
+package osagnostic
 
 import (
 	"github.com/mitchellh/go-homedir"
@@ -7,12 +7,12 @@ import (
 
 type OperatingSystem struct{}
 
-func (o OperatingSystem) GetName() (err error, os string) {
+func (o OperatingSystem) GetName() (os string, err error) {
 	os = runtime.GOOS
 	return
 }
 
-func (o OperatingSystem) HomeDir() (err error, path string) {
+func (o OperatingSystem) HomeDir() (path string, err error) {
 	path, err = homedir.Dir()
 	return
 }

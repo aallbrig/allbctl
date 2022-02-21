@@ -15,15 +15,15 @@ func (m MachineConfigurationGroup) Name() string {
 	return m.GroupName
 }
 
-func (m MachineConfigurationGroup) Validate() (error, *bytes.Buffer) {
+func (m MachineConfigurationGroup) Validate() (*bytes.Buffer, error) {
 	out := bytes.NewBufferString("")
 	if len(m.Configs) == 0 {
-		return fmt.Errorf("%s No configuration for section", m.GroupName), out
+		return out, fmt.Errorf("%s No configuration for section", m.GroupName)
 	}
 
 	var errs []error
 	for _, config := range m.Configs {
-		err, validateOut := config.Validate()
+		validateOut, err := config.Validate()
 		out.WriteString(validateOut.String() + "\n")
 
 		if err != nil {
@@ -32,25 +32,25 @@ func (m MachineConfigurationGroup) Validate() (error, *bytes.Buffer) {
 	}
 
 	if len(errs) != 0 {
-		return WrapErrors(errors.New(m.GroupName), errs), out
+		return out, WrapErrors(errors.New(m.GroupName), errs)
 	}
 
-	return nil, out
+	return out, nil
 }
 
-func (m MachineConfigurationGroup) Install() (error, *bytes.Buffer) {
+func (m MachineConfigurationGroup) Install() (*bytes.Buffer, error) {
 	out := bytes.NewBufferString("")
 	if len(m.Configs) == 0 {
-		return fmt.Errorf("%s No configuration for section", m.GroupName), out
+		return out, fmt.Errorf("%s No configuration for section", m.GroupName)
 	}
 
 	var errs []error
 	for _, config := range m.Configs {
-		err, validateOut := config.Validate()
+		validateOut, err := config.Validate()
 
 		if err != nil {
 			out.WriteString(fmt.Sprintf("\tInstalling: %s\n", config.Name()))
-			err, installOut := config.Install()
+			installOut, err := config.Install()
 			out.WriteString(installOut.String())
 
 			if err != nil {
@@ -62,16 +62,16 @@ func (m MachineConfigurationGroup) Install() (error, *bytes.Buffer) {
 	}
 
 	if len(errs) != 0 {
-		return WrapErrors(errors.New(m.GroupName), errs), out
+		return out, WrapErrors(errors.New(m.GroupName), errs)
 	}
 
-	return nil, out
+	return out, nil
 }
 
-func (m MachineConfigurationGroup) Uninstall() (error, *bytes.Buffer) {
+func (m MachineConfigurationGroup) Uninstall() (*bytes.Buffer, error) {
 	out := bytes.NewBufferString("")
 	if len(m.Configs) == 0 {
-		return fmt.Errorf("%s No configuration for section", m.GroupName), out
+		return out, fmt.Errorf("%s No configuration for section", m.GroupName)
 	}
 
 	var errs []error
@@ -79,7 +79,7 @@ func (m MachineConfigurationGroup) Uninstall() (error, *bytes.Buffer) {
 		config := m.Configs[i]
 		out.WriteString(fmt.Sprintf("\tUninstalling: %s\n", config.Name()))
 
-		err, uninstallOut := config.Uninstall()
+		uninstallOut, err := config.Uninstall()
 		out.WriteString(uninstallOut.String())
 
 		if err != nil {
@@ -88,10 +88,10 @@ func (m MachineConfigurationGroup) Uninstall() (error, *bytes.Buffer) {
 	}
 
 	if len(errs) != 0 {
-		return WrapErrors(errors.New(m.GroupName), errs), out
+		return out, WrapErrors(errors.New(m.GroupName), errs)
 	}
 
-	return nil, out
+	return out, nil
 }
 
 func WrapErrors(err error, errs []error) error {

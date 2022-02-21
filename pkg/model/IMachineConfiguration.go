@@ -4,7 +4,7 @@ import "bytes"
 
 type IMachineConfiguration interface {
 	Name() string
-	Validate() (err error, out *bytes.Buffer)
-	Install() (err error, out *bytes.Buffer)
-	Uninstall() (err error, out *bytes.Buffer)
+	Validate() (out *bytes.Buffer, err error)
+	Install() (out *bytes.Buffer, err error)
+	Uninstall() (out *bytes.Buffer, err error)
 }

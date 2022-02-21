@@ -2,31 +2,31 @@ package providers
 
 import (
 	"github.com/aallbrig/allbctl/pkg/computersetup/dotfiles"
-	"github.com/aallbrig/allbctl/pkg/computersetup/os_agnostic"
+	"github.com/aallbrig/allbctl/pkg/computersetup/osagnostic"
 	"github.com/aallbrig/allbctl/pkg/externalapi"
 	"github.com/aallbrig/allbctl/pkg/model"
 	"log"
 	"path/filepath"
 )
 
-var os = os_agnostic.OperatingSystem{}
+var os = osagnostic.OperatingSystem{}
 
 type MacbookConfigurationProvider struct{}
 
 func (m MacbookConfigurationProvider) GetConfiguration() []model.IMachineConfiguration {
-	_, homeDir := os.HomeDir()
+	homeDir, _ := os.HomeDir()
 	return []model.IMachineConfiguration{
 		model.MachineConfigurationGroup{
 			GroupName: "Expected Directories",
 			Configs: []model.IMachineConfiguration{
-				os_agnostic.NewExpectedDirectory(filepath.Join(homeDir, "src")),
-				os_agnostic.NewExpectedDirectory(filepath.Join(homeDir, "bin")),
+				osagnostic.NewExpectedDirectory(filepath.Join(homeDir, "src")),
+				osagnostic.NewExpectedDirectory(filepath.Join(homeDir, "bin")),
 			},
 		},
 		model.MachineConfigurationGroup{
 			GroupName: "Expected Environment Variables",
 			Configs: []model.IMachineConfiguration{
-				os_agnostic.ExpectedEnvVar{
+				osagnostic.ExpectedEnvVar{
 					Key: externalapi.GithubAuthTokenEnvVar,
 					OnInstall: func() error {
 						log.Println("Read documentation: https://cli.github.com/manual/gh_help_environment")

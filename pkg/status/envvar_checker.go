@@ -20,10 +20,10 @@ func NewEnvironmentVariableChecker() *EnvironmentVariableChecker {
 	return &EnvironmentVariableChecker{}
 }
 
-func (checker EnvironmentVariableChecker) Check(envVarName string) (err error, result *CheckEnvVarResult) {
+func (checker EnvironmentVariableChecker) Check(envVarName string) (result *CheckEnvVarResult, err error) {
 	_, exists := os.LookupEnv(envVarName)
-	return err, &CheckEnvVarResult{
+	return &CheckEnvVarResult{
 		Name:   envVarName,
 		Exists: exists,
-	}
+	}, err
 }
