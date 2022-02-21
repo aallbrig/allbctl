@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/aallbrig/allbctl/pkg/computersetup/os_agnostic"
+	"github.com/aallbrig/allbctl/pkg/computersetup/osagnostic"
 	"github.com/aallbrig/allbctl/pkg/externalapi"
 	"github.com/aallbrig/allbctl/pkg/externalcmd"
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
@@ -29,10 +29,10 @@ func (d DotFilerGremlin) Name() string {
 	return "Dotfiles Gremlin"
 }
 
-func (d DotFilerGremlin) Validate() (err error, out *bytes.Buffer) {
-	osAgonstic := os_agnostic.OperatingSystem{}
+func (d DotFilerGremlin) Validate() (out *bytes.Buffer, err error) {
+	osAgonstic := osagnostic.OperatingSystem{}
 	dotfiles, err := d.GetMyDotfiles()
-	_, homeDir := osAgonstic.HomeDir()
+	homeDir, _ := osAgonstic.HomeDir()
 	for _, repo := range dotfiles {
 		repoLocation := path.Join(homeDir, "src", *repo.Name)
 		if _, statErr := os.Stat(repoLocation); os.IsNotExist(statErr) {
@@ -42,9 +42,9 @@ func (d DotFilerGremlin) Validate() (err error, out *bytes.Buffer) {
 	return
 }
 
-func (d DotFilerGremlin) Install() (err error, out *bytes.Buffer) {
+func (d DotFilerGremlin) Install() (out *bytes.Buffer, err error) {
 	out = bytes.NewBufferString("")
-	osAgnostic := os_agnostic.OperatingSystem{}
+	osAgnostic := osagnostic.OperatingSystem{}
 	dotfiles, err := d.GetMyDotfiles()
 	if err != nil {
 		out.WriteString(fmt.Sprintf("❌ Error getting dotfiles %v\n", err))
@@ -72,7 +72,7 @@ func (d DotFilerGremlin) Install() (err error, out *bytes.Buffer) {
 		Password: token,
 	}
 
-	_, homeDir := osAgnostic.HomeDir()
+	homeDir, _ := osAgnostic.HomeDir()
 	for _, repo := range dotfiles {
 		repoLocation := path.Join(homeDir, "src", *repo.Name)
 		if _, statErr := os.Stat(repoLocation); os.IsNotExist(statErr) {
@@ -87,7 +87,7 @@ func (d DotFilerGremlin) Install() (err error, out *bytes.Buffer) {
 	return
 }
 
-func (d DotFilerGremlin) Uninstall() (err error, out *bytes.Buffer) {
+func (d DotFilerGremlin) Uninstall() (out *bytes.Buffer, err error) {
 	return
 }
 

@@ -15,11 +15,11 @@ func (t MachineTweaker) ApplyConfiguration() ([]error, *bytes.Buffer) {
 	var errs []error
 	for _, configuration := range t.MachineConfiguration {
 		out.WriteString(fmt.Sprintf("Applying configuration: %s\n", configuration.Name()))
-		err, validateOut := configuration.Validate()
+		validateOut, err := configuration.Validate()
 		out.WriteString(validateOut.String() + "\n")
 
 		if err != nil {
-			err, installOut := configuration.Install()
+			installOut, err := configuration.Install()
 			out.WriteString(installOut.String() + "\n")
 
 			if err != nil {
@@ -36,7 +36,7 @@ func (t MachineTweaker) ConfigurationStatus() (errs []error, out *bytes.Buffer) 
 
 	for _, configuration := range t.MachineConfiguration {
 		out.WriteString(fmt.Sprintf("%s\n-----\n", configuration.Name()))
-		err, validateOut := configuration.Validate()
+		validateOut, err := configuration.Validate()
 		out.WriteString(validateOut.String() + "\n")
 
 		if err != nil {
@@ -53,7 +53,7 @@ func (t MachineTweaker) ResetConfiguration() (errs []error, out *bytes.Buffer) {
 	// Uninstall in reverse
 	for i := len(t.MachineConfiguration) - 1; i >= 0; i-- {
 		configuration := t.MachineConfiguration[i]
-		err, uninstallOut := configuration.Uninstall()
+		uninstallOut, err := configuration.Uninstall()
 		out.WriteString(uninstallOut.String() + "\n")
 
 		if err != nil {

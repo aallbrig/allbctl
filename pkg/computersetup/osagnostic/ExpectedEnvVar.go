@@ -1,4 +1,4 @@
-package os_agnostic
+package osagnostic
 
 import (
 	"bytes"
@@ -19,7 +19,7 @@ func (e ExpectedEnvVar) Name() string {
 	return fmt.Sprintf("Envvar %s", e.Key)
 }
 
-func (e ExpectedEnvVar) Validate() (err error, out *bytes.Buffer) {
+func (e ExpectedEnvVar) Validate() (out *bytes.Buffer, err error) {
 	out = bytes.NewBufferString("")
 	_, exists := os.LookupEnv(e.Key)
 	if !exists {
@@ -29,32 +29,32 @@ func (e ExpectedEnvVar) Validate() (err error, out *bytes.Buffer) {
 		_, _ = color.New(color.FgGreen).Fprint(out, "PRESENT")
 	}
 	out.WriteString(fmt.Sprintf(" %s", e.Name()))
-	return err, out
+	return out, err
 }
 
-func (e ExpectedEnvVar) Install() (error, *bytes.Buffer) {
+func (e ExpectedEnvVar) Install() (*bytes.Buffer, error) {
 	out := bytes.NewBufferString("")
-	err, _ := e.Validate()
+	_, err := e.Validate()
 	if err == nil {
-		return err, out
+		return out, err
 	}
 	if e.OnInstall != nil {
-		return e.OnInstall(), out
+		return out, e.OnInstall()
 	}
 
-	return fmt.Errorf("no install lambda defined for envvar %s", e.Key), out
+	return out, fmt.Errorf("no install lambda defined for envvar %s", e.Key)
 }
 
-func (e ExpectedEnvVar) Uninstall() (error, *bytes.Buffer) {
+func (e ExpectedEnvVar) Uninstall() (*bytes.Buffer, error) {
 	out := bytes.NewBufferString("")
-	err, _ := e.Validate()
+	_, err := e.Validate()
 	if err == nil {
-		return err, out
+		return out, err
 	}
 
 	if e.OnUninstall != nil {
-		return e.OnUninstall(), out
+		return out, e.OnUninstall()
 	}
 
-	return fmt.Errorf("no uninstall lambda defined for envvar %s", e.Key), out
+	return out, fmt.Errorf("no uninstall lambda defined for envvar %s", e.Key)
 }
