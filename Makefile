@@ -9,6 +9,9 @@ install-dependencies:
 build:
 	go build -o bin/allbctl main.go
 
+build-docker:
+	docker build --tag aallbrig/allbctl .
+
 build-mac:
 	gox -osarch="darwin/amd64"
 
