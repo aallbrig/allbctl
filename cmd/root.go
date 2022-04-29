@@ -35,6 +35,7 @@ func Execute() {
 
 func init() {
 	cobra.OnInitialize(initConfig)
+	rootCmd.AddCommand(NewUnityProjectCommand())
 	rootCmd.AddCommand(ComputerSetupCmd)
 	rootCmd.AddCommand(StatusCmd)
 	rootCmd.AddCommand(ResetCmd)

@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/aallbrig/allbctl/pkg/computersetup/osagnostic"
 	"github.com/aallbrig/allbctl/pkg/externalapi"
 	"github.com/aallbrig/allbctl/pkg/externalcmd"
+	"github.com/aallbrig/allbctl/pkg/osagnostic"
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/google/go-github/github"
 	"os"
@@ -30,11 +30,10 @@ func (d DotFilerGremlin) Name() string {
 }
 
 func (d DotFilerGremlin) Validate() (out *bytes.Buffer, err error) {
-	osAgonstic := osagnostic.OperatingSystem{}
+	osAgnostic := osagnostic.NewOperatingSystem()
 	dotfiles, err := d.GetMyDotfiles()
-	homeDir, _ := osAgonstic.HomeDir()
 	for _, repo := range dotfiles {
-		repoLocation := path.Join(homeDir, "src", *repo.Name)
+		repoLocation := path.Join(osAgnostic.HomeDirectoryPath, "src", *repo.Name)
 		if _, statErr := os.Stat(repoLocation); os.IsNotExist(statErr) {
 			err = statErr
 		}
@@ -44,7 +43,7 @@ func (d DotFilerGremlin) Validate() (out *bytes.Buffer, err error) {
 
 func (d DotFilerGremlin) Install() (out *bytes.Buffer, err error) {
 	out = bytes.NewBufferString("")
-	osAgnostic := osagnostic.OperatingSystem{}
+	osAgnostic := osagnostic.NewOperatingSystem()
 	dotfiles, err := d.GetMyDotfiles()
 	if err != nil {
 		out.WriteString(fmt.Sprintf("❌ Error getting dotfiles %v\n", err))
@@ -72,11 +71,10 @@ func (d DotFilerGremlin) Install() (out *bytes.Buffer, err error) {
 		Password: token,
 	}
 
-	homeDir, _ := osAgnostic.HomeDir()
 	for _, repo := range dotfiles {
-		repoLocation := path.Join(homeDir, "src", *repo.Name)
+		repoLocation := path.Join(osAgnostic.HomeDirectoryPath, "src", *repo.Name)
 		if _, statErr := os.Stat(repoLocation); os.IsNotExist(statErr) {
-			_, innerErr := externalcmd.CloneGithubRepo(path.Join(homeDir, "src"), &repo)
+			_, innerErr := externalcmd.CloneGithubRepo(path.Join(osAgnostic.HomeDirectoryPath, "src"), &repo)
 			if innerErr != nil {
 				out.WriteString(fmt.Sprintf("Error cloning repo %v", innerErr))
 				err = innerErr
