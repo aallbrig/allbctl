@@ -2,25 +2,24 @@ package providers
 
 import (
 	"github.com/aallbrig/allbctl/pkg/computersetup/dotfiles"
-	"github.com/aallbrig/allbctl/pkg/computersetup/osagnostic"
 	"github.com/aallbrig/allbctl/pkg/externalapi"
 	"github.com/aallbrig/allbctl/pkg/model"
+	"github.com/aallbrig/allbctl/pkg/osagnostic"
 	"log"
 	"path/filepath"
 )
 
-var os = osagnostic.OperatingSystem{}
+var os = osagnostic.NewOperatingSystem()
 
 type MacbookConfigurationProvider struct{}
 
 func (m MacbookConfigurationProvider) GetConfiguration() []model.IMachineConfiguration {
-	homeDir, _ := os.HomeDir()
 	return []model.IMachineConfiguration{
 		model.MachineConfigurationGroup{
 			GroupName: "Expected Directories",
 			Configs: []model.IMachineConfiguration{
-				osagnostic.NewExpectedDirectory(filepath.Join(homeDir, "src")),
-				osagnostic.NewExpectedDirectory(filepath.Join(homeDir, "bin")),
+				osagnostic.NewExpectedDirectory(filepath.Join(os.HomeDirectoryPath, "src")),
+				osagnostic.NewExpectedDirectory(filepath.Join(os.HomeDirectoryPath, "bin")),
 			},
 		},
 		model.MachineConfigurationGroup{

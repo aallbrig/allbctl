@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	computerSetup "github.com/aallbrig/allbctl/pkg/computersetup"
-	"github.com/aallbrig/allbctl/pkg/computersetup/osagnostic"
+	"github.com/aallbrig/allbctl/pkg/osagnostic"
 	"github.com/aallbrig/allbctl/pkg/status"
 	"log"
 
@@ -20,16 +20,15 @@ var StatusCmd = &cobra.Command{
 		out.WriteString("System Info\n")
 		out.WriteString("-----\n")
 		err := status.SystemInfo(out)
+		if err != nil {
+			log.Fatalf("Issues getting status info")
+		}
 		out.WriteString("\n")
 
-		os := osagnostic.OperatingSystem{}
+		os := osagnostic.NewOperatingSystem()
 		identifier := computerSetup.MachineIdentifier{}
-		name, err := os.GetName()
-		if err != nil {
-			log.Fatalf("Issues getting operating system identifier")
-		}
 
-		configProvider := identifier.ConfigurationProviderForOperatingSystem(name)
+		configProvider := identifier.ConfigurationProviderForOperatingSystem(os.Name)
 		if configProvider == nil {
 			log.Fatal(fmt.Sprintf("No configuration provider found for operationg system %s", os))
 		}

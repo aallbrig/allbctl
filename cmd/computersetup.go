@@ -3,12 +3,11 @@ package cmd
 import (
 	"fmt"
 	computerSetup "github.com/aallbrig/allbctl/pkg/computersetup"
-	"github.com/aallbrig/allbctl/pkg/computersetup/osagnostic"
+	"github.com/aallbrig/allbctl/pkg/osagnostic"
 	"github.com/spf13/cobra"
 	"log"
 )
 
-// ComputerSetupCmd defines the root of computer setup
 var ComputerSetupCmd = &cobra.Command{
 	Use: "computer-setup",
 	Aliases: []string{
@@ -18,14 +17,9 @@ var ComputerSetupCmd = &cobra.Command{
 	},
 	Short: "Configure host to developer preferences (cross platform)",
 	Run: func(cmd *cobra.Command, args []string) {
-		os := osagnostic.OperatingSystem{}
+		os := osagnostic.NewOperatingSystem()
 		identifier := computerSetup.MachineIdentifier{}
-		name, err := os.GetName()
-		if err != nil {
-			log.Fatalf("Issues getting operating system identifier")
-		}
-
-		configProvider := identifier.ConfigurationProviderForOperatingSystem(name)
+		configProvider := identifier.ConfigurationProviderForOperatingSystem(os.Name)
 		if configProvider == nil {
 			log.Fatal(fmt.Sprintf("No configuration provider found for operationg system %s", os))
 		}

@@ -22,6 +22,7 @@ require (
 	github.com/hashicorp/go-version v1.4.0 // indirect
 	github.com/jonboulle/clockwork v0.1.0 // indirect
 	github.com/kevinburke/ssh_config v1.1.0 // indirect
+	github.com/manifoldco/promptui v0.9.0
 	github.com/mattn/go-colorable v0.1.12 // indirect
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/mitchellh/gox v1.0.1 // indirect
