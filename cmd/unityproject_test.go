@@ -151,3 +151,21 @@ func Test_ProjectCmd_OptionallyCanInstallFullscreenWebGLFiles(t *testing.T) {
 		t.Fail()
 	}
 }
+
+func Test_ProjectCmd_OptionallyCanInitializeGithubRepo(t *testing.T) {
+	sut := NewUnityProjectCommand()
+	sut.SetArgs([]string{
+		"--project", "test-project",
+		"--ignore-unity-commands",
+		"--enable-github-commands",
+	})
+
+	tempDir, err := ioutil.TempDir("", "test")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer os.RemoveAll(tempDir)
+	operatingSystem.CurrentWorkingDirectory = tempDir
+
+	err = sut.Execute()
+}

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/aallbrig/allbctl/pkg/osagnostic"
 	"github.com/manifoldco/promptui"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"io/ioutil"
 	"log"
@@ -45,6 +46,8 @@ func findUnityLTSExecutable() string {
 }
 
 func newInitializeUnityProjectCommand(path string) *exec.Cmd {
+	// Run equivalent to
+	// /Applications/Unity/Hub/Editor/2021.2.10f1/Unity.app/Contents/MacOS/Unity -createProject $(pwd)/unity/ + projectName
 	return exec.Command(findUnityLTSExecutable(), "-createProject", path, "-quit")
 }
 
@@ -74,39 +77,47 @@ func newCopyFullscreenWebGLTemplateHTML(path string) *exec.Cmd {
 	localDestination := filepath.Join(path, "Assets", "WebGLTemplates", "Fullscreen", "index.html")
 	return newCurlCopy(FullscreenTemplateHTML, localDestination)
 }
+
 func newCopyFullscreenWebGLTemplateJS(path string) *exec.Cmd {
 	localDestination := filepath.Join(path, "Assets", "WebGLTemplates", "Fullscreen", "TemplateData", "main.js")
 	return newCurlCopy(FullscreenTemplateJS, localDestination)
 }
+
 func newCopyFullscreenWebGLTemplateCSS(path string) *exec.Cmd {
 	localDestination := filepath.Join(path, "Assets", "WebGLTemplates", "Fullscreen", "TemplateData", "style.css")
 	return newCurlCopy(FullscreenTemplateCSS, localDestination)
 }
 
 func copyFullscreenWebGLTemplate(path string) error {
-	err := newCopyFullscreenWebGLTemplateHTML(path).Run()
-	if err != nil {
+	if err := newCopyFullscreenWebGLTemplateHTML(path).Run(); err != nil {
 		return err
 	}
-	err = newCopyFullscreenWebGLTemplateJS(path).Run()
-	if err != nil {
+	if err := newCopyFullscreenWebGLTemplateJS(path).Run(); err != nil {
 		return err
 	}
-	err = newCopyFullscreenWebGLTemplateCSS(path).Run()
+	err := newCopyFullscreenWebGLTemplateCSS(path).Run()
 	return err
 }
 
 var projectNamePrompt = promptui.Prompt{
 	Label: "Project Name",
 	Validate: func(input string) error {
+		if input == "" {
+			return errors.New("Project name must not be empty")
+		}
 		return nil
 	},
-	Default: "new-unity-project",
+	Default: "",
+}
+var runGithubCommandsPrompt = promptui.Prompt{
+	Label:     "Run GitHub setup commands?",
+	IsConfirm: true,
 }
 var operatingSystem = osagnostic.NewOperatingSystem()
 var projectName string
 var ignoreUnityCommands bool
 var installWebGLFullscreenTemplate bool
+var runGithubCommands bool
 
 func NewUnityProjectCommand() *cobra.Command {
 	var unityProjectCommand = &cobra.Command{
@@ -119,7 +130,7 @@ func NewUnityProjectCommand() *cobra.Command {
 			if projectName == "" {
 				result, err := projectNamePrompt.Run()
 				if err != nil {
-					// TODO: What happens when an error is returned?
+					return err
 				}
 				projectName = result
 			}
@@ -135,8 +146,6 @@ func NewUnityProjectCommand() *cobra.Command {
 			operatingSystem.CreateDirectory(unityProjectPath)
 
 			if ignoreUnityCommands == false {
-				// Run equivalent to
-				// /Applications/Unity/Hub/Editor/2021.2.10f1/Unity.app/Contents/MacOS/Unity -createProject $(pwd)/unity/ + projectName
 				if err := newInitializeUnityProjectCommand(unityProjectPath).Run(); err != nil {
 					return err
 				}
@@ -151,27 +160,32 @@ func NewUnityProjectCommand() *cobra.Command {
 					return err
 				}
 			}
-			// if UNITY_LICENSE envvar is set
-			// gh secret set UNITY_LICENSE --body "${UNITY_LICENSE}"
-			// if UNITY_EMAIL envvar is set
-			// gh secret set UNITY_EMAIL --body "${UNITY_EMAIL}"
-			// if UNITY_PASSWORD envvar is set
-			// gh secret set UNITY_PASSWORD --body "${UNITY_PASSWORD}"
+
+			if !runGithubCommands {
+
+			}
+			if runGithubCommands {
+				if err := setupGithubRepository(unityProjectPath); err != nil {
+					return err
+				}
+				if err := setUnityLicense(operatingSystem); err != nil {
+					return err
+				}
+				if err := setUnityEmail(operatingSystem); err != nil {
+					return err
+				}
+				if err := setUnityPassword(operatingSystem); err != nil {
+					return err
+				}
+			}
 			// curl activate-unity-license.yml from gist to .github/activate-unity-license.yml
 			// https://gist.githubusercontent.
 			//com/aallbrig/915341c99b9f73f03c922a7f94e47041/raw/1cd37fc5930c8d61622d8c96f78245983b6caf8b/activate-unity-license.yml
+			// For github actions unity builder
+			// curl copy then replace PROJECT_NAME with project name
 			// curl unity.yml from gist to .github/unity.yml
 			// https://gist.githubusercontent.com/aallbrig/c54066dfcb6e2cd527c9313f396c7f48/raw/7f5d3397db772aa05ad84901b9aaadfd5150bcb4/unity.yml
 
-			// if this is a webGL project
-			// make unity project subdirectory to hold webGL template
-			// (optional) ask for google analytics ID
-			// curl index.html down from webGL fullscreen gist
-			// https://gist.githubusercontent.com/aallbrig/2d07e3bbf03da818705db3215216e5cf/raw/752a534f7193cbd2c2b3a8929d5c0115d06adbb8/index.html
-			// curl style.css down from webGL fullscreen gist
-			// https://gist.githubusercontent.com/aallbrig/f51e371876df31830ef03c10bc192b50/raw/de8129c867c9e8007bf3227f6a02b1e6515fb5ba/style.css
-			// curl main.js down from webGL fullscreen gist
-			// https://gist.githubusercontent.com/aallbrig/2c243ce8b3d39bff2a0674744585d2e2/raw/a684ad3f108ede8a7e963300785967f3ed2c5a11/main.js
 			return nil
 		},
 	}
@@ -191,7 +205,35 @@ func NewUnityProjectCommand() *cobra.Command {
 		&installWebGLFullscreenTemplate,
 		"install-webgl-fullscreen-template",
 		false,
-		"Optional flag to install a sensible fullscreen WebGL template",
+		"Optional flag to install a fullscreen WebGL template",
+	)
+	unityProjectCommand.Flags().BoolVar(
+		&runGithubCommands,
+		"enable-github-commands",
+		true,
+		"Optional to run associated github setup commands",
 	)
 	return unityProjectCommand
+}
+
+func setupGithubRepository(path string) error {
+	return nil
+}
+
+func setUnityLicense(system *osagnostic.OperatingSystem) error {
+	// if UNITY_LICENSE envvar is set
+	// gh secret set UNITY_LICENSE --body "${UNITY_LICENSE}"
+	return nil
+}
+
+func setUnityEmail(system *osagnostic.OperatingSystem) error {
+	// if UNITY_EMAIL envvar is set
+	// gh secret set UNITY_EMAIL --body "${UNITY_EMAIL}"
+	return nil
+}
+
+func setUnityPassword(system *osagnostic.OperatingSystem) error {
+	// if UNITY_PASSWORD envvar is set
+	// gh secret set UNITY_PASSWORD --body "${UNITY_PASSWORD}"
+	return nil
 }
