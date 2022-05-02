@@ -114,3 +114,40 @@ func Test_ProjectCmd_GitIgnoresCommonUnityFiles(t *testing.T) {
 		t.Fail()
 	}
 }
+
+func Test_ProjectCmd_OptionallyCanInstallFullscreenWebGLFiles(t *testing.T) {
+	sut := NewUnityProjectCommand()
+	sut.SetArgs([]string{
+		"--project", "test-project",
+		"--ignore-unity-commands",
+		"--install-webgl-fullscreen-template",
+	})
+
+	tempDir, err := ioutil.TempDir("", "test")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer os.RemoveAll(tempDir)
+	operatingSystem.CurrentWorkingDirectory = tempDir
+
+	err = sut.Execute()
+
+	unityAssetsFolder := filepath.Join(tempDir, "test-project", "unity", "test-project", "Assets")
+	templateRoot := filepath.Join(unityAssetsFolder, "WebGLTemplates", "Fullscreen")
+	fullscreenHTML := filepath.Join(templateRoot, "index.html")
+	fullscreenJS := filepath.Join(templateRoot, "TemplateData", "main.js")
+	fullscreenCSS := filepath.Join(templateRoot, "TemplateData", "style.css")
+
+	if _, err := os.Stat(fullscreenHTML); os.IsNotExist(err) {
+		t.Log("Expected a HTML file but got none")
+		t.Fail()
+	}
+	if _, err := os.Stat(fullscreenJS); os.IsNotExist(err) {
+		t.Log("Expected a JS file but got none")
+		t.Fail()
+	}
+	if _, err := os.Stat(fullscreenCSS); os.IsNotExist(err) {
+		t.Log("Expected a CSS file but got none")
+		t.Fail()
+	}
+}
