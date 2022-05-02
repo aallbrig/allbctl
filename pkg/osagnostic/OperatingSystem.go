@@ -4,6 +4,7 @@ import (
 	"github.com/mitchellh/go-homedir"
 	"os"
 	"runtime"
+	"strings"
 )
 
 func NewOperatingSystem() *OperatingSystem {
@@ -12,13 +13,20 @@ func NewOperatingSystem() *OperatingSystem {
 	operatingSystem.setName()
 	operatingSystem.setHomeDirectory()
 	operatingSystem.setCurrentWorkingDirectory()
+	operatingSystem.setEnvironmentVariables()
 	return operatingSystem
+}
+
+type EnvVar struct {
+	Key   string
+	Value string
 }
 
 type OperatingSystem struct {
 	Name                    string
 	HomeDirectoryPath       string
 	CurrentWorkingDirectory string
+	EnvironmentVariables    []*EnvVar
 }
 
 func (o *OperatingSystem) setName() {
@@ -41,5 +49,16 @@ func (o *OperatingSystem) CreateDirectory(path string) {
 	// Does the directory already exist?
 	if err := os.MkdirAll(path, os.ModePerm); err != nil {
 		// TODO: what happens if this fails?
+	}
+}
+
+func (o *OperatingSystem) setEnvironmentVariables() {
+	for _, envVar := range os.Environ() {
+		// each envVar in Environ() takes the form "KEY=VALUE" e.g. USER=anonymous
+		pair := strings.SplitN(envVar, "=", 2)
+		o.EnvironmentVariables = append(o.EnvironmentVariables, &EnvVar{
+			Key:   pair[0],
+			Value: pair[1],
+		})
 	}
 }
