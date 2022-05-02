@@ -13,6 +13,15 @@ import (
 	"strings"
 )
 
+const (
+	FullscreenTemplateHTML = "https://gist.githubusercontent." +
+		"com/aallbrig/2d07e3bbf03da818705db3215216e5cf/raw/752a534f7193cbd2c2b3a8929d5c0115d06adbb8/index.html"
+	FullscreenTemplateJS = "https://gist.githubusercontent." +
+		"com/aallbrig/2c243ce8b3d39bff2a0674744585d2e2/raw/a684ad3f108ede8a7e963300785967f3ed2c5a11/main.js"
+	FullscreenTemplateCSS = "https://gist.githubusercontent." +
+		"com/aallbrig/f51e371876df31830ef03c10bc192b50/raw/de8129c867c9e8007bf3227f6a02b1e6515fb5ba/style.css"
+)
+
 func newInitializeGitRepoCommand(path string) *exec.Cmd {
 	return exec.Command("git", "-C", path, "init", "-b", "main")
 }
@@ -39,20 +48,52 @@ func newInitializeUnityProjectCommand(path string) *exec.Cmd {
 	return exec.Command(findUnityLTSExecutable(), "-createProject", path, "-quit")
 }
 
-func newCopyUnityGitignore(path string) *exec.Cmd {
-	unityIgnoreWeb := "https://raw.githubusercontent.com/github/gitignore/main/Unity.gitignore"
-
-	gitIgnoreHostPath := filepath.Join(path, ".gitignore")
-
-	if _, err := os.Stat(gitIgnoreHostPath); os.IsNotExist(err) {
-		file, err := os.Create(gitIgnoreHostPath)
+func newCurlCopy(url string, destinationFile string) *exec.Cmd {
+	if _, err := os.Stat(destinationFile); os.IsNotExist(err) {
+		err := os.MkdirAll(filepath.Dir(destinationFile), os.ModePerm)
+		if err != nil {
+			log.Fatal(err)
+		}
+		file, err := os.Create(destinationFile)
 		if err != nil {
 			log.Fatal(err)
 		}
 		defer file.Close()
 	}
 
-	return exec.Command("curl", unityIgnoreWeb, "--output", gitIgnoreHostPath)
+	return exec.Command("curl", url, "--output", destinationFile)
+}
+
+func newCopyUnityGitignore(path string) *exec.Cmd {
+	webResource := "https://raw.githubusercontent.com/github/gitignore/main/Unity.gitignore"
+	localDestination := filepath.Join(path, ".gitignore")
+	return newCurlCopy(webResource, localDestination)
+}
+
+func newCopyFullscreenWebGLTemplateHTML(path string) *exec.Cmd {
+	localDestination := filepath.Join(path, "Assets", "WebGLTemplates", "Fullscreen", "index.html")
+	return newCurlCopy(FullscreenTemplateHTML, localDestination)
+}
+func newCopyFullscreenWebGLTemplateJS(path string) *exec.Cmd {
+	localDestination := filepath.Join(path, "Assets", "WebGLTemplates", "Fullscreen", "TemplateData", "main.js")
+	return newCurlCopy(FullscreenTemplateJS, localDestination)
+}
+func newCopyFullscreenWebGLTemplateCSS(path string) *exec.Cmd {
+	localDestination := filepath.Join(path, "Assets", "WebGLTemplates", "Fullscreen", "TemplateData", "style.css")
+	return newCurlCopy(FullscreenTemplateCSS, localDestination)
+}
+
+func copyFullscreenWebGLTemplate(path string) error {
+	err := newCopyFullscreenWebGLTemplateHTML(path).Run()
+	if err != nil {
+		return err
+	}
+	err = newCopyFullscreenWebGLTemplateJS(path).Run()
+	if err != nil {
+		return err
+	}
+	err = newCopyFullscreenWebGLTemplateCSS(path).Run()
+	return err
 }
 
 var projectNamePrompt = promptui.Prompt{
@@ -65,6 +106,7 @@ var projectNamePrompt = promptui.Prompt{
 var operatingSystem = osagnostic.NewOperatingSystem()
 var projectName string
 var ignoreUnityCommands bool
+var installWebGLFullscreenTemplate bool
 
 func NewUnityProjectCommand() *cobra.Command {
 	var unityProjectCommand = &cobra.Command{
@@ -103,6 +145,12 @@ func NewUnityProjectCommand() *cobra.Command {
 			if err := newCopyUnityGitignore(unityProjectPath).Run(); err != nil {
 				return err
 			}
+
+			if installWebGLFullscreenTemplate {
+				if err := copyFullscreenWebGLTemplate(unityProjectPath); err != nil {
+					return err
+				}
+			}
 			// if UNITY_LICENSE envvar is set
 			// gh secret set UNITY_LICENSE --body "${UNITY_LICENSE}"
 			// if UNITY_EMAIL envvar is set
@@ -138,6 +186,12 @@ func NewUnityProjectCommand() *cobra.Command {
 		"ignore-unity-commands",
 		false,
 		"Optional flag to disable running unity commands",
+	)
+	unityProjectCommand.Flags().BoolVar(
+		&installWebGLFullscreenTemplate,
+		"install-webgl-fullscreen-template",
+		false,
+		"Optional flag to install a sensible fullscreen WebGL template",
 	)
 	return unityProjectCommand
 }
