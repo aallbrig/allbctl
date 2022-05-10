@@ -161,6 +161,10 @@ func NewUnityProjectCommand() *cobra.Command {
 				}
 			}
 
+			unityAssetsFolder := filepath.Join(unityProjectPath, "Assets")
+			scriptsFolder := filepath.Join(unityAssetsFolder, "Scripts")
+			operatingSystem.CreateDirectory(scriptsFolder)
+
 			if !runGithubCommands {
 
 			}

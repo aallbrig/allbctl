@@ -21,7 +21,7 @@ var ComputerSetupCmd = &cobra.Command{
 		identifier := computerSetup.MachineIdentifier{}
 		configProvider := identifier.ConfigurationProviderForOperatingSystem(os.Name)
 		if configProvider == nil {
-			log.Fatal(fmt.Sprintf("No configuration provider found for operationg system %s", os))
+			log.Fatal(fmt.Sprintf("No configuration provider found for operationg system %s", os.Name))
 		}
 
 		tweaker := computerSetup.NewMachineTweaker(configProvider.GetConfiguration())
