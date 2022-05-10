@@ -115,6 +115,31 @@ func Test_ProjectCmd_GitIgnoresCommonUnityFiles(t *testing.T) {
 	}
 }
 
+func Test_ProjectCmd_CreatesAScriptsFolder(t *testing.T) {
+	sut := NewUnityProjectCommand()
+	sut.SetArgs([]string{
+		"--project", "test-project",
+		"--ignore-unity-commands",
+	})
+
+	tempDir, err := ioutil.TempDir("", "test")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer os.RemoveAll(tempDir)
+	operatingSystem.CurrentWorkingDirectory = tempDir
+
+	err = sut.Execute()
+
+	unityAssetsFolder := filepath.Join(tempDir, "test-project", "unity", "test-project", "Assets")
+	scriptsFolder := filepath.Join(unityAssetsFolder, "Scripts")
+
+	if _, err := os.Stat(scriptsFolder); os.IsNotExist(err) {
+		t.Log("Expected Scripts folder but got none")
+		t.Fail()
+	}
+}
+
 func Test_ProjectCmd_OptionallyCanInstallFullscreenWebGLFiles(t *testing.T) {
 	sut := NewUnityProjectCommand()
 	sut.SetArgs([]string{
