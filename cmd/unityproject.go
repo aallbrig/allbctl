@@ -191,6 +191,10 @@ func NewUnityProjectCommand() *cobra.Command {
 			// curl copy then replace PROJECT_NAME with project name
 			// curl unity.yml from gist to .github/unity.yml
 			// https://gist.githubusercontent.com/aallbrig/c54066dfcb6e2cd527c9313f396c7f48/raw/7f5d3397db772aa05ad84901b9aaadfd5150bcb4/unity.yml
+			// example:
+			// curl https://gist.githubusercontent.
+			//com/aallbrig/c54066dfcb6e2cd527c9313f396c7f48/raw/7f5d3397db772aa05ad84901b9aaadfd5150bcb4/unity.
+			//yml | sed 's/UNITY_PROJECT_DIRECTORY_NAME/virtual-arcade-bar/g' | tee $(pwd)/.github/workflows/unity.yml
 
 			return nil
 		},
