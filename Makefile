@@ -6,6 +6,9 @@ install-dependencies:
 	go mod download
 	go mod vendor
 
+install:
+	go install
+
 build:
 	go build -o bin/allbctl main.go
 
