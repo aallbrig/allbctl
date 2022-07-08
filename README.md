@@ -14,6 +14,12 @@ make lint
 make test
 ```
 
+### Install
+```bash
+make install
+go install
+```
+
 ### Contributing
 Please reference the `CONTRIBUTING.md` file.
 
