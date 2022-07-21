@@ -12,7 +12,7 @@ func NewOperatingSystem() *OperatingSystem {
 	// Load up the data
 	operatingSystem.setName()
 	operatingSystem.setHomeDirectory()
-	operatingSystem.setCurrentWorkingDirectory()
+	operatingSystem.setCurrentWorkingDirectory("")
 	operatingSystem.setEnvironmentVariables()
 	return operatingSystem
 }
@@ -39,9 +39,22 @@ func (o *OperatingSystem) setHomeDirectory() {
 	}
 }
 
-func (o *OperatingSystem) setCurrentWorkingDirectory() {
-	if path, err := os.Getwd(); err == nil {
-		o.CurrentWorkingDirectory = path
+func (o *OperatingSystem) validatePathInput(path string) bool {
+	return true
+}
+
+func (o *OperatingSystem) UpdateCurrentWorkingDirectory(path string) {
+	o.setCurrentWorkingDirectory(path)
+}
+
+func (o *OperatingSystem) setCurrentWorkingDirectory(path string) {
+	if path != "" && o.validatePathInput(path) {
+		o.UpdateCurrentWorkingDirectory(path)
+	} else if path == "" {
+		// acceptable condition -- get current working directory by default
+		if path, err := os.Getwd(); err == nil {
+			o.CurrentWorkingDirectory = path
+		}
 	}
 }
 
