@@ -118,6 +118,7 @@ var projectName string
 var ignoreUnityCommands bool
 var installWebGLFullscreenTemplate bool
 var runGithubCommands bool
+var createRepositoryDirectory bool
 
 func NewUnityProjectCommand() *cobra.Command {
 	var unityProjectCommand = &cobra.Command{
@@ -134,15 +135,18 @@ func NewUnityProjectCommand() *cobra.Command {
 				}
 				projectName = result
 			}
-			sourceCodePath := filepath.Join(operatingSystem.CurrentWorkingDirectory, projectName)
-			// Make source code directory
-			operatingSystem.CreateDirectory(sourceCodePath)
+			if runGithubCommands {
+				sourceCodePath := filepath.Join(operatingSystem.CurrentWorkingDirectory, projectName)
+				operatingSystem.CreateDirectory(sourceCodePath)
 
-			if err := newInitializeGitRepoCommand(sourceCodePath).Run(); err != nil {
-				return err
+				if err := newInitializeGitRepoCommand(sourceCodePath).Run(); err != nil {
+					return err
+				}
+
+				operatingSystem.UpdateCurrentWorkingDirectory(sourceCodePath)
 			}
 			// Create a unity subdirectory
-			unityProjectPath := filepath.Join(sourceCodePath, "unity", projectName)
+			unityProjectPath := filepath.Join(operatingSystem.CurrentWorkingDirectory, "unity", projectName)
 			operatingSystem.CreateDirectory(unityProjectPath)
 
 			if ignoreUnityCommands == false {
@@ -167,10 +171,7 @@ func NewUnityProjectCommand() *cobra.Command {
 			testsFolder := filepath.Join(unityAssetsFolder, "Tests")
 			operatingSystem.CreateDirectory(testsFolder)
 
-			if !runGithubCommands {
-
-			}
-			if runGithubCommands {
+			if runGithubCommands == true {
 				if err := setupGithubRepository(unityProjectPath); err != nil {
 					return err
 				}
@@ -201,9 +202,9 @@ func NewUnityProjectCommand() *cobra.Command {
 	}
 	unityProjectCommand.Flags().StringVar(
 		&projectName,
-		"project",
+		"project-name",
 		"",
-		"Name of both the source code directory and unity project",
+		"Name of both the source code directory and unity project (preferable to use dashes (-) in names)",
 	)
 	unityProjectCommand.Flags().BoolVar(
 		&ignoreUnityCommands,
@@ -212,16 +213,22 @@ func NewUnityProjectCommand() *cobra.Command {
 		"Optional flag to disable running unity commands",
 	)
 	unityProjectCommand.Flags().BoolVar(
+		&createRepositoryDirectory,
+		"create-repository-directory",
+		true,
+		"Optional to run associated mkdir and git init commands",
+	)
+	unityProjectCommand.Flags().BoolVar(
+		&runGithubCommands,
+		"run-github-cli-commands",
+		false,
+		"Optional to run associated github cli commands",
+	)
+	unityProjectCommand.Flags().BoolVar(
 		&installWebGLFullscreenTemplate,
 		"install-webgl-fullscreen-template",
 		false,
 		"Optional flag to install a fullscreen WebGL template",
-	)
-	unityProjectCommand.Flags().BoolVar(
-		&runGithubCommands,
-		"enable-github-commands",
-		true,
-		"Optional to run associated github setup commands",
 	)
 	return unityProjectCommand
 }
