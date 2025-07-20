@@ -1,0 +1,86 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build and Package Binaries
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22.x'
+      - name: Go version
+        run: go version
+      - name: Build Linux amd64
+        run: |
+          GOOS=linux GOARCH=amd64 go build -o allbctl-linux-amd64
+      - name: Package Linux binary
+        run: |
+          tar -czvf allbctl-linux-amd64.tar.gz allbctl-linux-amd64
+      - name: Upload Linux artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: allbctl-linux-amd64
+          path: allbctl-linux-amd64.tar.gz
+      - name: Build macOS amd64
+        run: |
+          GOOS=darwin GOARCH=amd64 go build -o allbctl-darwin-amd64
+      - name: Package macOS binary
+        run: |
+          tar -czvf allbctl-darwin-amd64.tar.gz allbctl-darwin-amd64
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: allbctl-darwin-amd64
+          path: allbctl-darwin-amd64.tar.gz
+      - name: Build Windows amd64
+        run: |
+          GOOS=windows GOARCH=amd64 go build -o allbctl-windows-amd64.exe
+      - name: Package Windows binary
+        run: |
+          zip allbctl-windows-amd64.zip allbctl-windows-amd64.exe
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: allbctl-windows-amd64
+          path: allbctl-windows-amd64.zip
+  release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Linux artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: allbctl-linux-amd64
+      - name: Download macOS artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: allbctl-darwin-amd64
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: allbctl-windows-amd64
+      - name: Create Release and Upload Assets
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: |
+            allbctl-linux-amd64.tar.gz
+            allbctl-darwin-amd64.tar.gz
+            allbctl-windows-amd64.zip
+          token: ${{ secrets.GITHUB_TOKEN }}
+          generateReleaseNotes: true
+          draft: false
+          prerelease: false
