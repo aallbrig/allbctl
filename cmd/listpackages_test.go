@@ -35,3 +35,25 @@ func TestRunCmd_InvalidCommand(t *testing.T) {
 		t.Error("Expected error output for invalid command")
 	}
 }
+
+func TestExists_AllSupportedCommands(t *testing.T) {
+	osType := runtime.GOOS
+	var cmds []string
+	if osType == "linux" {
+		cmds = []string{"apt", "snap", "flatpak", "dnf", "yum", "zypper", "pacman", "rpm", "dpkg", "apk", "emerge"}
+	} else if osType == "darwin" {
+		cmds = []string{"brew", "port", "pkgin"}
+	} else if osType == "windows" {
+		cmds = []string{"choco", "winget", "scoop"}
+	}
+	for _, cmd := range cmds {
+		exists(cmd) // Should not panic
+	}
+}
+
+func TestGetPackages_AllSupportedManagers(t *testing.T) {
+	managers := []string{"apt", "snap", "flatpak", "dnf", "yum", "zypper", "pacman", "rpm", "dpkg", "apk", "emerge", "brew", "macports", "pkgsrc", "choco", "winget", "scoop"}
+	for _, m := range managers {
+		_ = getPackages(m) // Should not panic or error
+	}
+}
