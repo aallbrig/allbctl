@@ -35,13 +35,49 @@ func listInstalledPackages() {
 		if exists("flatpak") {
 			managers = append(managers, "flatpak")
 		}
+		if exists("dnf") {
+			managers = append(managers, "dnf")
+		}
+		if exists("yum") {
+			managers = append(managers, "yum")
+		}
+		if exists("zypper") {
+			managers = append(managers, "zypper")
+		}
+		if exists("pacman") {
+			managers = append(managers, "pacman")
+		}
+		if exists("rpm") {
+			managers = append(managers, "rpm")
+		}
+		if exists("dpkg") {
+			managers = append(managers, "dpkg")
+		}
+		if exists("apk") {
+			managers = append(managers, "apk")
+		}
+		if exists("emerge") {
+			managers = append(managers, "emerge")
+		}
 	case "darwin":
 		if exists("brew") {
 			managers = append(managers, "brew")
 		}
+		if exists("port") {
+			managers = append(managers, "macports")
+		}
+		if exists("pkgin") {
+			managers = append(managers, "pkgsrc")
+		}
 	case "windows":
 		if exists("choco") {
 			managers = append(managers, "choco")
+		}
+		if exists("winget") {
+			managers = append(managers, "winget")
+		}
+		if exists("scoop") {
+			managers = append(managers, "scoop")
 		}
 	}
 
@@ -74,6 +110,22 @@ func getPackages(manager string) string {
 		return runCmd("brew list --formula --cask")
 	case "choco":
 		return runCmd("choco list --local-only")
+	case "dnf":
+		return runCmd("dnf list installed")
+	case "yum":
+		return runCmd("yum list installed")
+	case "zypper":
+		return runCmd("zypper se --installed-only")
+	case "pacman":
+		return runCmd("pacman -Q")
+	case "rpm":
+		return runCmd("rpm -qa")
+	case "dpkg":
+		return runCmd("dpkg --get-selections")
+	case "apk":
+		return runCmd("apk info")
+	case "emerge":
+		return runCmd("emerge --quiet --nocolor --pretend --tree @world")
 	default:
 		return "Unknown package manager."
 	}
