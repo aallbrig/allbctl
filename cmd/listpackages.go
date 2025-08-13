@@ -101,7 +101,8 @@ func exists(cmd string) bool {
 func getPackages(manager string) string {
 	switch manager {
 	case "apt":
-		return runCmd("apt list --installed")
+		// Only return the count of installed packages
+		return runCmd("bash -c \"dpkg-query -f '${binary:Package}\n' -W | wc -l\"")
 	case "snap":
 		return runCmd("snap list")
 	case "flatpak":
