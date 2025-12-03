@@ -6,7 +6,6 @@
 ```bash
 # Help
 allbctl --help
-allbctl new-unity-project --help
 
 # List installed packages
 allbctl list-packages              # Summary: just show counts per package manager (default)
@@ -27,15 +26,6 @@ allbctl cs install                 # Short alias for install
 #    - oh-my-zsh
 #    - Symlinks for .zshrc, .gitconfig, .vimrc, .tmux.conf, .ssh/config
 #    - zsh as default shell (on Linux)
-
-## My favorites
-project_name=$(basename "`pwd`")
-
-allbctl new-unity-project \
-  --project-name "${project_name}" \
-  --create-repository-directory false \
-  --install-webgl-fullscreen-template
-  
 
 ```
 
