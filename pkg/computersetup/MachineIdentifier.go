@@ -15,7 +15,7 @@ func (m MachineIdentifier) ConfigurationProviderForOperatingSystem(os string) mo
 	case "darwin":
 		return providers.MacbookConfigurationProvider{}
 	case "linux":
-		return nil
+		return providers.LinuxConfigurationProvider{}
 	default:
 		return nil
 	}
