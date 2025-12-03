@@ -7,6 +7,8 @@ import (
 	"runtime"
 	"strings"
 
+	computerSetup "github.com/aallbrig/allbctl/pkg/computersetup"
+	"github.com/aallbrig/allbctl/pkg/osagnostic"
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/host"
 	"github.com/shirou/gopsutil/v3/mem"
@@ -59,9 +61,6 @@ func printSystemInfo() {
 
 	// GPU Info
 	gpuList := getGPUInfoList()
-
-	// Git Info
-	gitInstalled := isGitInstalled()
 
 	// Internet Type
 	internetType := getInternetType()
@@ -145,11 +144,111 @@ func printSystemInfo() {
 	fmt.Printf("  Router:    %s\n", routerIP)
 	fmt.Printf("  Type:      %s\n", internetType)
 	fmt.Println()
-	// Print Installed Software section
-	fmt.Println("Installed Software:")
-	fmt.Printf("  Git:       %s\n", gitInstalled)
+
+	// Print Computer Setup Status
+	fmt.Println("Computer Setup:")
+	printComputerSetupStatus()
 	fmt.Println()
-	fmt.Println("Tip: Run 'list-packages' to see all detected package managers and a list of installed packages.")
+
+	// Print Package Manager Summary
+	fmt.Println("Packages:")
+	printPackageSummary()
+}
+
+// printComputerSetupStatus runs the computer-setup status logic
+func printComputerSetupStatus() {
+	os := osagnostic.NewOperatingSystem()
+	identifier := computerSetup.MachineIdentifier{}
+	configProvider := identifier.ConfigurationProviderForOperatingSystem(os.Name)
+	if configProvider == nil {
+		fmt.Printf("  No configuration provider for %s\n", os.Name)
+		return
+	}
+
+	tweaker := computerSetup.NewMachineTweaker(configProvider.GetConfiguration())
+	_, out := tweaker.ConfigurationStatus()
+	
+	// Indent the output
+	lines := strings.Split(out.String(), "\n")
+	for _, line := range lines {
+		if line != "" {
+			fmt.Printf("  %s\n", line)
+		}
+	}
+}
+
+// printPackageSummary runs the list-packages summary logic
+func printPackageSummary() {
+	osType := runtime.GOOS
+	var managers []string
+
+	// System package managers
+	switch osType {
+	case "linux":
+		if exists("apt-mark") {
+			managers = append(managers, "apt")
+		}
+		if exists("snap") {
+			managers = append(managers, "snap")
+		}
+		if exists("flatpak") {
+			managers = append(managers, "flatpak")
+		}
+		if exists("dnf") {
+			managers = append(managers, "dnf")
+		}
+		if exists("yum") {
+			managers = append(managers, "yum")
+		}
+		if exists("pacman") {
+			managers = append(managers, "pacman")
+		}
+	case "darwin":
+		if exists("brew") {
+			managers = append(managers, "brew")
+		}
+	case "windows":
+		if exists("choco") {
+			managers = append(managers, "choco")
+		}
+		if exists("winget") {
+			managers = append(managers, "winget")
+		}
+		if exists("scoop") {
+			managers = append(managers, "scoop")
+		}
+	}
+
+	// Programming runtime package managers (cross-platform)
+	if exists("npm") {
+		managers = append(managers, "npm")
+	}
+	if exists("pip") || exists("pip3") {
+		managers = append(managers, "pip")
+	}
+	if exists("gem") {
+		managers = append(managers, "gem")
+	}
+	if exists("cargo") {
+		managers = append(managers, "cargo")
+	}
+	if exists("go") {
+		managers = append(managers, "go")
+	}
+
+	if len(managers) == 0 {
+		fmt.Println("  No package managers detected")
+		return
+	}
+
+	// Summary mode: just count packages
+	for _, m := range managers {
+		pkgs := getPackages(m)
+		if pkgs != "" {
+			count := countPackages(m, pkgs)
+			fmt.Printf("  %-15s %d packages\n", m+":", count)
+		}
+	}
 }
 
 // detectTerminal tries to determine the terminal emulator in use
@@ -172,14 +271,6 @@ func detectTerminal() string {
 		}
 	}
 	return "Unknown"
-}
-
-// isGitInstalled checks if git is available in PATH
-func isGitInstalled() string {
-	if _, err := exec.LookPath("git"); err == nil {
-		return "Installed"
-	}
-	return "Not installed"
 }
 
 // getGPUInfoList returns a slice of GPU model names using platform-specific commands

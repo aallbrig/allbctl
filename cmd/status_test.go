@@ -25,14 +25,14 @@ func TestPrintSystemInfo_Output(t *testing.T) {
 	}
 	output := sb.String()
 
-	// Accept either single or double quotes for the tip
+	// Check for expected sections
 	if !strings.Contains(output, "Host:") {
 		t.Error("Output missing Host section")
 	}
-	if !strings.Contains(output, "Installed Software:") {
-		t.Error("Output missing Installed Software section")
+	if !strings.Contains(output, "Computer Setup:") {
+		t.Error("Output missing Computer Setup section")
 	}
-	if !strings.Contains(output, "Tip: Run 'allbctl list-packages'") && !strings.Contains(output, "Tip: Run \"allbctl list-packages\"") {
-		t.Error("Output missing tip for list-packages")
+	if !strings.Contains(output, "Packages:") {
+		t.Error("Output missing Packages section")
 	}
 }
