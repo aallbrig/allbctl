@@ -24,8 +24,8 @@ func TestExists_KnownCommands(t *testing.T) {
 
 func TestGetPackages_UnknownManager(t *testing.T) {
 	result := getPackages("unknown")
-	if result != "Unknown package manager." {
-		t.Errorf("Expected 'Unknown package manager.', got '%s'", result)
+	if result != "" {
+		t.Errorf("Expected empty string for unknown manager, got '%s'", result)
 	}
 }
 
@@ -40,20 +40,63 @@ func TestExists_AllSupportedCommands(t *testing.T) {
 	osType := runtime.GOOS
 	var cmds []string
 	if osType == "linux" {
-		cmds = []string{"apt", "snap", "flatpak", "dnf", "yum", "zypper", "pacman", "rpm", "dpkg", "apk", "emerge"}
+		cmds = []string{"apt-mark", "snap", "flatpak", "dnf", "yum", "pacman"}
 	} else if osType == "darwin" {
-		cmds = []string{"brew", "port", "pkgin"}
+		cmds = []string{"brew"}
 	} else if osType == "windows" {
 		cmds = []string{"choco", "winget", "scoop"}
 	}
+	// Add cross-platform runtime package managers
+	cmds = append(cmds, "npm", "pip", "pip3", "gem", "cargo", "go")
+	
 	for _, cmd := range cmds {
 		exists(cmd) // Should not panic
 	}
 }
 
 func TestGetPackages_AllSupportedManagers(t *testing.T) {
-	managers := []string{"apt", "snap", "flatpak", "dnf", "yum", "zypper", "pacman", "rpm", "dpkg", "apk", "emerge", "brew", "macports", "pkgsrc", "choco", "winget", "scoop"}
+	managers := []string{"apt", "snap", "flatpak", "dnf", "yum", "pacman", "brew", "choco", "winget", "scoop", "npm", "pip", "gem", "cargo", "go"}
 	for _, m := range managers {
 		_ = getPackages(m) // Should not panic or error
+	}
+}
+
+func TestCountPackages_Apt(t *testing.T) {
+	output := "package1\npackage2\npackage3\n"
+	count := countPackages("apt", output)
+	if count != 3 {
+		t.Errorf("Expected 3 packages for apt, got %d", count)
+	}
+}
+
+func TestCountPackages_Npm(t *testing.T) {
+	output := "/home/user/.nvm/versions/node/v20.0.0/lib\n├── package1@1.0.0\n├── package2@2.0.0\n└── package3@3.0.0\n"
+	count := countPackages("npm", output)
+	if count != 3 {
+		t.Errorf("Expected 3 packages for npm, got %d", count)
+	}
+}
+
+func TestCountPackages_Pip(t *testing.T) {
+	output := "Package    Version\n---------- -------\npkg1       1.0.0\npkg2       2.0.0\n"
+	count := countPackages("pip", output)
+	if count != 2 {
+		t.Errorf("Expected 2 packages for pip, got %d", count)
+	}
+}
+
+func TestCountPackages_Error(t *testing.T) {
+	output := "Error running command: exit status 1"
+	count := countPackages("apt", output)
+	if count != 0 {
+		t.Errorf("Expected 0 packages for error output, got %d", count)
+	}
+}
+
+func TestCountPackages_EmptyOutput(t *testing.T) {
+	output := ""
+	count := countPackages("apt", output)
+	if count != 0 {
+		t.Errorf("Expected 0 packages for empty output, got %d", count)
 	}
 }
