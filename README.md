@@ -8,6 +8,11 @@
 allbctl --help
 allbctl new-unity-project --help
 
+# List installed packages
+allbctl list-packages              # Summary: just show counts per package manager (default)
+allbctl list-packages --detail     # Full listing of all packages
+allbctl list-packages -d           # Short version of --detail
+
 ## My favorites
 project_name=$(basename "`pwd`")
 

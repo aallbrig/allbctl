@@ -9,24 +9,42 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var detailFlag bool
+
 // ListPackagesCmd represents the list-packages command
 var ListPackagesCmd = &cobra.Command{
 	Use:   "list-packages",
-	Short: "List installed packages from all detected package managers",
+	Short: "Show package count summary from all detected package managers",
+	Long: `Show package count summary from all detected package managers.
+	
+For system package managers (apt, yum, brew, chocolatey, etc.), only explicitly 
+installed packages are counted, not their dependencies.
+
+For programming runtime package managers (npm, pip, gem, etc.), only globally 
+installed packages are counted.
+
+If a package manager is not detected on the system, it will not be displayed.
+
+Use --detail flag to see the full list of all installed packages.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		listInstalledPackages()
 	},
 }
 
+func init() {
+	ListPackagesCmd.Flags().BoolVarP(&detailFlag, "detail", "d", false, "Show detailed list of all packages instead of just counts")
+}
+
 func listInstalledPackages() {
 	osType := runtime.GOOS
-	fmt.Printf("Detected OS: %s\n", osType)
+	fmt.Printf("Detected OS: %s\n\n", osType)
 
 	var managers []string
 
+	// System package managers
 	switch osType {
 	case "linux":
-		if exists("apt") {
+		if exists("apt-mark") {
 			managers = append(managers, "apt")
 		}
 		if exists("snap") {
@@ -41,33 +59,12 @@ func listInstalledPackages() {
 		if exists("yum") {
 			managers = append(managers, "yum")
 		}
-		if exists("zypper") {
-			managers = append(managers, "zypper")
-		}
 		if exists("pacman") {
 			managers = append(managers, "pacman")
-		}
-		if exists("rpm") {
-			managers = append(managers, "rpm")
-		}
-		if exists("dpkg") {
-			managers = append(managers, "dpkg")
-		}
-		if exists("apk") {
-			managers = append(managers, "apk")
-		}
-		if exists("emerge") {
-			managers = append(managers, "emerge")
 		}
 	case "darwin":
 		if exists("brew") {
 			managers = append(managers, "brew")
-		}
-		if exists("port") {
-			managers = append(managers, "macports")
-		}
-		if exists("pkgin") {
-			managers = append(managers, "pkgsrc")
 		}
 	case "windows":
 		if exists("choco") {
@@ -81,15 +78,47 @@ func listInstalledPackages() {
 		}
 	}
 
+	// Programming runtime package managers (cross-platform)
+	if exists("npm") {
+		managers = append(managers, "npm")
+	}
+	if exists("pip") || exists("pip3") {
+		managers = append(managers, "pip")
+	}
+	if exists("gem") {
+		managers = append(managers, "gem")
+	}
+	if exists("cargo") {
+		managers = append(managers, "cargo")
+	}
+	if exists("go") {
+		managers = append(managers, "go")
+	}
+
 	if len(managers) == 0 {
 		fmt.Println("No known package managers detected.")
 		return
 	}
 
-	for _, m := range managers {
-		fmt.Printf("\nPackages installed via %s:\n", m)
-		pkgs := getPackages(m)
-		fmt.Println(pkgs)
+	if detailFlag {
+		// Detail mode: show full listing
+		for _, m := range managers {
+			pkgs := getPackages(m)
+			if pkgs != "" {
+				fmt.Printf("Packages installed via %s:\n", m)
+				fmt.Println(pkgs)
+				fmt.Println()
+			}
+		}
+	} else {
+		// Summary mode (default): just count packages
+		for _, m := range managers {
+			pkgs := getPackages(m)
+			if pkgs != "" {
+				count := countPackages(m, pkgs)
+				fmt.Printf("%-15s %d packages\n", m+":", count)
+			}
+		}
 	}
 }
 
@@ -99,37 +128,62 @@ func exists(cmd string) bool {
 }
 
 func getPackages(manager string) string {
+	var output string
 	switch manager {
 	case "apt":
-		// Only return the count of installed packages
-		return runCmd("bash -c \"dpkg-query -f '${binary:Package}\n' -W | wc -l\"")
+		// List only manually installed packages (not auto-installed dependencies)
+		output = runCmd("apt-mark showmanual")
 	case "snap":
-		return runCmd("snap list")
+		// Snap doesn't track dependencies separately, list all
+		output = runCmd("snap list --color=never")
 	case "flatpak":
-		return runCmd("flatpak list")
+		// List user-installed apps (columns: name, app-id, version, branch, origin)
+		output = runCmd("flatpak list --app --columns=name,application")
 	case "brew":
-		return runCmd("brew list --formula --cask")
+		// List only top-level formulae and casks (explicitly installed, not dependencies)
+		output = runCmd("brew leaves") + "\n" + runCmd("brew list --cask")
 	case "choco":
-		return runCmd("choco list --local-only")
+		// List only explicitly installed packages
+		output = runCmd("choco list")
 	case "dnf":
-		return runCmd("dnf list installed")
+		// List user-installed packages (not dependencies)
+		output = runCmd("dnf repoquery --userinstalled --qf '%{name}'")
 	case "yum":
-		return runCmd("yum list installed")
-	case "zypper":
-		return runCmd("zypper se --installed-only")
+		// List user-installed packages
+		output = runCmd("yum history userinstalled")
 	case "pacman":
-		return runCmd("pacman -Q")
-	case "rpm":
-		return runCmd("rpm -qa")
-	case "dpkg":
-		return runCmd("dpkg --get-selections")
-	case "apk":
-		return runCmd("apk info")
-	case "emerge":
-		return runCmd("emerge --quiet --nocolor --pretend --tree @world")
+		// List explicitly installed packages (not dependencies)
+		output = runCmd("pacman -Qe")
+	case "winget":
+		// List installed packages
+		output = runCmd("winget list")
+	case "scoop":
+		// List installed packages
+		output = runCmd("scoop list")
+	case "npm":
+		// List globally installed packages (depth 0 = no dependencies)
+		output = runCmd("npm list -g --depth=0")
+	case "pip":
+		// List globally installed packages
+		cmd := "pip3"
+		if !exists("pip3") {
+			cmd = "pip"
+		}
+		output = runCmd(cmd + " list --format=columns")
+	case "gem":
+		// List globally installed gems (no dependencies shown by default)
+		output = runCmd("gem list --local")
+	case "cargo":
+		// List globally installed cargo binaries
+		output = runCmd("cargo install --list")
+	case "go":
+		// Go doesn't have a traditional global install list
+		// List binaries in GOPATH/bin or GOBIN
+		output = runCmd("bash -c 'ls -1 $(go env GOPATH)/bin 2>/dev/null || echo \"No Go binaries found\"'")
 	default:
-		return "Unknown package manager."
+		return ""
 	}
+	return strings.TrimSpace(output)
 }
 
 func runCmd(command string) string {
@@ -140,4 +194,77 @@ func runCmd(command string) string {
 		return fmt.Sprintf("Error running %s: %v", command, err)
 	}
 	return string(output)
+}
+
+func countPackages(manager string, output string) int {
+	if strings.HasPrefix(output, "Error running") {
+		return 0
+	}
+	
+	output = strings.TrimSpace(output)
+	if output == "" {
+		return 0
+	}
+	
+	lines := strings.Split(output, "\n")
+	
+	switch manager {
+	case "apt", "cargo", "go":
+		// Simple line count (one package per line)
+		return len(lines)
+	case "snap", "flatpak", "brew", "dnf", "yum", "pacman", "winget", "scoop", "gem":
+		// Skip header lines and count data lines
+		count := 0
+		for i, line := range lines {
+			line = strings.TrimSpace(line)
+			if line == "" {
+				continue
+			}
+			// Skip header lines (varies by manager)
+			if manager == "snap" && i == 0 {
+				continue // Skip "Name Version Rev Tracking Publisher Notes"
+			}
+			if manager == "flatpak" && strings.HasPrefix(line, "Name") {
+				continue
+			}
+			if (manager == "winget" || manager == "scoop") && i < 2 {
+				continue // Skip headers and separator
+			}
+			count++
+		}
+		return count
+	case "npm":
+		// npm output has a tree structure, count top-level packages
+		// Format: /path/to/lib\n├── package@version\n└── package@version
+		count := 0
+		for _, line := range lines {
+			line = strings.TrimSpace(line)
+			if strings.HasPrefix(line, "├──") || strings.HasPrefix(line, "└──") {
+				count++
+			}
+		}
+		return count
+	case "pip":
+		// pip list has 2 header lines
+		if len(lines) <= 2 {
+			return 0
+		}
+		return len(lines) - 2
+	case "choco":
+		// choco list has header and footer, count packages in between
+		count := 0
+		for _, line := range lines {
+			line = strings.TrimSpace(line)
+			if line == "" || strings.Contains(line, "packages installed") {
+				continue
+			}
+			// Package lines typically have a version number
+			if strings.Contains(line, " ") && !strings.HasSuffix(line, ":") {
+				count++
+			}
+		}
+		return count
+	default:
+		return len(lines)
+	}
 }
