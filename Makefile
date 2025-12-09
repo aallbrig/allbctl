@@ -1,6 +1,6 @@
 install-dependencies:
-	go get -u golang.org/x/lint/golint
-	go get -u github.com/mitchellh/gox
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+	go install github.com/mitchellh/gox@latest
 	go get -u github.com/fatih/color
 	go get -u github.com/pkg/errors
 	go mod download
@@ -32,7 +32,7 @@ test:
 	go test -v ./...
 
 lint:
-	golint `go list ./... | grep -v vendor/`
+	golangci-lint run ./...
 
 run:
 	go run main.go
