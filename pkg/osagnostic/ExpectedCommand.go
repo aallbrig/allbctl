@@ -21,7 +21,7 @@ func (e ExpectedCommand) Name() string {
 
 func (e ExpectedCommand) Validate() (out *bytes.Buffer, err error) {
 	out = bytes.NewBufferString("")
-	
+
 	_, err = exec.LookPath(e.CommandName)
 	if err != nil {
 		_, _ = color.New(color.FgRed).Fprint(out, "NOT FOUND")
@@ -29,7 +29,7 @@ func (e ExpectedCommand) Validate() (out *bytes.Buffer, err error) {
 		_, _ = color.New(color.FgGreen).Fprint(out, "INSTALLED")
 	}
 	out.WriteString(fmt.Sprintf(" %s", e.CommandName))
-	
+
 	return
 }
 
@@ -40,7 +40,7 @@ func (e ExpectedCommand) Install() (*bytes.Buffer, error) {
 	out.WriteString("  - Linux: apt install / yum install / pacman -S\n")
 	out.WriteString("  - macOS: brew install\n")
 	out.WriteString("  - Windows: choco install / winget install\n")
-	
+
 	return out, fmt.Errorf("manual installation required for %s", e.CommandName)
 }
 

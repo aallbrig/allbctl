@@ -10,7 +10,10 @@ import (
 func TestPrintSystemInfo_Output(t *testing.T) {
 	// Redirect stdout
 	oldStdout := os.Stdout
-	r, w, _ := os.Pipe()
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("Failed to create pipe: %v", err)
+	}
 	os.Stdout = w
 
 	printSystemInfo()
@@ -19,7 +22,7 @@ func TestPrintSystemInfo_Output(t *testing.T) {
 	os.Stdout = oldStdout
 
 	var sb strings.Builder
-	_, err := io.Copy(&sb, r)
+	_, err = io.Copy(&sb, r)
 	if err != nil {
 		t.Fatalf("Failed to read output: %v", err)
 	}

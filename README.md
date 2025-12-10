@@ -81,8 +81,15 @@ Automate bootstrapping a new development machine with dotfiles and configuration
 On a fresh machine (Linux, macOS, or Windows), you can bootstrap your dev environment:
 
 ```bash
-# 1. Install the latest allbctl from GitHub
-go install github.com/aallbrig/allbctl@latest
+# 1. Download the latest release from GitHub
+# Visit https://github.com/aallbrig/allbctl/releases/latest
+# Download the appropriate binary for your platform:
+#   - allbctl-linux-amd64 for Linux
+#   - allbctl-darwin-amd64 for macOS (Intel)
+#   - allbctl-darwin-arm64 for macOS (Apple Silicon)
+#   - allbctl-windows-amd64.exe for Windows
+# Make it executable (Linux/macOS): chmod +x allbctl-*
+# Move to your PATH (e.g., ~/bin or /usr/local/bin)
 
 # 2. Check your system status
 allbctl status
@@ -98,24 +105,6 @@ allbctl cs install
 # - Verify git is installed (prompts you to install if missing)
 # - Clone your dotfiles repo
 # - Run the dotfiles install script
-```
-
-### Build
-```bash
-make install-dependencies
-make build
-```
-
-### Tests
-```bash
-make lint
-make test
-```
-
-### Install
-```bash
-make install
-go install
 ```
 
 ### Contributing

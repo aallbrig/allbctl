@@ -200,14 +200,14 @@ func countPackages(manager string, output string) int {
 	if strings.HasPrefix(output, "Error running") {
 		return 0
 	}
-	
+
 	output = strings.TrimSpace(output)
 	if output == "" {
 		return 0
 	}
-	
+
 	lines := strings.Split(output, "\n")
-	
+
 	switch manager {
 	case "apt", "cargo", "go":
 		// Simple line count (one package per line)

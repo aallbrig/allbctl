@@ -7,7 +7,7 @@ import (
 func TestShellConfigToolChecker_ExtractTools(t *testing.T) {
 	// This test verifies the tool extraction patterns work correctly
 	checker := &ShellConfigToolChecker{}
-	
+
 	testCases := []struct {
 		name     string
 		line     string
@@ -54,16 +54,16 @@ func TestShellConfigToolChecker_ExtractTools(t *testing.T) {
 			expected: []string{"kubectl"},
 		},
 	}
-	
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			result := checker.extractToolsFromLine(tc.line)
-			
+
 			if len(result) != len(tc.expected) {
 				t.Errorf("Expected %d tools, got %d: %v", len(tc.expected), len(result), result)
 				return
 			}
-			
+
 			for i, tool := range tc.expected {
 				found := false
 				for _, r := range result {
@@ -82,12 +82,12 @@ func TestShellConfigToolChecker_ExtractTools(t *testing.T) {
 
 func TestShellConfigToolChecker_IsToolAvailable(t *testing.T) {
 	checker := &ShellConfigToolChecker{}
-	
+
 	// Test with a command that should always exist
 	if !checker.isToolAvailable("ls") {
 		t.Error("Expected 'ls' to be available")
 	}
-	
+
 	// Test with a command that should never exist
 	if checker.isToolAvailable("this-command-does-not-exist-xyz123") {
 		t.Error("Expected non-existent command to return false")

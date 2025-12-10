@@ -45,7 +45,7 @@ func NewShellConfigToolChecker() *ShellConfigToolChecker {
 
 func (c *ShellConfigToolChecker) ExtractTools() []ToolStatus {
 	toolMap := make(map[string]string) // tool -> source file (full path)
-	
+
 	// Common shell builtins and utilities to exclude
 	commonCommands := map[string]bool{
 		// Core shell builtins
@@ -83,7 +83,7 @@ func (c *ShellConfigToolChecker) ExtractTools() []ToolStatus {
 		for scanner.Scan() {
 			line := scanner.Text()
 			tools := c.extractToolsFromLine(line)
-			
+
 			// Deduplicate tools from this line
 			seenInLine := make(map[string]bool)
 			for _, tool := range tools {
@@ -112,7 +112,7 @@ func (c *ShellConfigToolChecker) ExtractTools() []ToolStatus {
 
 func (c *ShellConfigToolChecker) extractToolsFromLine(line string) []string {
 	toolSet := make(map[string]bool) // Use a set to avoid duplicates
-	
+
 	// Skip comments
 	trimmed := strings.TrimSpace(line)
 	if trimmed == "" || strings.HasPrefix(trimmed, "#") {

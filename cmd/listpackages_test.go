@@ -48,7 +48,7 @@ func TestExists_AllSupportedCommands(t *testing.T) {
 	}
 	// Add cross-platform runtime package managers
 	cmds = append(cmds, "npm", "pip", "pip3", "gem", "cargo", "go")
-	
+
 	for _, cmd := range cmds {
 		exists(cmd) // Should not panic
 	}
