@@ -39,5 +39,6 @@ func (m MacbookConfigurationProvider) GetConfiguration() []model.IMachineConfigu
 			},
 		},
 		dotfiles.NewDotfilesGremlin(),
+		osagnostic.NewShellConfigTools(),
 	}
 }
