@@ -60,9 +60,8 @@ func (o *OperatingSystem) setCurrentWorkingDirectory(path string) {
 
 func (o *OperatingSystem) CreateDirectory(path string) {
 	// Does the directory already exist?
-	if err := os.MkdirAll(path, os.ModePerm); err != nil {
-		// TODO: what happens if this fails?
-	}
+	//nolint:errcheck // TODO: what happens if this fails?
+	_ = os.MkdirAll(path, os.ModePerm)
 }
 
 func (o *OperatingSystem) setEnvironmentVariables() {

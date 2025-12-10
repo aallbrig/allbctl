@@ -72,7 +72,7 @@ func (provider *GithubClientProvider) GetGithubClient(accessToken string) (clien
 		AccessToken: accessToken,
 	}
 
-	oauthClient := oauth2.NewClient(oauth2.NoContext, tokenSource)
+	oauthClient := oauth2.NewClient(context.Background(), tokenSource)
 	ghClient := github.NewClient(oauthClient)
 
 	client = GithubClient{

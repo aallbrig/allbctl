@@ -6,7 +6,7 @@ import (
 	"os"
 	"sort"
 	"strings"
-	
+
 	"github.com/fatih/color"
 )
 
@@ -26,9 +26,9 @@ func (s *ShellConfigTools) Name() string {
 
 func (s *ShellConfigTools) Validate() (*bytes.Buffer, error) {
 	out := bytes.NewBufferString("")
-	
+
 	tools := s.checker.ExtractTools()
-	
+
 	if len(tools) == 0 {
 		out.WriteString("No tools found in shell config files\n")
 		return out, nil
@@ -57,15 +57,15 @@ func (s *ShellConfigTools) Validate() (*bytes.Buffer, error) {
 		if homeDir != "" && strings.HasPrefix(file, homeDir) {
 			displayPath = "$HOME" + strings.TrimPrefix(file, homeDir)
 		}
-		
+
 		out.WriteString(fmt.Sprintf("%s:\n", displayPath))
-		
+
 		// Sort tools within each file
 		fileTools := toolsByFile[file]
 		sort.Slice(fileTools, func(i, j int) bool {
 			return fileTools[i].Tool < fileTools[j].Tool
 		})
-		
+
 		for _, tool := range fileTools {
 			if tool.Available {
 				color.New(color.FgGreen).Fprint(out, "INSTALLED")
@@ -94,10 +94,10 @@ func (s *ShellConfigTools) Validate() (*bytes.Buffer, error) {
 
 func (s *ShellConfigTools) Install() (*bytes.Buffer, error) {
 	out := bytes.NewBufferString("")
-	
+
 	tools := s.checker.ExtractTools()
 	var missingTools []string
-	
+
 	for _, tool := range tools {
 		if !tool.Available {
 			missingTools = append(missingTools, tool.Tool)
@@ -109,10 +109,10 @@ func (s *ShellConfigTools) Install() (*bytes.Buffer, error) {
 		return out, nil
 	}
 
-	out.WriteString(fmt.Sprintf("The following tools are referenced in your shell config but not installed:\n"))
+	out.WriteString("The following tools are referenced in your shell config but not installed:\n")
 	out.WriteString(fmt.Sprintf("  %s\n", strings.Join(missingTools, ", ")))
 	out.WriteString("\nPlease install them manually using your package manager.\n")
-	
+
 	return out, fmt.Errorf("cannot automatically install shell config tools")
 }
 

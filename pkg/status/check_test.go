@@ -2,7 +2,6 @@ package status
 
 import (
 	"bytes"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -10,13 +9,14 @@ import (
 )
 
 func Test_MissingStatusForDirectory(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "")
+	tempDir, err := os.MkdirTemp("", "")
 	if err != nil {
 		t.Error("[Testing] Error creating a temporary directory")
 	}
 	defer os.RemoveAll(tempDir)
 
 	stringBuf := bytes.NewBufferString("")
+	//nolint:errcheck // Function handles errors internally and writes status to buffer
 	_ = CheckForDirectory(stringBuf, tempDir, "src")
 
 	if !strings.Contains(stringBuf.String(), "Missing") {
@@ -25,7 +25,7 @@ func Test_MissingStatusForDirectory(t *testing.T) {
 }
 
 func Test_PresentStatusForDirectory(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "")
+	tempDir, err := os.MkdirTemp("", "")
 	if err != nil {
 		t.Error("[Testing] Error creating a temporary directory")
 	}
@@ -37,6 +37,7 @@ func Test_PresentStatusForDirectory(t *testing.T) {
 	}
 
 	stringBuf := bytes.NewBufferString("")
+	//nolint:errcheck // Function handles errors internally and writes status to buffer
 	_ = CheckForDirectory(stringBuf, tempDir, "src")
 
 	if !strings.Contains(stringBuf.String(), "Present") {
@@ -61,6 +62,7 @@ func Test_SystemInfo(t *testing.T) {
 	for _, testCase := range testCases {
 		goos = testCase.goos
 
+		//nolint:errcheck // Function handles errors internally and writes status to buffer
 		_ = SystemInfo(stringBuf)
 		if !strings.Contains(stringBuf.String(), testCase.expected) {
 			t.Errorf("Expected %s to contain %s", stringBuf.String(), testCase.expected)
@@ -70,7 +72,7 @@ func Test_SystemInfo(t *testing.T) {
 }
 
 func Test_PackageManagerPresent(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "")
+	tempDir, err := os.MkdirTemp("", "")
 	if err != nil {
 		t.Error("[Testing] Error creating a temporary directory")
 	}
@@ -93,12 +95,13 @@ func Test_PackageManagerPresent(t *testing.T) {
 
 	for _, testCase := range testCases {
 		stringBuf := bytes.NewBufferString("")
-		err = ioutil.WriteFile(filepath.Join(tempDir, testCase.command), []byte(""), 0777)
+		err = os.WriteFile(filepath.Join(tempDir, testCase.command), []byte(""), 0777)
 		if err != nil {
 			t.Error("[Testing] Error creating file")
 		}
 
 		goos = testCase.goos
+		//nolint:errcheck // Function handles errors internally and writes status to buffer
 		_ = PackageManager(stringBuf)
 		if !strings.Contains(stringBuf.String(), testCase.expected) {
 			t.Errorf("Expected %s to contain package manager %s", stringBuf.String(), testCase.expected)
@@ -113,7 +116,7 @@ func Test_PackageManagerPresent(t *testing.T) {
 }
 
 func Test_PackageManagerMissing(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "")
+	tempDir, err := os.MkdirTemp("", "")
 	if err != nil {
 		t.Error("[Testing] Error creating a temporary directory")
 	}
@@ -138,6 +141,7 @@ func Test_PackageManagerMissing(t *testing.T) {
 		stringBuf := bytes.NewBufferString("")
 
 		goos = testCase.goos
+		//nolint:errcheck // Function handles errors internally and writes status to buffer
 		_ = PackageManager(stringBuf)
 
 		if !strings.Contains(stringBuf.String(), "Missing") {

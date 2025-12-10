@@ -50,7 +50,7 @@ func SystemInfo(buf *bytes.Buffer) (err error) {
 	case "linux":
 		buf.WriteString("Linux")
 	default:
-		buf.WriteString(fmt.Sprintf("%s", goos))
+		buf.WriteString(goos)
 	}
 	buf.WriteString("\n")
 

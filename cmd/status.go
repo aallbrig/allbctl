@@ -92,7 +92,10 @@ func printSystemInfo() {
 	}
 
 	// Network Interfaces
-	netIfaces, _ := net.Interfaces()
+	netIfaces, err := net.Interfaces()
+	if err != nil {
+		netIfaces = nil
+	}
 	var netSection []string
 	for _, iface := range netIfaces {
 		if len(iface.Addrs) == 0 {
@@ -172,7 +175,7 @@ func printComputerSetupStatus() {
 
 	tweaker := computerSetup.NewMachineTweaker(configProvider.GetConfiguration())
 	_, out := tweaker.ConfigurationStatus()
-	
+
 	// Indent the output
 	lines := strings.Split(out.String(), "\n")
 	for _, line := range lines {
@@ -186,12 +189,11 @@ func printComputerSetupStatus() {
 func printPackageManagers() {
 	osType := runtime.GOOS
 	systemAvailable := []string{}
-	systemUnavailable := []string{}
 	runtimeAvailable := []string{}
 
 	// System package managers by OS
 	systemManagers := map[string]string{}
-	
+
 	switch osType {
 	case "linux":
 		systemManagers["apt"] = "apt-get"
@@ -221,8 +223,6 @@ func printPackageManagers() {
 	for name, cmd := range systemManagers {
 		if exists(cmd) {
 			systemAvailable = append(systemAvailable, name)
-		} else {
-			systemUnavailable = append(systemUnavailable, name)
 		}
 	}
 
@@ -491,15 +491,7 @@ func getInternetType() string {
 				out2, err2 := cmd2.Output()
 				if err2 == nil {
 					for _, line := range strings.Split(string(out2), "\n") {
-						if strings.Contains(line, "tx bitrate") {
-							// Not always present, but can parse
-						}
-						if strings.Contains(line, "connected to") {
-							// Not always present
-						}
-						if strings.Contains(line, "freq:") {
-							// Not always present
-						}
+						// Parse for WiFi standard (802.11ax, 802.11ac, etc.)
 						if strings.Contains(line, "802.11") {
 							// e.g. 802.11ax (WiFi 6/6E), 802.11ac (WiFi 5)
 							proto := strings.TrimSpace(line)

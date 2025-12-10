@@ -11,7 +11,7 @@ type LinuxConfigurationProvider struct{}
 
 func (l LinuxConfigurationProvider) GetConfiguration() []model.IMachineConfiguration {
 	os := osagnostic.NewOperatingSystem()
-	
+
 	return []model.IMachineConfiguration{
 		model.MachineConfigurationGroup{
 			GroupName: "Expected Directories",

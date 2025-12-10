@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	computerSetup "github.com/aallbrig/allbctl/pkg/computersetup"
 	"github.com/aallbrig/allbctl/pkg/osagnostic"
 	"github.com/spf13/cobra"
@@ -31,7 +30,7 @@ var statusCmd = &cobra.Command{
 		identifier := computerSetup.MachineIdentifier{}
 		configProvider := identifier.ConfigurationProviderForOperatingSystem(os.Name)
 		if configProvider == nil {
-			log.Fatal(fmt.Sprintf("No configuration provider found for operating system %s", os.Name))
+			log.Fatalf("No configuration provider found for operating system %s", os.Name)
 		}
 
 		tweaker := computerSetup.NewMachineTweaker(configProvider.GetConfiguration())
@@ -48,7 +47,7 @@ var installCmd = &cobra.Command{
 		identifier := computerSetup.MachineIdentifier{}
 		configProvider := identifier.ConfigurationProviderForOperatingSystem(os.Name)
 		if configProvider == nil {
-			log.Fatal(fmt.Sprintf("No configuration provider found for operating system %s", os.Name))
+			log.Fatalf("No configuration provider found for operating system %s", os.Name)
 		}
 
 		tweaker := computerSetup.NewMachineTweaker(configProvider.GetConfiguration())
