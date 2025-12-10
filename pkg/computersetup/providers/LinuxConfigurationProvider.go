@@ -35,5 +35,6 @@ func (l LinuxConfigurationProvider) GetConfiguration() []model.IMachineConfigura
 				),
 			},
 		},
+		osagnostic.NewShellConfigTools(),
 	}
 }

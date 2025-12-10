@@ -150,6 +150,11 @@ func printSystemInfo() {
 	printComputerSetupStatus()
 	fmt.Println()
 
+	// Print Package Managers Available
+	fmt.Println("Package Managers:")
+	printPackageManagers()
+	fmt.Println()
+
 	// Print Package Manager Summary
 	fmt.Println("Packages:")
 	printPackageSummary()
@@ -175,6 +180,129 @@ func printComputerSetupStatus() {
 			fmt.Printf("  %s\n", line)
 		}
 	}
+}
+
+// printPackageManagers displays available package managers
+func printPackageManagers() {
+	osType := runtime.GOOS
+	systemAvailable := []string{}
+	systemUnavailable := []string{}
+	runtimeAvailable := []string{}
+
+	// System package managers by OS
+	systemManagers := map[string]string{}
+	
+	switch osType {
+	case "linux":
+		systemManagers["apt"] = "apt-get"
+		systemManagers["dnf"] = "dnf"
+		systemManagers["yum"] = "yum"
+		systemManagers["pacman"] = "pacman"
+		systemManagers["snap"] = "snap"
+		systemManagers["flatpak"] = "flatpak"
+		systemManagers["zypper"] = "zypper"
+		systemManagers["apk"] = "apk"
+		systemManagers["nix"] = "nix-env"
+		// Check for Homebrew on Linux
+		if exists("brew") {
+			systemAvailable = append(systemAvailable, "homebrew")
+		}
+	case "darwin":
+		systemManagers["homebrew"] = "brew"
+		systemManagers["macports"] = "port"
+		systemManagers["nix"] = "nix-env"
+	case "windows":
+		systemManagers["chocolatey"] = "choco"
+		systemManagers["winget"] = "winget"
+		systemManagers["scoop"] = "scoop"
+	}
+
+	// Check system package managers
+	for name, cmd := range systemManagers {
+		if exists(cmd) {
+			systemAvailable = append(systemAvailable, name)
+		} else {
+			systemUnavailable = append(systemUnavailable, name)
+		}
+	}
+
+	// Programming runtime package managers (cross-platform)
+	runtimeManagers := map[string]string{
+		"npm":      "npm",
+		"pip":      "pip",
+		"gem":      "gem",
+		"cargo":    "cargo",
+		"composer": "composer",
+		"maven":    "mvn",
+		"gradle":   "gradle",
+	}
+
+	// Check runtime package managers
+	for name, cmd := range runtimeManagers {
+		if exists(cmd) || (name == "pip" && exists("pip3")) {
+			runtimeAvailable = append(runtimeAvailable, name)
+		}
+	}
+
+	// Check for WSL on Windows
+	var wslAvailable []string
+	if osType == "windows" {
+		wslAvailable = checkWSLPackageManagers()
+	}
+
+	// Print system package managers
+	if len(systemAvailable) > 0 {
+		fmt.Printf("  System:    %s\n", strings.Join(systemAvailable, ", "))
+	} else {
+		fmt.Printf("  System:    none\n")
+	}
+
+	// Print runtime package managers
+	if len(runtimeAvailable) > 0 {
+		fmt.Printf("  Runtime:   %s\n", strings.Join(runtimeAvailable, ", "))
+	}
+
+	// Print WSL package managers on Windows
+	if len(wslAvailable) > 0 {
+		fmt.Printf("  WSL:       %s\n", strings.Join(wslAvailable, ", "))
+	} else if osType == "windows" {
+		fmt.Printf("  WSL:       not available\n")
+	}
+}
+
+// checkWSLPackageManagers checks for WSL availability and its package managers on Windows
+func checkWSLPackageManagers() []string {
+	if runtime.GOOS != "windows" {
+		return nil
+	}
+
+	var wslAvailable []string
+
+	// Check if WSL is available by trying to run a simple command
+	wslTestCmd := exec.Command("wsl", "--", "echo", "test")
+	if err := wslTestCmd.Run(); err != nil {
+		return nil
+	}
+
+	// WSL is available, check for package managers inside WSL
+	wslManagers := map[string]string{
+		"apt":    "apt-get",
+		"dnf":    "dnf",
+		"yum":    "yum",
+		"pacman": "pacman",
+		"zypper": "zypper",
+		"apk":    "apk",
+	}
+
+	for name, cmd := range wslManagers {
+		// Check if the command exists in WSL
+		checkCmd := exec.Command("wsl", "which", cmd)
+		if err := checkCmd.Run(); err == nil {
+			wslAvailable = append(wslAvailable, name)
+		}
+	}
+
+	return wslAvailable
 }
 
 // printPackageSummary runs the list-packages summary logic
