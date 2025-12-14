@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"io"
 	"os"
 	"os/exec"
 	"strings"
@@ -177,15 +178,9 @@ func TestStatusCommandSections(t *testing.T) {
 	os.Stdout = oldStdout
 
 	var sb strings.Builder
-	buf := make([]byte, 1024)
-	for {
-		n, err := r.Read(buf)
-		if n > 0 {
-			sb.Write(buf[:n])
-		}
-		if err != nil {
-			break
-		}
+	_, err = io.Copy(&sb, r)
+	if err != nil {
+		t.Fatalf("Failed to read output: %v", err)
 	}
 	output := sb.String()
 
