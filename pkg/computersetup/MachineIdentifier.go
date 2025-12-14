@@ -1,9 +1,10 @@
 package computersetup
 
 import (
+	"runtime"
+
 	"github.com/aallbrig/allbctl/pkg/computersetup/providers"
 	"github.com/aallbrig/allbctl/pkg/model"
-	"runtime"
 )
 
 type MachineIdentifier struct{}
@@ -11,7 +12,7 @@ type MachineIdentifier struct{}
 func (m MachineIdentifier) ConfigurationProviderForOperatingSystem(os string) model.IMachineConfigurationProvider {
 	switch os {
 	case "windows":
-		return nil
+		return providers.WindowsConfigurationProvider{}
 	case "darwin":
 		return providers.MacbookConfigurationProvider{}
 	case "linux":

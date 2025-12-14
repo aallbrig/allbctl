@@ -26,60 +26,108 @@ jobs:
       - name: Build Linux amd64
         run: |
           GOOS=linux GOARCH=amd64 go build -o allbctl-linux-amd64
-      - name: Package Linux binary
+      - name: Package Linux amd64 binary
         run: |
           tar -czvf allbctl-linux-amd64.tar.gz allbctl-linux-amd64
-      - name: Upload Linux artifact
+      - name: Upload Linux amd64 artifact
         uses: actions/upload-artifact@v4
         with:
           name: allbctl-linux-amd64
           path: allbctl-linux-amd64.tar.gz
+      - name: Build Linux arm64
+        run: |
+          GOOS=linux GOARCH=arm64 go build -o allbctl-linux-arm64
+      - name: Package Linux arm64 binary
+        run: |
+          tar -czvf allbctl-linux-arm64.tar.gz allbctl-linux-arm64
+      - name: Upload Linux arm64 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: allbctl-linux-arm64
+          path: allbctl-linux-arm64.tar.gz
       - name: Build macOS amd64
         run: |
           GOOS=darwin GOARCH=amd64 go build -o allbctl-darwin-amd64
-      - name: Package macOS binary
+      - name: Package macOS amd64 binary
         run: |
           tar -czvf allbctl-darwin-amd64.tar.gz allbctl-darwin-amd64
-      - name: Upload macOS artifact
+      - name: Upload macOS amd64 artifact
         uses: actions/upload-artifact@v4
         with:
           name: allbctl-darwin-amd64
           path: allbctl-darwin-amd64.tar.gz
+      - name: Build macOS arm64
+        run: |
+          GOOS=darwin GOARCH=arm64 go build -o allbctl-darwin-arm64
+      - name: Package macOS arm64 binary
+        run: |
+          tar -czvf allbctl-darwin-arm64.tar.gz allbctl-darwin-arm64
+      - name: Upload macOS arm64 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: allbctl-darwin-arm64
+          path: allbctl-darwin-arm64.tar.gz
       - name: Build Windows amd64
         run: |
           GOOS=windows GOARCH=amd64 go build -o allbctl-windows-amd64.exe
-      - name: Package Windows binary
+      - name: Package Windows amd64 binary
         run: |
           zip allbctl-windows-amd64.zip allbctl-windows-amd64.exe
-      - name: Upload Windows artifact
+      - name: Upload Windows amd64 artifact
         uses: actions/upload-artifact@v4
         with:
           name: allbctl-windows-amd64
           path: allbctl-windows-amd64.zip
+      - name: Build Windows arm64
+        run: |
+          GOOS=windows GOARCH=arm64 go build -o allbctl-windows-arm64.exe
+      - name: Package Windows arm64 binary
+        run: |
+          zip allbctl-windows-arm64.zip allbctl-windows-arm64.exe
+      - name: Upload Windows arm64 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: allbctl-windows-arm64
+          path: allbctl-windows-arm64.zip
   release:
     name: Create GitHub Release
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - name: Download Linux artifact
+      - name: Download Linux amd64 artifact
         uses: actions/download-artifact@v4
         with:
           name: allbctl-linux-amd64
-      - name: Download macOS artifact
+      - name: Download Linux arm64 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: allbctl-linux-arm64
+      - name: Download macOS amd64 artifact
         uses: actions/download-artifact@v4
         with:
           name: allbctl-darwin-amd64
-      - name: Download Windows artifact
+      - name: Download macOS arm64 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: allbctl-darwin-arm64
+      - name: Download Windows amd64 artifact
         uses: actions/download-artifact@v4
         with:
           name: allbctl-windows-amd64
+      - name: Download Windows arm64 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: allbctl-windows-arm64
       - name: Create Release and Upload Assets
         uses: ncipollo/release-action@v1
         with:
           artifacts: |
             allbctl-linux-amd64.tar.gz
+            allbctl-linux-arm64.tar.gz
             allbctl-darwin-amd64.tar.gz
+            allbctl-darwin-arm64.tar.gz
             allbctl-windows-amd64.zip
+            allbctl-windows-arm64.zip
           token: ${{ secrets.GITHUB_TOKEN }}
           generateReleaseNotes: true
           draft: false

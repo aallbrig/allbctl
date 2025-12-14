@@ -20,7 +20,7 @@ jobs:
         run: make test
       - name: Lint source
         run: make lint
-      - name: Build all artifacts
+      - name: Build all artifacts (amd64 and arm64)
         run: make build-all
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2

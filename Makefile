@@ -16,16 +16,16 @@ build-docker:
 	docker build --tag aallbrig/allbctl .
 
 build-mac:
-	gox -osarch="darwin/amd64"
+	gox -osarch="darwin/amd64" -osarch="darwin/arm64"
 
 build-windows:
-	gox -osarch="windows/amd64"
+	gox -osarch="windows/amd64" -osarch="windows/arm64"
 
 build-linux:
-	gox -osarch="linux/amd64"
+	gox -osarch="linux/amd64" -osarch="linux/arm64"
 
 build-all:
-	gox -osarch="linux/amd64" -osarch="windows/amd64" -osarch="darwin/amd64"
+	gox -osarch="linux/amd64" -osarch="linux/arm64" -osarch="windows/amd64" -osarch="windows/arm64" -osarch="darwin/amd64" -osarch="darwin/arm64"
 	chmod +x allbctl_*
 
 test:
