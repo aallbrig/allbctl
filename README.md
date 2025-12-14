@@ -22,14 +22,16 @@ allbctl list-packages -d           # Short version of --detail
 
 # Computer setup (bootstrap development environment)
 allbctl computer-setup status      # Check what's set up and what's missing
-allbctl computer-setup install     # Install/configure dev environment
+allbctl computer-setup install     # Install/configure dev environment automatically
 allbctl cs status                  # Short alias for status
 allbctl cs install                 # Short alias for install
 
 # What computer-setup does:
 # ✅ Ensures ~/src directory exists
-# ✅ Verifies git is installed
-# ✅ Clones dotfiles from https://github.com/aallbrig/dotfiles
+# ✅ **Automatically installs git** (cross-platform: apt/dnf/yum/pacman/zypper/apk on Linux, brew on macOS, winget/choco/scoop on Windows)
+# ✅ **Automatically installs GitHub CLI (gh)** (cross-platform package manager support)
+# ✅ **Generates SSH keys** (if missing) and **registers them with GitHub** automatically
+# ✅ **Clones dotfiles** from https://github.com/aallbrig/dotfiles to ~/src/dotfiles
 # ✅ Runs dotfiles install script (./fresh.sh) which sets up:
 #    - oh-my-zsh
 #    - Symlinks for .zshrc, .gitconfig, .vimrc, .tmux.conf, .ssh/config
@@ -38,7 +40,8 @@ allbctl cs install                 # Short alias for install
 #    - Detects commands in $(command), source <(command), which/command -v, eval patterns
 #    - Shows which tools are INSTALLED (green) vs MISSING (red)
 #    - Groups by config file with $HOME path notation
-#    - Works across Linux, macOS, and Windows
+# ✅ **Fully cross-platform** - Works on Linux, macOS, and Windows
+# ✅ **Idempotent** - Safe to run multiple times, only installs what's missing
 
 ```
 
@@ -63,18 +66,23 @@ Multi-platform package detection supporting:
 - **Runtime**: npm, pip, gem, cargo, composer, maven, gradle (all platforms)
 
 #### Computer Setup Automation
-Automate bootstrapping a new development machine with dotfiles and configurations.
+Fully automate bootstrapping a new development machine with dotfiles and essential tools.
 
 **Features:**
+- **Cross-platform tool installation**: Automatically installs git and GitHub CLI using native package managers
+  - **Linux**: apt, dnf, yum, pacman, zypper, apk
+  - **macOS**: Homebrew
+  - **Windows**: winget, chocolatey, scoop
+- **SSH key management**: Generates SSH keys if missing and automatically registers them with GitHub
 - Creates required directories (`~/src`, `~/bin`)
-- Verifies essential tools are installed (git, etc.)
-- Clones and runs your dotfiles setup
+- **Dotfiles integration**: Clones your dotfiles repo to `~/src/dotfiles` and runs install script
 - **Shell Config Tool Detection**: Automatically scans your shell configuration files (.zshrc, .bashrc, .bash_profile, .profile) to find tool dependencies
   - Extracts commands from: `$(command)`, `` `command` ``, `source <(command)`, `which command`, `command -v`, `eval "$(command)"`
   - Reports which tools are INSTALLED (green) vs MISSING (red)
   - Groups output by config file with `$HOME` paths for portability
   - Filters out common shell builtins to focus on external tools
   - OS-agnostic: works on Linux, macOS, and Windows
+- **Idempotent operations**: Safe to run multiple times, only installs what's missing
 
 ### Bootstrapping a New Machine
 
@@ -97,16 +105,19 @@ allbctl status
 # 3. Check what needs to be set up
 allbctl cs status
 
-# 4. Run the setup
+# 4. Run the automated setup
 allbctl cs install
 
-# The tool will:
+# The tool will automatically:
+# - Install git if not present (using your system's package manager)
+# - Install GitHub CLI if not present
+# - Generate SSH keys if missing
+# - Register your SSH keys with GitHub (requires 'gh auth login' first)
 # - Create ~/src directory if needed
-# - Verify git is installed (prompts you to install if missing)
-# - Clone your dotfiles repo
-# - Run the dotfiles install script
+# - Clone your dotfiles repo to ~/src/dotfiles
+# - Run the dotfiles install script (./fresh.sh)
+# - All operations are idempotent - safe to run multiple times
 ```
 
 ### Contributing
 Please reference the `CONTRIBUTING.md` file.
-

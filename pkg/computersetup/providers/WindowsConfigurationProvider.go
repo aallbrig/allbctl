@@ -8,9 +8,9 @@ import (
 	"github.com/aallbrig/allbctl/pkg/osagnostic"
 )
 
-type LinuxConfigurationProvider struct{}
+type WindowsConfigurationProvider struct{}
 
-func (l LinuxConfigurationProvider) GetConfiguration() []model.IMachineConfiguration {
+func (w WindowsConfigurationProvider) GetConfiguration() []model.IMachineConfiguration {
 	os := osagnostic.NewOperatingSystem()
 
 	return []model.IMachineConfiguration{
@@ -24,21 +24,13 @@ func (l LinuxConfigurationProvider) GetConfiguration() []model.IMachineConfigura
 			GroupName: "Required Tools",
 			Configs: []model.IMachineConfiguration{
 				osagnostic.NewInstallableCommand("git").
-					SetLinuxPackage("apt", "git").
-					SetLinuxPackage("dnf", "git").
-					SetLinuxPackage("yum", "git").
-					SetLinuxPackage("pacman", "git").
-					SetLinuxPackage("zypper", "git").
-					SetLinuxPackage("apk", "git").
-					SetLinuxPackage("generic", "git"),
+					SetWindowsPackage("winget", "Git.Git").
+					SetWindowsPackage("choco", "git").
+					SetWindowsPackage("scoop", "git"),
 				osagnostic.NewInstallableCommand("gh").
-					SetLinuxPackage("apt", "gh").
-					SetLinuxPackage("dnf", "gh").
-					SetLinuxPackage("yum", "gh").
-					SetLinuxPackage("pacman", "github-cli").
-					SetLinuxPackage("zypper", "gh").
-					SetLinuxPackage("apk", "github-cli").
-					SetLinuxPackage("generic", "gh"),
+					SetWindowsPackage("winget", "GitHub.cli").
+					SetWindowsPackage("choco", "gh").
+					SetWindowsPackage("scoop", "gh"),
 			},
 		},
 		model.MachineConfigurationGroup{
