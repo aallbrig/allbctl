@@ -20,6 +20,13 @@ allbctl list-packages              # Summary: just show counts per package manag
 allbctl list-packages --detail     # Full listing of all packages
 allbctl list-packages -d           # Short version of --detail
 
+# Detect runtimes (programming languages, databases, cloud tools)
+allbctl runtimes                   # Shows detected development runtimes with versions:
+                                   # - Languages: Node.js, Go, PHP, Java, Python
+                                   # - Databases: MySQL, PostgreSQL, SQLite, MariaDB, MongoDB, Redis
+                                   # - Cloud: Kubernetes, AWS CLI, Azure CLI, Google Cloud SDK
+                                   # - HashiCorp: Terraform, Vault, Consul, Nomad
+
 # Computer setup (bootstrap development environment)
 allbctl computer-setup status      # Check what's set up and what's missing
 allbctl computer-setup install     # Install/configure dev environment
@@ -106,6 +113,31 @@ allbctl cs install
 # - Clone your dotfiles repo
 # - Run the dotfiles install script
 ```
+
+### Additional Commands
+
+#### Runtimes Detection
+The `runtimes` command detects programming languages, databases, and cloud tools installed on your system:
+
+```bash
+allbctl runtimes
+```
+
+**Detects:**
+- **Programming Languages**: Node.js, Go, PHP, Java, Python
+- **SQL Databases**: MySQL, PostgreSQL, SQLite, MariaDB, SQL Server, Oracle
+- **NoSQL Databases**: MongoDB, Redis, Cassandra
+- **Kubernetes & Cloud**: kubectl, AWS CLI, Azure CLI, Google Cloud SDK
+- **HashiCorp Tools**: Terraform, Vault, Consul, Nomad
+
+#### Reset Configuration
+The `reset` command resets your machine configuration:
+
+```bash
+allbctl reset
+```
+
+This will display system information and reset the computer setup configuration to its initial state.
 
 ### Contributing
 Please reference the `CONTRIBUTING.md` file.
