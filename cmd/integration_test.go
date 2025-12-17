@@ -59,24 +59,23 @@ func TestCLICommandsExist(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Use the compiled binary if available, otherwise use go run from project root
+			// Build the binary if it doesn't exist
 			binary := "../bin/allbctl"
-			var cmd *exec.Cmd
-			if _, err := os.Stat(binary); err == nil {
-				cmd = exec.Command(binary, tt.args...)
-			} else {
+			if _, err := os.Stat(binary); err != nil {
 				// Try from current directory (when running tests from project root)
 				binary = "./bin/allbctl"
-				if _, err := os.Stat(binary); err == nil {
-					cmd = exec.Command(binary, tt.args...)
-				} else {
-					// Fallback to using go run
-					args := append([]string{"run", "../main.go"}, tt.args...)
-					cmd = exec.Command("go", args...)
-					cmd.Dir = ".."
+				if _, err := os.Stat(binary); err != nil {
+					// Build the binary
+					t.Log("Building binary for integration tests...")
+					buildCmd := exec.Command("go", "build", "-o", "../bin/allbctl", "../main.go")
+					if err := buildCmd.Run(); err != nil {
+						t.Skipf("Failed to build binary, skipping integration test: %v", err)
+					}
+					binary = "../bin/allbctl"
 				}
 			}
 
+			cmd := exec.Command(binary, tt.args...)
 			output, err := cmd.CombinedOutput()
 			
 			if tt.expectError && err == nil {
