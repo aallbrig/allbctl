@@ -77,7 +77,7 @@ func TestCLICommandsExist(t *testing.T) {
 
 			cmd := exec.Command(binary, tt.args...)
 			output, err := cmd.CombinedOutput()
-			
+
 			if tt.expectError && err == nil {
 				t.Errorf("%s: expected error but got none", tt.name)
 			}
@@ -100,7 +100,7 @@ func TestRootCommandOutput(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Root command failed: %v", err)
 	}
-	
+
 	// Verify all commands are registered
 	commands := []string{"computer-setup", "list-packages", "status", "runtimes", "reset"}
 	for _, cmd := range commands {
@@ -143,7 +143,7 @@ func TestListPackagesFlagExists(t *testing.T) {
 	if flag == nil {
 		t.Error("--detail flag not found for list-packages command")
 	}
-	
+
 	// Check short flag
 	flagD := ListPackagesCmd.Flags().ShorthandLookup("d")
 	if flagD == nil {
