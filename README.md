@@ -9,11 +9,12 @@ allbctl --help
 
 # System status (like neofetch, but better!)
 allbctl status                     # Shows comprehensive system information:
-                                   # - Host info (OS, hostname, shell, terminal, CPU, GPU, memory)
-                                   # - Network info (interfaces, router, connection type)
+allbctl cs status                  # Same as above (alias)
+                                   # - User@hostname header with separator
+                                   # - OS, kernel, uptime, host/virtualization info
+                                   # - Package counts (dpkg, rpm, flatpak, snap, brew, etc.)
+                                   # - Shell, terminal, CPU, GPU(s), memory
                                    # - Computer setup status (dotfiles, directories, tools)
-                                   # - Package managers (available system & runtime package managers)
-                                   # - Package counts per package manager
 
 # List installed packages
 allbctl list-packages              # Summary: just show counts per package manager (default)
@@ -55,22 +56,20 @@ allbctl cs install                 # Short alias for install
 ### Features
 
 #### System Status
-The `status` command provides a comprehensive view of your system, similar to neofetch but tailored for development:
-- **Host Information**: OS, hostname, shell, terminal, CPU, GPU(s), memory, hardware details
-- **Network Information**: Network interfaces with IPs, router IP, connection type (WiFi/Ethernet)
-- **Computer Setup Status**: Dotfiles location, required directories, installed tools
-- **Package Managers**: Detects available package managers on your system
-  - **System**: apt, dnf, yum, pacman, snap, flatpak, zypper, apk, homebrew, macports, chocolatey, winget, scoop, nix
-  - **Runtime**: npm, pip, gem, cargo, composer, maven, gradle
-  - **WSL** (Windows only): Detects WSL availability and package managers inside WSL
-- **Package Counts**: Summary of installed packages per detected package manager
+The `status` and `cs status` commands provide a neofetch-inspired view of your system:
+- **User@Hostname Header**: Shows current user and machine name with separator line
+- **OS Information**: Platform, version, architecture, kernel version
+- **System Details**: Host/virtualization info, uptime
+- **Package Counts**: Inline display of packages from detected package managers (dpkg, rpm, pacman, snap, flatpak, brew, choco, winget)
+- **System Info**: Shell, terminal, CPU with core count and frequency, GPU(s), memory usage
+- **Computer Setup Status**: Dotfiles location, required directories, installed tools, SSH configuration
 
 #### Package Management
 Multi-platform package detection supporting:
-- **Linux**: apt, dnf, yum, pacman, snap, flatpak, zypper, apk, nix, homebrew
+- **Linux**: dpkg, rpm, apt, dnf, yum, pacman, snap, flatpak, zypper, apk, nix, homebrew
 - **macOS**: homebrew, macports, nix
 - **Windows**: chocolatey, winget, scoop, plus WSL package managers
-- **Runtime**: npm, pip, gem, cargo, composer, maven, gradle (all platforms)
+- **Runtime**: npm, pip, gem, cargo, composer, maven, gradle, go (all platforms)
 
 #### Computer Setup Automation
 Fully automate bootstrapping a new development machine with dotfiles and essential tools.

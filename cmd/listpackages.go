@@ -44,6 +44,12 @@ func listInstalledPackages() {
 	// System package managers
 	switch osType {
 	case "linux":
+		if exists("dpkg") {
+			managers = append(managers, "dpkg")
+		}
+		if exists("rpm") {
+			managers = append(managers, "rpm")
+		}
 		if exists("apt-mark") {
 			managers = append(managers, "apt")
 		}
@@ -130,6 +136,10 @@ func exists(cmd string) bool {
 func getPackages(manager string) string {
 	var output string
 	switch manager {
+	case "dpkg":
+		output = runCmd("dpkg --get-selections")
+	case "rpm":
+		output = runCmd("rpm -qa")
 	case "apt":
 		// List only manually installed packages (not auto-installed dependencies)
 		output = runCmd("apt-mark showmanual")
@@ -209,6 +219,18 @@ func countPackages(manager string, output string) int {
 	lines := strings.Split(output, "\n")
 
 	switch manager {
+	case "dpkg":
+		// dpkg --get-selections output: "package-name	install"
+		count := 0
+		for _, line := range lines {
+			if strings.Contains(line, "install") {
+				count++
+			}
+		}
+		return count
+	case "rpm":
+		// Simple line count for rpm -qa
+		return len(lines)
 	case "apt", "cargo", "go":
 		// Simple line count (one package per line)
 		return len(lines)

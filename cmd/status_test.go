@@ -28,14 +28,18 @@ func TestPrintSystemInfo_Output(t *testing.T) {
 	}
 	output := sb.String()
 
-	// Check for expected sections
-	if !strings.Contains(output, "Host:") {
-		t.Error("Output missing Host section")
+	// Check for expected sections (neofetch-style output)
+	if !strings.Contains(output, "@") {
+		t.Error("Output missing user@hostname header")
 	}
-	if !strings.Contains(output, "Computer Setup:") {
-		t.Error("Output missing Computer Setup section")
+	if !strings.Contains(output, "OS:") {
+		t.Error("Output missing OS line")
 	}
-	if !strings.Contains(output, "Packages:") {
-		t.Error("Output missing Packages section")
+	if !strings.Contains(output, "Computer Setup Status:") {
+		t.Error("Output missing Computer Setup Status section")
+	}
+	// Packages line is optional based on system package managers
+	if !strings.Contains(output, "CPU:") {
+		t.Error("Output missing CPU line")
 	}
 }
