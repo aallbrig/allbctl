@@ -24,18 +24,9 @@ Available subcommands:
 
 var statusCmd = &cobra.Command{
 	Use:   "status",
-	Short: "Check current setup status",
+	Short: "Check current setup status with system information",
 	Run: func(cmd *cobra.Command, args []string) {
-		os := osagnostic.NewOperatingSystem()
-		identifier := computerSetup.MachineIdentifier{}
-		configProvider := identifier.ConfigurationProviderForOperatingSystem(os.Name)
-		if configProvider == nil {
-			log.Fatalf("No configuration provider found for operating system %s", os.Name)
-		}
-
-		tweaker := computerSetup.NewMachineTweaker(configProvider.GetConfiguration())
-		_, out := tweaker.ConfigurationStatus()
-		log.Print(out)
+		printSystemInfo()
 	},
 }
 

@@ -8,10 +8,10 @@ require (
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/pkg/errors v0.9.1
-	github.com/shirou/gopsutil/v3 v3.24.5
+	github.com/shirou/gopsutil/v4 v4.25.11
 	github.com/spf13/cobra v1.3.0
 	github.com/spf13/viper v1.10.1
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.11.1
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8
 )
 
@@ -20,6 +20,7 @@ require (
 	github.com/ProtonMail/go-crypto v0.0.0-20220113124808-70ae35bab23f // indirect
 	github.com/acomagu/bufpipe v1.0.3 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/ebitengine/purego v0.9.1 // indirect
 	github.com/emirpasic/gods v1.12.0 // indirect
 	github.com/fsnotify/fsnotify v1.5.1 // indirect
 	github.com/go-git/gcfg v1.5.0 // indirect
@@ -39,16 +40,15 @@ require (
 	github.com/mitchellh/mapstructure v1.4.3 // indirect
 	github.com/pelletier/go-toml v1.9.4 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
+	github.com/power-devops/perfstat v0.0.0-20240221224432-82ca36839d55 // indirect
 	github.com/sergi/go-diff v1.2.0 // indirect
-	github.com/shoenig/go-m1cpu v0.1.6 // indirect
 	github.com/spf13/afero v1.8.1 // indirect
 	github.com/spf13/cast v1.4.1 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/subosito/gotenv v1.2.0 // indirect
-	github.com/tklauser/go-sysconf v0.3.12 // indirect
-	github.com/tklauser/numcpus v0.6.1 // indirect
+	github.com/tklauser/go-sysconf v0.3.16 // indirect
+	github.com/tklauser/numcpus v0.11.0 // indirect
 	github.com/xanzy/ssh-agent v0.3.1 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	golang.org/x/crypto v0.46.0 // indirect
