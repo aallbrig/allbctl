@@ -8,8 +8,6 @@ import (
 	"strings"
 	"time"
 
-	computerSetup "github.com/aallbrig/allbctl/pkg/computersetup"
-	"github.com/aallbrig/allbctl/pkg/osagnostic"
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/host"
 	"github.com/shirou/gopsutil/v4/mem"
@@ -121,11 +119,6 @@ func printSystemInfo() {
 	printNetworkInfo()
 	fmt.Println()
 
-	// Workstation Bootstrap Status
-	fmt.Println("Workstation Bootstrap Status:")
-	printComputerSetupStatus()
-	fmt.Println()
-
 	// Package Managers section
 	fmt.Println("Package Managers:")
 	printPackageManagers()
@@ -134,28 +127,6 @@ func printSystemInfo() {
 	// Packages section
 	fmt.Println("Packages:")
 	printPackageSummary()
-}
-
-// printComputerSetupStatus runs the computer-setup status logic
-func printComputerSetupStatus() {
-	os := osagnostic.NewOperatingSystem()
-	identifier := computerSetup.MachineIdentifier{}
-	configProvider := identifier.ConfigurationProviderForOperatingSystem(os.Name)
-	if configProvider == nil {
-		fmt.Printf("  No configuration provider for %s\n", os.Name)
-		return
-	}
-
-	tweaker := computerSetup.NewMachineTweaker(configProvider.GetConfiguration())
-	_, out := tweaker.ConfigurationStatus()
-
-	// Indent the output
-	lines := strings.Split(out.String(), "\n")
-	for _, line := range lines {
-		if line != "" {
-			fmt.Printf("  %s\n", line)
-		}
-	}
 }
 
 // formatUptime formats a duration into a human-readable uptime string
