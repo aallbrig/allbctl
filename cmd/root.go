@@ -19,9 +19,12 @@ var rootCmd = &cobra.Command{
 
 Example commands for allbctl:
 
-$ allbctl computersetup
+$ allbctl bootstrap status
+$ allbctl bootstrap install
+$ allbctl status
 `,
 	Run: func(cmd *cobra.Command, args []string) {
+		cmd.Help()
 	},
 }
 
@@ -35,9 +38,8 @@ func Execute() {
 
 func init() {
 	cobra.OnInitialize(initConfig)
-	rootCmd.AddCommand(ComputerSetupCmd)
+	rootCmd.AddCommand(BootstrapCmd)
 	rootCmd.AddCommand(StatusCmd)
-	rootCmd.AddCommand(ResetCmd)
 	rootCmd.AddCommand(RuntimesCmd)
 	rootCmd.AddCommand(ListPackagesCmd)
 
