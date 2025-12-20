@@ -3,11 +3,12 @@ package osagnostic
 import (
 	"bytes"
 	"fmt"
-	"github.com/fatih/color"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/fatih/color"
 )
 
 type SSHKeyGitHubRegistration struct {
@@ -45,14 +46,6 @@ func (s SSHKeyGitHubRegistration) Validate() (out *bytes.Buffer, err error) {
 		return
 	}
 
-	// Check if authenticated with GitHub CLI
-	cmd := exec.Command("gh", "auth", "status")
-	if authErr := cmd.Run(); authErr != nil {
-		_, _ = color.New(color.FgYellow).Fprint(out, "NOT AUTHENTICATED WITH GITHUB CLI")
-		err = authErr
-		return
-	}
-
 	// Check if SSH key is already registered
 	keyContent, readErr := os.ReadFile(s.KeyPath)
 	if readErr != nil {
@@ -70,11 +63,16 @@ func (s SSHKeyGitHubRegistration) Validate() (out *bytes.Buffer, err error) {
 	}
 	publicKey := keyParts[1]
 
-	// List registered SSH keys
-	cmd = exec.Command("gh", "ssh-key", "list")
-	output, listErr := cmd.Output()
+	// List registered SSH keys (this implicitly checks auth status)
+	cmd := exec.Command("gh", "ssh-key", "list")
+	output, listErr := cmd.CombinedOutput() // Use CombinedOutput to capture stderr warnings
 	if listErr != nil {
-		_, _ = color.New(color.FgRed).Fprint(out, "CANNOT LIST GITHUB SSH KEYS")
+		// If listing fails, it's likely due to auth issues
+		if strings.Contains(listErr.Error(), "exit status") {
+			_, _ = color.New(color.FgYellow).Fprint(out, "NOT AUTHENTICATED WITH GITHUB CLI")
+		} else {
+			_, _ = color.New(color.FgRed).Fprint(out, "CANNOT LIST GITHUB SSH KEYS")
+		}
 		err = listErr
 		return
 	}

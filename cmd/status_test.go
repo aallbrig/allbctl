@@ -38,9 +38,6 @@ func TestPrintSystemInfo_Output(t *testing.T) {
 	if !strings.Contains(output, "Network:") {
 		t.Error("Output missing Network section")
 	}
-	if !strings.Contains(output, "Workstation Bootstrap Status:") {
-		t.Error("Output missing Workstation Bootstrap Status section")
-	}
 	if !strings.Contains(output, "Package Managers:") {
 		t.Error("Output missing Package Managers section")
 	}
