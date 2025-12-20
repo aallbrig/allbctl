@@ -20,6 +20,9 @@ allbctl cs status                  # Same as above (alias)
 allbctl list-packages              # Summary: just show counts per package manager (default)
 allbctl list-packages --detail     # Full listing of all packages
 allbctl list-packages -d           # Short version of --detail
+allbctl list-packages apt          # List only apt packages (shows command for copy/paste)
+allbctl list-packages npm          # List only npm packages (shows command for copy/paste)
+allbctl list-packages flatpak      # List only flatpak packages (shows command for copy/paste)
 
 # Computer setup (bootstrap development environment)
 allbctl computer-setup status      # Check what's set up and what's missing
@@ -63,6 +66,34 @@ Multi-platform package detection supporting:
 - **macOS**: homebrew, macports, nix
 - **Windows**: chocolatey, winget, scoop, plus WSL package managers
 - **Runtime**: npm, pip, gem, cargo, composer, maven, gradle, go (all platforms)
+
+##### Supported Package Managers
+
+| Package Manager | Linux | macOS | Windows | Type |
+|----------------|-------|-------|---------|------|
+| **apt** | ✅ | ❌ | ❌ | System |
+| **dpkg** | ✅ | ❌ | ❌ | System |
+| **rpm** | ✅ | ❌ | ❌ | System |
+| **dnf** | ✅ | ❌ | ❌ | System |
+| **yum** | ✅ | ❌ | ❌ | System |
+| **pacman** | ✅ | ❌ | ❌ | System |
+| **snap** | ✅ | ❌ | ❌ | System |
+| **flatpak** | ✅ | ❌ | ❌ | System |
+| **brew** | ✅ | ✅ | ❌ | System |
+| **choco** | ❌ | ❌ | ✅ | System |
+| **winget** | ❌ | ❌ | ✅ | System |
+| **scoop** | ❌ | ❌ | ✅ | System |
+| **npm** | ✅ | ✅ | ✅ | Runtime |
+| **pip** | ✅ | ✅ | ✅ | Runtime |
+| **gem** | ✅ | ✅ | ✅ | Runtime |
+| **cargo** | ✅ | ✅ | ✅ | Runtime |
+| **go** | ✅ | ✅ | ✅ | Runtime |
+
+**Usage:**
+- `allbctl list-packages` - Summary of all detected package managers
+- `allbctl list-packages <manager>` - List packages for a specific manager (e.g., `apt`, `npm`, `flatpak`)
+  - Displays the underlying command for easy copy/paste (e.g., "Command: apt-mark showmanual")
+- `allbctl list-packages --detail` - Full listing of all packages from all managers
 
 #### Computer Setup Automation
 Fully automate bootstrapping a new development machine with dotfiles and essential tools.
