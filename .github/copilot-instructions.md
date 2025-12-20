@@ -17,13 +17,13 @@ All Go code must:
 - Be formatted using the Go CLI (`go fmt`, `go version go1.23.5 linux/amd64`)
 - Follow standard Go practices:
   - Ensure `Makefile` is up to date
-  - Run `go run main.go` as the entrypoint to allbctl CLI while developing
+  - Run `go run main.go` as the starting point to allbctl CLI while developing
   - Run `go fmt` to format code
   - Run `go vet` to check for common issues
   - Run `go test` to execute tests
   - Run `go mod tidy` to manage dependencies
   - Follow Go conventions and idioms
-  - Final checks should be on built allbctl (Makefile builds to `bin/allbctl`)
+  - Final checks should be made on built allbctl (Makefile builds to `bin/allbctl`)
 
 ## Documentation
 

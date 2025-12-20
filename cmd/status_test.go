@@ -33,13 +33,18 @@ func TestPrintSystemInfo_Output(t *testing.T) {
 		t.Error("Output missing user@hostname header")
 	}
 	if !strings.Contains(output, "OS:") {
-		t.Error("Output missing OS line")
+		t.Error("Output missing OS field")
 	}
-	if !strings.Contains(output, "Computer Setup Status:") {
-		t.Error("Output missing Computer Setup Status section")
+	if !strings.Contains(output, "Network:") {
+		t.Error("Output missing Network section")
 	}
-	// Packages line is optional based on system package managers
-	if !strings.Contains(output, "CPU:") {
-		t.Error("Output missing CPU line")
+	if !strings.Contains(output, "Workstation Bootstrap Status:") {
+		t.Error("Output missing Workstation Bootstrap Status section")
+	}
+	if !strings.Contains(output, "Package Managers:") {
+		t.Error("Output missing Package Managers section")
+	}
+	if !strings.Contains(output, "Packages:") {
+		t.Error("Output missing Packages section")
 	}
 }

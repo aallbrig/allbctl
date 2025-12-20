@@ -13,7 +13,7 @@ var detailFlag bool
 
 // ListPackagesCmd represents the list-packages command
 var ListPackagesCmd = &cobra.Command{
-	Use:   "list-packages",
+	Use:   "list-packages [package-manager]",
 	Short: "Show package count summary from all detected package managers",
 	Long: `Show package count summary from all detected package managers.
 	
@@ -25,9 +25,14 @@ installed packages are counted.
 
 If a package manager is not detected on the system, it will not be displayed.
 
-Use --detail flag to see the full list of all installed packages.`,
+Use --detail flag to see the full list of all installed packages.
+
+You can also specify a specific package manager to list only its packages:
+  allbctl list-packages apt
+  allbctl list-packages npm
+  allbctl list-packages flatpak`,
 	Run: func(cmd *cobra.Command, args []string) {
-		listInstalledPackages()
+		listInstalledPackages(args)
 	},
 }
 
@@ -35,8 +40,29 @@ func init() {
 	ListPackagesCmd.Flags().BoolVarP(&detailFlag, "detail", "d", false, "Show detailed list of all packages instead of just counts")
 }
 
-func listInstalledPackages() {
+func listInstalledPackages(args []string) {
 	osType := runtime.GOOS
+
+	// If a specific package manager is requested
+	if len(args) > 0 {
+		manager := args[0]
+		if !exists(getCommandForManager(manager)) {
+			fmt.Printf("Package manager '%s' not found on this system.\n", manager)
+			return
+		}
+		pkgs := getPackages(manager)
+		if pkgs != "" {
+			fmt.Printf("Packages installed via %s:\n", manager)
+			fmt.Println(pkgs)
+			fmt.Printf("\nCommand: %s\n", getQueryCommand(manager))
+		} else {
+			fmt.Printf("No packages found for %s\n", manager)
+			fmt.Printf("\nCommand: %s\n", getQueryCommand(manager))
+		}
+		return
+	}
+
+	// Otherwise, list all detected package managers
 	fmt.Printf("Detected OS: %s\n\n", osType)
 
 	var managers []string
@@ -125,6 +151,67 @@ func listInstalledPackages() {
 				fmt.Printf("%-15s %d packages\n", m+":", count)
 			}
 		}
+		fmt.Println("\nUse --detail flag to see the full list of all installed packages.")
+		fmt.Println("Or specify a package manager: allbctl list-packages <manager>")
+	}
+}
+
+func getCommandForManager(manager string) string {
+	switch manager {
+	case "apt":
+		return "apt-mark"
+	case "pip":
+		if exists("pip3") {
+			return "pip3"
+		}
+		return "pip"
+	default:
+		return manager
+	}
+}
+
+func getQueryCommand(manager string) string {
+	switch manager {
+	case "dpkg":
+		return "dpkg --get-selections"
+	case "rpm":
+		return "rpm -qa"
+	case "apt":
+		return "apt-mark showmanual"
+	case "snap":
+		return "snap list --color=never"
+	case "flatpak":
+		return "flatpak list --app --columns=name,application"
+	case "brew":
+		return "brew leaves && brew list --cask"
+	case "choco":
+		return "choco list"
+	case "dnf":
+		return "dnf repoquery --userinstalled --qf '%{name}'"
+	case "yum":
+		return "yum history userinstalled"
+	case "pacman":
+		return "pacman -Qe"
+	case "winget":
+		return "winget list"
+	case "scoop":
+		return "scoop list"
+	case "npm":
+		return "npm list -g --depth=0"
+	case "pip":
+		cmd := "pip3"
+		if !exists("pip3") {
+			cmd = "pip"
+		}
+		return cmd + " list --format=columns"
+	case "gem":
+		return "gem list --local"
+	case "cargo":
+		return "cargo install --list"
+	case "go":
+		return "ls -1 $(go env GOPATH)/bin"
+	default:
+		return ""
 	}
 }
 

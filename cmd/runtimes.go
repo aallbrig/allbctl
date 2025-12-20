@@ -56,17 +56,3 @@ var runtimeCommands = map[string][]string{
 	// Package Managers
 	"APT Packages": {"bash", "-c", "dpkg-query -f '${binary:Package}\n' -W | wc -l"},
 }
-
-func parseVersion(output string) string {
-	// Simple version extraction: first line, trimmed
-	return firstLine(output)
-}
-
-func firstLine(s string) string {
-	for i, c := range s {
-		if c == '\n' || c == '\r' {
-			return s[:i]
-		}
-	}
-	return s
-}
