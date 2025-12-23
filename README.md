@@ -65,6 +65,7 @@ The `status` and `cs status` commands provide a neofetch-inspired view of your s
 - **System Details**: Host/virtualization info, uptime
 - **Package Counts**: Inline display of packages from detected package managers (dpkg, rpm, pacman, snap, flatpak, brew, choco, winget)
 - **System Info**: Shell, terminal, CPU with core count and frequency, GPU(s), memory usage
+- **Package Managers**: Detected package managers with versions (e.g., "apt (2.8.3), npm (11.6.2)")
 - **Runtimes**: Detected programming language runtimes with versions (e.g., "Python (3.12.3), Node.js (24.11.1)")
 - **Computer Setup Status**: Dotfiles location, required directories, installed tools, SSH configuration
 
