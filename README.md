@@ -181,5 +181,31 @@ allbctl reset
 
 This will display system information and reset the computer setup configuration to its initial state.
 
+### Testing
+
+#### Windows VM Testing
+To test allbctl on Windows 10 using Vagrant:
+
+```bash
+# Build Windows binary
+make build-windows
+
+# Start Windows 10 VM
+vagrant up windows10
+
+# The VM will boot with GUI - log in and open PowerShell
+# Test the bootstrap sequence:
+cd C:\allbctl-test
+.\allbctl.exe bootstrap status    # Check initial state
+.\allbctl.exe bootstrap install   # Install components
+.\allbctl.exe bootstrap status    # Verify installation
+
+# Cleanup
+vagrant halt windows10      # Stop VM
+vagrant destroy windows10   # Remove VM
+```
+
+See [test/windows-vm-test.md](test/windows-vm-test.md) for detailed testing instructions.
+
 ### Contributing
 Please reference the `CONTRIBUTING.md` file.
