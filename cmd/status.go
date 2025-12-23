@@ -133,6 +133,10 @@ func printSystemInfo() {
 	// Packages section
 	fmt.Println("Packages:")
 	printPackageSummary()
+	fmt.Println()
+
+	// Projects section
+	printProjectsInline()
 }
 
 // formatUptime formats a duration into a human-readable uptime string
