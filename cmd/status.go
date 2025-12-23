@@ -119,6 +119,11 @@ func printSystemInfo() {
 	printNetworkInfo()
 	fmt.Println()
 
+	// AI Agents section
+	fmt.Println("AI Agents:")
+	printAIAgents()
+	fmt.Println()
+
 	// Package Managers section
 	fmt.Println("Package Managers:")
 	printPackageManagers()
@@ -356,6 +361,191 @@ func getInternetType() string {
 		}
 	}
 	return "Unknown"
+}
+
+// AIAgent represents an AI coding assistant
+type AIAgent struct {
+	Name    string
+	Version string
+}
+
+// detectAIAgents detects available AI coding assistants
+func detectAIAgents() []AIAgent {
+	var agents []AIAgent
+
+	// GitHub Copilot CLI
+	if exists("copilot") {
+		version := getAIAgentVersion("copilot")
+		agents = append(agents, AIAgent{Name: "copilot", Version: version})
+	}
+
+	// Claude Code (if it exists as a CLI)
+	if exists("claude") {
+		version := getAIAgentVersion("claude")
+		agents = append(agents, AIAgent{Name: "claude", Version: version})
+	}
+
+	// Cursor AI
+	if exists("cursor") {
+		version := getAIAgentVersion("cursor")
+		agents = append(agents, AIAgent{Name: "cursor", Version: version})
+	}
+
+	// Aider
+	if exists("aider") {
+		version := getAIAgentVersion("aider")
+		agents = append(agents, AIAgent{Name: "aider", Version: version})
+	}
+
+	// Continue.dev (if it has a CLI)
+	if exists("continue") {
+		version := getAIAgentVersion("continue")
+		agents = append(agents, AIAgent{Name: "continue", Version: version})
+	}
+
+	// Cody (Sourcegraph)
+	if exists("cody") {
+		version := getAIAgentVersion("cody")
+		agents = append(agents, AIAgent{Name: "cody", Version: version})
+	}
+
+	// Tabby (local AI)
+	if exists("tabby") {
+		version := getAIAgentVersion("tabby")
+		agents = append(agents, AIAgent{Name: "tabby", Version: version})
+	}
+
+	// Amazon CodeWhisperer
+	if exists("codewhisperer") {
+		version := getAIAgentVersion("codewhisperer")
+		agents = append(agents, AIAgent{Name: "codewhisperer", Version: version})
+	}
+
+	// Ollama (local LLM runner)
+	if exists("ollama") {
+		version := getAIAgentVersion("ollama")
+		agents = append(agents, AIAgent{Name: "ollama", Version: version})
+	}
+
+	return agents
+}
+
+// getAIAgentVersion returns the version of an AI agent
+func getAIAgentVersion(agent string) string {
+	var cmd *exec.Cmd
+
+	switch agent {
+	case "copilot":
+		cmd = exec.Command("copilot", "--version")
+	case "claude":
+		cmd = exec.Command("claude", "--version")
+	case "cursor":
+		cmd = exec.Command("cursor", "--version")
+	case "aider":
+		cmd = exec.Command("aider", "--version")
+	case "continue":
+		cmd = exec.Command("continue", "--version")
+	case "cody":
+		cmd = exec.Command("cody", "--version")
+	case "tabby":
+		cmd = exec.Command("tabby", "--version")
+	case "codewhisperer":
+		cmd = exec.Command("codewhisperer", "--version")
+	case "ollama":
+		cmd = exec.Command("ollama", "--version")
+	default:
+		return ""
+	}
+
+	if cmd == nil {
+		return ""
+	}
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return ""
+	}
+
+	version := strings.TrimSpace(string(output))
+	return extractAIAgentVersion(agent, version)
+}
+
+// extractAIAgentVersion extracts clean version from AI agent output
+func extractAIAgentVersion(agent, output string) string {
+	output = strings.TrimSpace(output)
+	if output == "" {
+		return ""
+	}
+
+	// Take first line only
+	lines := strings.Split(output, "\n")
+	firstLine := strings.TrimSpace(lines[0])
+
+	switch agent {
+	case "copilot":
+		// "0.0.365" - just the version number
+		return firstLine
+	case "aider":
+		// "aider 0.50.0" -> "0.50.0"
+		if strings.HasPrefix(firstLine, "aider ") {
+			return strings.TrimPrefix(firstLine, "aider ")
+		}
+		return firstLine
+	case "ollama":
+		// "ollama version is 0.13.5" -> "0.13.5"
+		if strings.Contains(firstLine, "version is ") {
+			parts := strings.Split(firstLine, "version is ")
+			if len(parts) >= 2 {
+				return strings.TrimSpace(parts[1])
+			}
+		}
+		// Fallback to generic extraction
+		fields := strings.Fields(firstLine)
+		for _, field := range fields {
+			if strings.Contains(field, ".") {
+				field = strings.Trim(field, "()[]{}\"',vV")
+				if len(field) > 0 && (field[0] >= '0' && field[0] <= '9') {
+					return field
+				}
+			}
+		}
+		return firstLine
+	case "cursor", "claude", "continue", "cody", "tabby", "codewhisperer":
+		// Try to extract version number
+		fields := strings.Fields(firstLine)
+		for _, field := range fields {
+			if strings.Contains(field, ".") {
+				field = strings.Trim(field, "()[]{}\"',vV")
+				if len(field) > 0 && (field[0] >= '0' && field[0] <= '9') {
+					return field
+				}
+			}
+		}
+		return firstLine
+	}
+
+	return firstLine
+}
+
+// printAIAgents displays available AI coding assistants
+func printAIAgents() {
+	agents := detectAIAgents()
+
+	if len(agents) == 0 {
+		fmt.Printf("  No AI agents detected\n")
+		return
+	}
+
+	var agentStrings []string
+	for _, agent := range agents {
+		if agent.Version != "" {
+			agentStrings = append(agentStrings, fmt.Sprintf("%s (%s)", agent.Name, agent.Version))
+		} else {
+			agentStrings = append(agentStrings, agent.Name)
+		}
+	}
+
+	fmt.Printf("  %s\n", strings.Join(agentStrings, ", "))
 }
 
 // printPackageManagers displays available package managers
