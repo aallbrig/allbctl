@@ -12,6 +12,10 @@ install:
 build:
 	go build -ldflags="-X 'github.com/aallbrig/allbctl/cmd.Version=$$(git describe --tags --always --dirty 2>/dev/null || echo "dev")' -X 'github.com/aallbrig/allbctl/cmd.Commit=$$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")'" -o bin/allbctl main.go
 
+install-local: build
+	mkdir -p $(HOME)/go/bin
+	cp bin/allbctl $(HOME)/go/bin/allbctl
+
 build-docker:
 	docker build --tag aallbrig/allbctl .
 
