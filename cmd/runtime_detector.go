@@ -146,19 +146,152 @@ func detectRuntimesInline() string {
 		return ""
 	}
 
-	// Just return comma-separated list of language names
-	var names []string
+	// Return comma-separated list of language names with versions in parentheses
+	var parts []string
 	for _, rt := range runtimes {
 		if rt.Category == "language" {
-			names = append(names, rt.Name)
+			// Extract just the version number for cleaner display
+			version := extractVersionNumber(rt.Version)
+			if version != "" {
+				parts = append(parts, fmt.Sprintf("%s (%s)", rt.Name, version))
+			} else {
+				parts = append(parts, rt.Name)
+			}
 		}
 	}
 
-	if len(names) == 0 {
+	if len(parts) == 0 {
 		return ""
 	}
 
-	return strings.Join(names, ", ")
+	return strings.Join(parts, ", ")
+}
+
+// extractVersionNumber extracts just the version number from version output
+func extractVersionNumber(versionOutput string) string {
+	// Handle common version output patterns
+	output := strings.TrimSpace(versionOutput)
+
+	// For "Python 3.9.0" or "python 3.9.0"
+	if strings.HasPrefix(strings.ToLower(output), "python ") {
+		parts := strings.Fields(output)
+		if len(parts) >= 2 {
+			return parts[1]
+		}
+	}
+
+	// For "go version go1.20.0 linux/amd64"
+	if strings.HasPrefix(output, "go version go") {
+		parts := strings.Fields(output)
+		if len(parts) >= 3 {
+			return strings.TrimPrefix(parts[2], "go")
+		}
+	}
+
+	// For "rustc 1.70.0 (90c541806 2023-05-31)"
+	if strings.HasPrefix(output, "rustc ") {
+		parts := strings.Fields(output)
+		if len(parts) >= 2 {
+			return parts[1]
+		}
+	}
+
+	// For "node v18.0.0" or "Node.js v18.0.0"
+	if strings.Contains(strings.ToLower(output), "node") || strings.HasPrefix(output, "v") {
+		parts := strings.Fields(output)
+		for _, part := range parts {
+			if strings.HasPrefix(part, "v") && len(part) > 1 {
+				return strings.TrimPrefix(part, "v")
+			}
+		}
+	}
+
+	// For "ruby 3.0.0p0 (2020-12-25 revision 95aff21468)"
+	if strings.HasPrefix(output, "ruby ") {
+		parts := strings.Fields(output)
+		if len(parts) >= 2 {
+			// Remove patch level suffix like "p0"
+			version := parts[1]
+			if idx := strings.Index(version, "p"); idx > 0 {
+				return version[:idx]
+			}
+			return version
+		}
+	}
+
+	// For "This is perl 5, version 38, subversion 2 (v5.38.2)"
+	if strings.Contains(output, "perl") {
+		// Look for version in parentheses like (v5.38.2)
+		if idx := strings.Index(output, "(v"); idx >= 0 {
+			rest := output[idx+2:]
+			if endIdx := strings.Index(rest, ")"); endIdx >= 0 {
+				return rest[:endIdx]
+			}
+		}
+		// Try "version X, subversion Y" pattern
+		if strings.Contains(output, "version") {
+			parts := strings.Split(output, ",")
+			var versionParts []string
+			for _, part := range parts {
+				part = strings.TrimSpace(part)
+				if strings.HasPrefix(part, "version ") {
+					versionParts = append(versionParts, strings.TrimPrefix(part, "version "))
+				} else if strings.HasPrefix(part, "subversion ") {
+					versionParts = append(versionParts, strings.TrimPrefix(part, "subversion "))
+				}
+			}
+			if len(versionParts) >= 2 {
+				return versionParts[0] + "." + versionParts[1]
+			}
+		}
+	}
+
+	// For "PHP 8.1.0 (cli) (built: Nov 23 2021)"
+	if strings.HasPrefix(strings.ToUpper(output), "PHP ") {
+		parts := strings.Fields(output)
+		if len(parts) >= 2 {
+			return parts[1]
+		}
+	}
+
+	// For "javac 17.0.1" or "java version \"17.0.1\""
+	if strings.Contains(strings.ToLower(output), "java") {
+		parts := strings.Fields(output)
+		for i, part := range parts {
+			if (part == "version" || strings.HasPrefix(part, "version")) && i+1 < len(parts) {
+				version := parts[i+1]
+				// Remove quotes
+				version = strings.Trim(version, "\"'")
+				return version
+			}
+		}
+		// Try second field
+		if len(parts) >= 2 {
+			return parts[1]
+		}
+	}
+
+	// For C# / dotnet: "6.0.100"
+	if !strings.Contains(output, " ") {
+		// Just a version number
+		return output
+	}
+
+	// Generic: try to find version-like pattern (e.g., "1.2.3")
+	fields := strings.Fields(output)
+	for _, field := range fields {
+		// Check if field looks like a version (contains digits and dots)
+		if strings.Contains(field, ".") {
+			// Clean up any surrounding characters
+			field = strings.Trim(field, "()[]{}\"',")
+			if len(field) > 0 && (field[0] >= '0' && field[0] <= '9') {
+				return field
+			}
+		}
+	}
+
+	// If no pattern matches, return the first line as-is
+	return output
 }
 
 func checkNvmInstalled() bool {

@@ -405,6 +405,9 @@ func printPackageManagers() {
 	if exists("pip") || exists("pip3") {
 		runtimeAvailable = append(runtimeAvailable, "pip")
 	}
+	if exists("pipx") {
+		runtimeAvailable = append(runtimeAvailable, "pipx")
+	}
 	if exists("gem") {
 		runtimeAvailable = append(runtimeAvailable, "gem")
 	}
@@ -460,6 +463,9 @@ func printPackageSummary() {
 	}
 	if exists("pip") || exists("pip3") {
 		managers = append(managers, "pip")
+	}
+	if exists("pipx") {
+		managers = append(managers, "pipx")
 	}
 	if exists("gem") {
 		managers = append(managers, "gem")

@@ -117,6 +117,9 @@ func listInstalledPackages(args []string) {
 	if exists("pip") || exists("pip3") {
 		managers = append(managers, "pip")
 	}
+	if exists("pipx") {
+		managers = append(managers, "pipx")
+	}
 	if exists("gem") {
 		managers = append(managers, "gem")
 	}
@@ -204,6 +207,8 @@ func getQueryCommand(manager string) string {
 			cmd = "pip"
 		}
 		return cmd + " list --format=columns"
+	case "pipx":
+		return "pipx list"
 	case "gem":
 		return "gem list --local"
 	case "cargo":
@@ -267,6 +272,9 @@ func getPackages(manager string) string {
 			cmd = "pip"
 		}
 		output = runCmd(cmd + " list --format=columns")
+	case "pipx":
+		// List packages installed via pipx
+		output = runCmd("pipx list")
 	case "gem":
 		// List globally installed gems (no dependencies shown by default)
 		output = runCmd("gem list --local")
@@ -359,6 +367,20 @@ func countPackages(manager string, output string) int {
 			return 0
 		}
 		return len(lines) - 2
+	case "pipx":
+		// pipx list output format: "   package    pkg-name"
+		count := 0
+		for _, line := range lines {
+			line = strings.TrimSpace(line)
+			if line == "" || strings.HasPrefix(line, "venvs are in") || strings.HasPrefix(line, "apps are exposed") {
+				continue
+			}
+			// Count lines that start with "package" (each installed app)
+			if strings.HasPrefix(line, "package ") {
+				count++
+			}
+		}
+		return count
 	case "choco":
 		// choco list has header and footer, count packages in between
 		count := 0
