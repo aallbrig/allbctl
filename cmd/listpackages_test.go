@@ -47,7 +47,7 @@ func TestExists_AllSupportedCommands(t *testing.T) {
 		cmds = []string{"choco", "winget", "scoop"}
 	}
 	// Add cross-platform runtime package managers
-	cmds = append(cmds, "npm", "pip", "pip3", "gem", "cargo", "go")
+	cmds = append(cmds, "npm", "pip", "pip3", "gem", "cargo", "go", "pipx")
 
 	for _, cmd := range cmds {
 		exists(cmd) // Should not panic
@@ -55,7 +55,7 @@ func TestExists_AllSupportedCommands(t *testing.T) {
 }
 
 func TestGetPackages_AllSupportedManagers(t *testing.T) {
-	managers := []string{"apt", "snap", "flatpak", "dnf", "yum", "pacman", "brew", "choco", "winget", "scoop", "npm", "pip", "gem", "cargo", "go"}
+	managers := []string{"apt", "snap", "flatpak", "dnf", "yum", "pacman", "brew", "choco", "winget", "scoop", "npm", "pip", "gem", "cargo", "go", "pipx"}
 	for _, m := range managers {
 		_ = getPackages(m) // Should not panic or error
 	}
@@ -98,5 +98,13 @@ func TestCountPackages_EmptyOutput(t *testing.T) {
 	count := countPackages("apt", output)
 	if count != 0 {
 		t.Errorf("Expected 0 packages for empty output, got %d", count)
+	}
+}
+
+func TestCountPackages_Pipx(t *testing.T) {
+	output := "   package    pkg1\n   package    pkg2\n"
+	count := countPackages("pipx", output)
+	if count != 2 {
+		t.Errorf("Expected 2 packages for pipx, got %d", count)
 	}
 }

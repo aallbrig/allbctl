@@ -65,6 +65,7 @@ The `status` and `cs status` commands provide a neofetch-inspired view of your s
 - **System Details**: Host/virtualization info, uptime
 - **Package Counts**: Inline display of packages from detected package managers (dpkg, rpm, pacman, snap, flatpak, brew, choco, winget)
 - **System Info**: Shell, terminal, CPU with core count and frequency, GPU(s), memory usage
+- **Runtimes**: Detected programming language runtimes with versions (e.g., "Python (3.12.3), Node.js (24.11.1)")
 - **Computer Setup Status**: Dotfiles location, required directories, installed tools, SSH configuration
 
 #### Package Management
@@ -72,7 +73,7 @@ Multi-platform package detection supporting:
 - **Linux**: dpkg, rpm, apt, dnf, yum, pacman, snap, flatpak, zypper, apk, nix, homebrew
 - **macOS**: homebrew, macports, nix
 - **Windows**: chocolatey, winget, scoop, plus WSL package managers
-- **Runtime**: npm, pip, gem, cargo, composer, maven, gradle, go (all platforms)
+- **Runtime**: npm, pip, pipx, gem, cargo, composer, maven, gradle, go (all platforms)
 
 ##### Supported Package Managers
 
@@ -92,6 +93,7 @@ Multi-platform package detection supporting:
 | **scoop** | ❌ | ❌ | ✅ | System |
 | **npm** | ✅ | ✅ | ✅ | Runtime |
 | **pip** | ✅ | ✅ | ✅ | Runtime |
+| **pipx** | ✅ | ✅ | ✅ | Runtime |
 | **gem** | ✅ | ✅ | ✅ | Runtime |
 | **cargo** | ✅ | ✅ | ✅ | Runtime |
 | **go** | ✅ | ✅ | ✅ | Runtime |
