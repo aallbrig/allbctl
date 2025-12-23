@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
@@ -552,6 +553,7 @@ func printAIAgents() {
 func printPackageManagers() {
 	osType := runtime.GOOS
 	systemAvailable := []string{}
+	languageAvailable := []string{}
 	runtimeAvailable := []string{}
 
 	// System package managers
@@ -633,6 +635,69 @@ func printPackageManagers() {
 		}
 	}
 
+	// Language version managers
+	if checkNvmInstalled() {
+		version := getVersionManagerVersion("nvm")
+		if version != "" {
+			languageAvailable = append(languageAvailable, fmt.Sprintf("nvm (%s)", version))
+		} else {
+			languageAvailable = append(languageAvailable, "nvm")
+		}
+	}
+	if exists("pyenv") {
+		version := getVersionManagerVersion("pyenv")
+		if version != "" {
+			languageAvailable = append(languageAvailable, fmt.Sprintf("pyenv (%s)", version))
+		} else {
+			languageAvailable = append(languageAvailable, "pyenv")
+		}
+	}
+	if exists("rbenv") {
+		version := getVersionManagerVersion("rbenv")
+		if version != "" {
+			languageAvailable = append(languageAvailable, fmt.Sprintf("rbenv (%s)", version))
+		} else {
+			languageAvailable = append(languageAvailable, "rbenv")
+		}
+	}
+	if exists("jenv") {
+		version := getVersionManagerVersion("jenv")
+		if version != "" {
+			languageAvailable = append(languageAvailable, fmt.Sprintf("jenv (%s)", version))
+		} else {
+			languageAvailable = append(languageAvailable, "jenv")
+		}
+	}
+	if exists("rustup") {
+		version := getVersionManagerVersion("rustup")
+		if version != "" {
+			languageAvailable = append(languageAvailable, fmt.Sprintf("rustup (%s)", version))
+		} else {
+			languageAvailable = append(languageAvailable, "rustup")
+		}
+	}
+	if exists("asdf") {
+		version := getVersionManagerVersion("asdf")
+		if version != "" {
+			languageAvailable = append(languageAvailable, fmt.Sprintf("asdf (%s)", version))
+		} else {
+			languageAvailable = append(languageAvailable, "asdf")
+		}
+	}
+	// Check for sdkman
+	home, err := os.UserHomeDir()
+	if err == nil {
+		sdkmanInit := filepath.Join(home, ".sdkman", "bin", "sdkman-init.sh")
+		if _, err := os.Stat(sdkmanInit); err == nil {
+			version := getVersionManagerVersion("sdkman")
+			if version != "" {
+				languageAvailable = append(languageAvailable, fmt.Sprintf("sdkman (%s)", version))
+			} else {
+				languageAvailable = append(languageAvailable, "sdkman")
+			}
+		}
+	}
+
 	// Programming runtime package managers
 	if exists("npm") {
 		version := getPackageManagerVersion("npm")
@@ -686,6 +751,9 @@ func printPackageManagers() {
 	// Print
 	if len(systemAvailable) > 0 {
 		fmt.Printf("  System:    %s\n", strings.Join(systemAvailable, ", "))
+	}
+	if len(languageAvailable) > 0 {
+		fmt.Printf("  Language:  %s\n", strings.Join(languageAvailable, ", "))
 	}
 	if len(runtimeAvailable) > 0 {
 		fmt.Printf("  Runtime:   %s\n", strings.Join(runtimeAvailable, ", "))
@@ -845,6 +913,118 @@ func extractPackageManagerVersion(manager, output string) string {
 	}
 
 	return output
+}
+
+// getVersionManagerVersion returns the version of a language version manager
+func getVersionManagerVersion(manager string) string {
+	var cmd *exec.Cmd
+
+	switch manager {
+	case "nvm":
+		cmd = exec.Command("bash", "-c", ". ~/.nvm/nvm.sh 2>/dev/null && nvm --version || echo ''")
+	case "pyenv":
+		cmd = exec.Command("pyenv", "--version")
+	case "rbenv":
+		cmd = exec.Command("rbenv", "--version")
+	case "jenv":
+		cmd = exec.Command("jenv", "--version")
+	case "rustup":
+		cmd = exec.Command("rustup", "--version")
+	case "asdf":
+		cmd = exec.Command("asdf", "--version")
+	case "sdkman":
+		cmd = exec.Command("bash", "-c", "source ~/.sdkman/bin/sdkman-init.sh 2>/dev/null && sdk version || echo ''")
+	default:
+		return ""
+	}
+
+	if cmd == nil {
+		return ""
+	}
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return ""
+	}
+
+	version := strings.TrimSpace(string(output))
+	return extractVersionManagerVersion(manager, version)
+}
+
+// extractVersionManagerVersion extracts clean version from version manager output
+func extractVersionManagerVersion(manager, output string) string {
+	output = strings.TrimSpace(output)
+	if output == "" {
+		return ""
+	}
+
+	// Take first line only
+	lines := strings.Split(output, "\n")
+	firstLine := strings.TrimSpace(lines[0])
+
+	switch manager {
+	case "nvm":
+		// "0.40.3" - just the version number
+		return firstLine
+	case "pyenv":
+		// "pyenv 2.3.0" -> "2.3.0"
+		if strings.HasPrefix(firstLine, "pyenv ") {
+			return strings.TrimPrefix(firstLine, "pyenv ")
+		}
+		return firstLine
+	case "rbenv":
+		// "rbenv 1.2.0" -> "1.2.0"
+		if strings.HasPrefix(firstLine, "rbenv ") {
+			return strings.TrimPrefix(firstLine, "rbenv ")
+		}
+		return firstLine
+	case "jenv":
+		// "jenv 0.5.6" -> "0.5.6"
+		if strings.HasPrefix(firstLine, "jenv ") {
+			return strings.TrimPrefix(firstLine, "jenv ")
+		}
+		return firstLine
+	case "rustup":
+		// "rustup 1.26.0 (5af9b9484 2023-04-05)" -> "1.26.0"
+		if strings.HasPrefix(firstLine, "rustup ") {
+			parts := strings.Fields(firstLine)
+			if len(parts) >= 2 {
+				return parts[1]
+			}
+		}
+		return firstLine
+	case "asdf":
+		// "v0.14.0" -> "0.14.0"
+		if strings.HasPrefix(firstLine, "v") {
+			return strings.TrimPrefix(firstLine, "v")
+		}
+		return firstLine
+	case "sdkman":
+		// "SDKMAN 5.18.2" or "script: 5.18.2" -> "5.18.2"
+		fields := strings.Fields(firstLine)
+		for _, field := range fields {
+			if strings.Contains(field, ".") {
+				field = strings.Trim(field, "()[]{}\"',vV")
+				if len(field) > 0 && (field[0] >= '0' && field[0] <= '9') {
+					return field
+				}
+			}
+		}
+		return firstLine
+	}
+
+	// Generic: try to extract version-like pattern
+	fields := strings.Fields(firstLine)
+	for _, field := range fields {
+		if strings.Contains(field, ".") {
+			field = strings.Trim(field, "()[]{}\"',vV")
+			if len(field) > 0 && (field[0] >= '0' && field[0] <= '9') {
+				return field
+			}
+		}
+	}
+
+	return firstLine
 }
 
 // printPackageSummary runs the list-packages summary logic
