@@ -38,6 +38,9 @@ func TestPrintSystemInfo_Output(t *testing.T) {
 	if !strings.Contains(output, "Network:") {
 		t.Error("Output missing Network section")
 	}
+	if !strings.Contains(output, "AI Agents:") {
+		t.Error("Output missing AI Agents section")
+	}
 	if !strings.Contains(output, "Package Managers:") {
 		t.Error("Output missing Package Managers section")
 	}
@@ -62,6 +65,41 @@ func Test_GetPackageManagerVersion(t *testing.T) {
 			version := getPackageManagerVersion(tt.manager)
 			// Version might be empty if manager not installed, that's ok
 			t.Logf("Manager %s version: %s", tt.manager, version)
+		})
+	}
+}
+
+func Test_DetectAIAgents(t *testing.T) {
+	agents := detectAIAgents()
+	// May be empty if no AI agents installed, that's ok
+	t.Logf("Detected AI agents: %v", agents)
+
+	// Should not panic
+	if len(agents) > 0 {
+		for _, agent := range agents {
+			if agent.Name == "" {
+				t.Error("AI agent should have a name")
+			}
+		}
+	}
+}
+
+func Test_GetAIAgentVersion(t *testing.T) {
+	tests := []struct {
+		name  string
+		agent string
+	}{
+		{"copilot", "copilot"},
+		{"claude", "claude"},
+		{"ollama", "ollama"},
+		{"unknown", "unknown-agent-xyz"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			version := getAIAgentVersion(tt.agent)
+			// Version might be empty if agent not installed
+			t.Logf("Agent %s version: %s", tt.agent, version)
 		})
 	}
 }
