@@ -25,7 +25,9 @@ jobs:
         run: go version
       - name: Build Linux amd64
         run: |
-          GOOS=linux GOARCH=amd64 go build -o allbctl-linux-amd64
+          VERSION=${GITHUB_REF#refs/tags/v}
+          COMMIT=$(git rev-parse --short HEAD)
+          GOOS=linux GOARCH=amd64 go build -ldflags="-X 'github.com/aallbrig/allbctl/cmd.Version=${VERSION}' -X 'github.com/aallbrig/allbctl/cmd.Commit=${COMMIT}'" -o allbctl-linux-amd64
       - name: Package Linux amd64 binary
         run: |
           tar -czvf allbctl-linux-amd64.tar.gz allbctl-linux-amd64
@@ -36,7 +38,9 @@ jobs:
           path: allbctl-linux-amd64.tar.gz
       - name: Build Linux arm64
         run: |
-          GOOS=linux GOARCH=arm64 go build -o allbctl-linux-arm64
+          VERSION=${GITHUB_REF#refs/tags/v}
+          COMMIT=$(git rev-parse --short HEAD)
+          GOOS=linux GOARCH=arm64 go build -ldflags="-X 'github.com/aallbrig/allbctl/cmd.Version=${VERSION}' -X 'github.com/aallbrig/allbctl/cmd.Commit=${COMMIT}'" -o allbctl-linux-arm64
       - name: Package Linux arm64 binary
         run: |
           tar -czvf allbctl-linux-arm64.tar.gz allbctl-linux-arm64
@@ -47,7 +51,9 @@ jobs:
           path: allbctl-linux-arm64.tar.gz
       - name: Build macOS amd64
         run: |
-          GOOS=darwin GOARCH=amd64 go build -o allbctl-darwin-amd64
+          VERSION=${GITHUB_REF#refs/tags/v}
+          COMMIT=$(git rev-parse --short HEAD)
+          GOOS=darwin GOARCH=amd64 go build -ldflags="-X 'github.com/aallbrig/allbctl/cmd.Version=${VERSION}' -X 'github.com/aallbrig/allbctl/cmd.Commit=${COMMIT}'" -o allbctl-darwin-amd64
       - name: Package macOS amd64 binary
         run: |
           tar -czvf allbctl-darwin-amd64.tar.gz allbctl-darwin-amd64
@@ -58,7 +64,9 @@ jobs:
           path: allbctl-darwin-amd64.tar.gz
       - name: Build macOS arm64
         run: |
-          GOOS=darwin GOARCH=arm64 go build -o allbctl-darwin-arm64
+          VERSION=${GITHUB_REF#refs/tags/v}
+          COMMIT=$(git rev-parse --short HEAD)
+          GOOS=darwin GOARCH=arm64 go build -ldflags="-X 'github.com/aallbrig/allbctl/cmd.Version=${VERSION}' -X 'github.com/aallbrig/allbctl/cmd.Commit=${COMMIT}'" -o allbctl-darwin-arm64
       - name: Package macOS arm64 binary
         run: |
           tar -czvf allbctl-darwin-arm64.tar.gz allbctl-darwin-arm64
@@ -69,7 +77,9 @@ jobs:
           path: allbctl-darwin-arm64.tar.gz
       - name: Build Windows amd64
         run: |
-          GOOS=windows GOARCH=amd64 go build -o allbctl-windows-amd64.exe
+          VERSION=${GITHUB_REF#refs/tags/v}
+          COMMIT=$(git rev-parse --short HEAD)
+          GOOS=windows GOARCH=amd64 go build -ldflags="-X 'github.com/aallbrig/allbctl/cmd.Version=${VERSION}' -X 'github.com/aallbrig/allbctl/cmd.Commit=${COMMIT}'" -o allbctl-windows-amd64.exe
       - name: Package Windows amd64 binary
         run: |
           zip allbctl-windows-amd64.zip allbctl-windows-amd64.exe
@@ -80,7 +90,9 @@ jobs:
           path: allbctl-windows-amd64.zip
       - name: Build Windows arm64
         run: |
-          GOOS=windows GOARCH=arm64 go build -o allbctl-windows-arm64.exe
+          VERSION=${GITHUB_REF#refs/tags/v}
+          COMMIT=$(git rev-parse --short HEAD)
+          GOOS=windows GOARCH=arm64 go build -ldflags="-X 'github.com/aallbrig/allbctl/cmd.Version=${VERSION}' -X 'github.com/aallbrig/allbctl/cmd.Commit=${COMMIT}'" -o allbctl-windows-arm64.exe
       - name: Package Windows arm64 binary
         run: |
           zip allbctl-windows-arm64.zip allbctl-windows-arm64.exe

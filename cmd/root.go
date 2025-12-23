@@ -23,6 +23,7 @@ $ allbctl bootstrap status
 $ allbctl bootstrap install
 $ allbctl status
 `,
+	Version: Version,
 	Run: func(cmd *cobra.Command, args []string) {
 		cmd.Help()
 	},
@@ -45,6 +46,8 @@ func init() {
 	rootCmd.AddCommand(ProjectsCmd)
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.allbctl.yaml)")
+
+	rootCmd.SetVersionTemplate(fmt.Sprintf("allbctl %s (commit %s)\n", Version, Commit))
 }
 
 func initConfig() {
