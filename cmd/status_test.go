@@ -45,3 +45,23 @@ func TestPrintSystemInfo_Output(t *testing.T) {
 		t.Error("Output missing Packages section")
 	}
 }
+
+func Test_GetPackageManagerVersion(t *testing.T) {
+	tests := []struct {
+		name    string
+		manager string
+		wantErr bool
+	}{
+		{"npm", "npm", false},
+		{"pip", "pip", false},
+		{"unknown", "unknown-manager-xyz", false}, // Should not error, just return empty
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			version := getPackageManagerVersion(tt.manager)
+			// Version might be empty if manager not installed, that's ok
+			t.Logf("Manager %s version: %s", tt.manager, version)
+		})
+	}
+}

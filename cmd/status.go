@@ -368,54 +368,129 @@ func printPackageManagers() {
 	switch osType {
 	case "linux":
 		if exists("apt-get") {
-			systemAvailable = append(systemAvailable, "apt")
+			version := getPackageManagerVersion("apt")
+			if version != "" {
+				systemAvailable = append(systemAvailable, fmt.Sprintf("apt (%s)", version))
+			} else {
+				systemAvailable = append(systemAvailable, "apt")
+			}
 		}
 		if exists("flatpak") {
-			systemAvailable = append(systemAvailable, "flatpak")
+			version := getPackageManagerVersion("flatpak")
+			if version != "" {
+				systemAvailable = append(systemAvailable, fmt.Sprintf("flatpak (%s)", version))
+			} else {
+				systemAvailable = append(systemAvailable, "flatpak")
+			}
 		}
 		if exists("snap") {
-			systemAvailable = append(systemAvailable, "snap")
+			version := getPackageManagerVersion("snap")
+			if version != "" {
+				systemAvailable = append(systemAvailable, fmt.Sprintf("snap (%s)", version))
+			} else {
+				systemAvailable = append(systemAvailable, "snap")
+			}
 		}
 		if exists("dnf") {
-			systemAvailable = append(systemAvailable, "dnf")
+			version := getPackageManagerVersion("dnf")
+			if version != "" {
+				systemAvailable = append(systemAvailable, fmt.Sprintf("dnf (%s)", version))
+			} else {
+				systemAvailable = append(systemAvailable, "dnf")
+			}
 		}
 		if exists("yum") {
-			systemAvailable = append(systemAvailable, "yum")
+			version := getPackageManagerVersion("yum")
+			if version != "" {
+				systemAvailable = append(systemAvailable, fmt.Sprintf("yum (%s)", version))
+			} else {
+				systemAvailable = append(systemAvailable, "yum")
+			}
 		}
 		if exists("pacman") {
-			systemAvailable = append(systemAvailable, "pacman")
+			version := getPackageManagerVersion("pacman")
+			if version != "" {
+				systemAvailable = append(systemAvailable, fmt.Sprintf("pacman (%s)", version))
+			} else {
+				systemAvailable = append(systemAvailable, "pacman")
+			}
 		}
 	case "darwin":
 		if exists("brew") {
-			systemAvailable = append(systemAvailable, "homebrew")
+			version := getPackageManagerVersion("brew")
+			if version != "" {
+				systemAvailable = append(systemAvailable, fmt.Sprintf("homebrew (%s)", version))
+			} else {
+				systemAvailable = append(systemAvailable, "homebrew")
+			}
 		}
 	case "windows":
 		if exists("choco") {
-			systemAvailable = append(systemAvailable, "chocolatey")
+			version := getPackageManagerVersion("choco")
+			if version != "" {
+				systemAvailable = append(systemAvailable, fmt.Sprintf("chocolatey (%s)", version))
+			} else {
+				systemAvailable = append(systemAvailable, "chocolatey")
+			}
 		}
 		if exists("winget") {
-			systemAvailable = append(systemAvailable, "winget")
+			version := getPackageManagerVersion("winget")
+			if version != "" {
+				systemAvailable = append(systemAvailable, fmt.Sprintf("winget (%s)", version))
+			} else {
+				systemAvailable = append(systemAvailable, "winget")
+			}
 		}
 	}
 
 	// Programming runtime package managers
 	if exists("npm") {
-		runtimeAvailable = append(runtimeAvailable, "npm")
+		version := getPackageManagerVersion("npm")
+		if version != "" {
+			runtimeAvailable = append(runtimeAvailable, fmt.Sprintf("npm (%s)", version))
+		} else {
+			runtimeAvailable = append(runtimeAvailable, "npm")
+		}
 	}
 	if exists("pip") || exists("pip3") {
-		runtimeAvailable = append(runtimeAvailable, "pip")
+		version := getPackageManagerVersion("pip")
+		if version != "" {
+			runtimeAvailable = append(runtimeAvailable, fmt.Sprintf("pip (%s)", version))
+		} else {
+			runtimeAvailable = append(runtimeAvailable, "pip")
+		}
 	}
 	if exists("pipx") {
-		runtimeAvailable = append(runtimeAvailable, "pipx")
+		version := getPackageManagerVersion("pipx")
+		if version != "" {
+			runtimeAvailable = append(runtimeAvailable, fmt.Sprintf("pipx (%s)", version))
+		} else {
+			runtimeAvailable = append(runtimeAvailable, "pipx")
+		}
 	}
 	if exists("gem") {
-		runtimeAvailable = append(runtimeAvailable, "gem")
+		version := getPackageManagerVersion("gem")
+		if version != "" {
+			runtimeAvailable = append(runtimeAvailable, fmt.Sprintf("gem (%s)", version))
+		} else {
+			runtimeAvailable = append(runtimeAvailable, "gem")
+		}
 	}
 	if exists("cargo") {
-		runtimeAvailable = append(runtimeAvailable, "cargo")
+		version := getPackageManagerVersion("cargo")
+		if version != "" {
+			runtimeAvailable = append(runtimeAvailable, fmt.Sprintf("cargo (%s)", version))
+		} else {
+			runtimeAvailable = append(runtimeAvailable, "cargo")
+		}
 	}
 	if exists("go") {
-		runtimeAvailable = append(runtimeAvailable, "go")
+		version := getPackageManagerVersion("go")
+		if version != "" {
+			runtimeAvailable = append(runtimeAvailable, fmt.Sprintf("go (%s)", version))
+		} else {
+			runtimeAvailable = append(runtimeAvailable, "go")
+		}
 	}
 
 	// Print
@@ -425,6 +500,161 @@ func printPackageManagers() {
 	if len(runtimeAvailable) > 0 {
 		fmt.Printf("  Runtime:   %s\n", strings.Join(runtimeAvailable, ", "))
 	}
+}
+
+// getPackageManagerVersion returns the version of a package manager
+func getPackageManagerVersion(manager string) string {
+	var cmd *exec.Cmd
+
+	switch manager {
+	case "apt":
+		cmd = exec.Command("apt-get", "--version")
+	case "flatpak":
+		cmd = exec.Command("flatpak", "--version")
+	case "snap":
+		cmd = exec.Command("snap", "--version")
+	case "dnf":
+		cmd = exec.Command("dnf", "--version")
+	case "yum":
+		cmd = exec.Command("yum", "--version")
+	case "pacman":
+		cmd = exec.Command("pacman", "--version")
+	case "brew":
+		cmd = exec.Command("brew", "--version")
+	case "choco":
+		cmd = exec.Command("choco", "--version")
+	case "winget":
+		cmd = exec.Command("winget", "--version")
+	case "npm":
+		cmd = exec.Command("npm", "--version")
+	case "pip":
+		if exists("pip3") {
+			cmd = exec.Command("pip3", "--version")
+		} else {
+			cmd = exec.Command("pip", "--version")
+		}
+	case "pipx":
+		cmd = exec.Command("pipx", "--version")
+	case "gem":
+		cmd = exec.Command("gem", "--version")
+	case "cargo":
+		cmd = exec.Command("cargo", "--version")
+	case "go":
+		cmd = exec.Command("go", "version")
+	default:
+		return ""
+	}
+
+	if cmd == nil {
+		return ""
+	}
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return ""
+	}
+
+	version := strings.TrimSpace(string(output))
+	return extractPackageManagerVersion(manager, version)
+}
+
+// extractPackageManagerVersion extracts clean version from package manager output
+func extractPackageManagerVersion(manager, output string) string {
+	output = strings.TrimSpace(output)
+	if output == "" {
+		return ""
+	}
+
+	// Take first line only
+	if idx := strings.Index(output, "\n"); idx >= 0 {
+		output = output[:idx]
+	}
+
+	switch manager {
+	case "apt":
+		// "apt 2.8.3 (amd64)" -> "2.8.3"
+		if strings.HasPrefix(output, "apt ") {
+			parts := strings.Fields(output)
+			if len(parts) >= 2 {
+				return parts[1]
+			}
+		}
+	case "flatpak":
+		// "Flatpak 1.14.6" -> "1.14.6"
+		if strings.HasPrefix(output, "Flatpak ") {
+			return strings.TrimPrefix(output, "Flatpak ")
+		}
+	case "snap":
+		// "snap    2.63" -> "2.63"
+		if strings.HasPrefix(output, "snap") {
+			parts := strings.Fields(output)
+			if len(parts) >= 2 {
+				return parts[1]
+			}
+		}
+	case "pip":
+		// "pip 24.0 from /usr/lib..." -> "24.0"
+		if strings.HasPrefix(output, "pip ") {
+			parts := strings.Fields(output)
+			if len(parts) >= 2 {
+				return parts[1]
+			}
+		}
+	case "npm", "pipx", "gem":
+		// These usually return just version number
+		return output
+	case "cargo":
+		// "cargo 1.70.0 (7c2f85da6 2023-05-31)" -> "1.70.0"
+		if strings.HasPrefix(output, "cargo ") {
+			parts := strings.Fields(output)
+			if len(parts) >= 2 {
+				return parts[1]
+			}
+		}
+	case "go":
+		// "go version go1.25.5 linux/amd64" -> "1.25.5"
+		if strings.HasPrefix(output, "go version go") {
+			parts := strings.Fields(output)
+			if len(parts) >= 3 {
+				return strings.TrimPrefix(parts[2], "go")
+			}
+		}
+	case "brew":
+		// "Homebrew 4.0.0" or just "4.0.0"
+		if strings.HasPrefix(output, "Homebrew ") {
+			return strings.TrimPrefix(output, "Homebrew ")
+		}
+		return output
+	case "dnf", "yum":
+		// Usually just version number
+		return output
+	case "pacman":
+		// "Pacman v6.0.1 - libalpm v13.0.1" -> "6.0.1"
+		if strings.Contains(output, "Pacman v") {
+			parts := strings.Fields(output)
+			for _, part := range parts {
+				if strings.HasPrefix(part, "v") && len(part) > 1 {
+					return strings.TrimPrefix(part, "v")
+				}
+			}
+		}
+	case "choco", "winget":
+		// Usually just version number
+		return output
+	}
+
+	// Generic: try to extract version-like pattern
+	fields := strings.Fields(output)
+	for _, field := range fields {
+		if strings.Contains(field, ".") {
+			field = strings.Trim(field, "()[]{}\"',")
+			if len(field) > 0 && (field[0] >= '0' && field[0] <= '9') {
+				return field
+			}
+		}
+	}
+
+	return output
 }
 
 // printPackageSummary runs the list-packages summary logic
