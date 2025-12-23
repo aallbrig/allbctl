@@ -31,6 +31,13 @@ allbctl runtimes                   # Shows detected development runtimes with ve
                                    # - Cloud: Kubernetes, AWS CLI, Azure CLI, Google Cloud SDK
                                    # - HashiCorp: Terraform, Vault, Consul, Nomad
 
+# Projects (git repositories in ~/src)
+allbctl projects                   # Shows summary: count and last 5 recently touched repos
+allbctl projects --all             # Shows all git repos in ~/src
+allbctl projects --dirty           # Shows only repos with uncommitted changes
+allbctl projects --clean           # Shows only clean repos
+                                   # Dirty repos are marked with * (e.g., "~/src/myproject*")
+
 # Computer setup (bootstrap development environment)
 allbctl computer-setup status      # Check what's set up and what's missing
 allbctl computer-setup install     # Install/configure dev environment automatically
@@ -72,6 +79,10 @@ The `status` and `cs status` commands provide a neofetch-inspired view of your s
   - **Language**: Language version managers with versions (e.g., "nvm (0.40.3), pyenv (2.3.0)")
   - **Runtime**: Runtime package managers with versions (e.g., "npm (11.6.2), pip (24.0)")
 - **Runtimes**: Detected programming language runtimes with versions (e.g., "Python (3.12.3), Node.js (24.11.1)")
+- **Packages**: Summary of installed packages per package manager
+- **Projects**: Git repositories in ~/src shown as `X total (Y dirty)` with:
+  - Last 5 recently touched repos in a table format
+  - Three aligned columns: path (with `*` for dirty), remote origin (user/repo), and last modified date/time
 - **Computer Setup Status**: Dotfiles location, required directories, installed tools, SSH configuration
 
 ##### Supported AI Agents
@@ -201,6 +212,47 @@ allbctl runtimes
 - **NoSQL Databases**: MongoDB, Redis, Cassandra
 - **Kubernetes & Cloud**: kubectl, AWS CLI, Azure CLI, Google Cloud SDK
 - **HashiCorp Tools**: Terraform, Vault, Consul, Nomad
+
+#### Projects Management
+The `projects` command helps you track git repositories in your `~/src` directory:
+
+```bash
+allbctl projects              # Summary: count + last 5 recently touched repos
+allbctl projects --all        # Show all repos
+allbctl projects --dirty      # Show only repos with uncommitted changes
+allbctl projects --clean      # Show only clean repos
+```
+
+**Features:**
+- **Recursive discovery**: Finds all git repositories in `~/src`, including nested repos
+- **Dirty status tracking**: Repos with uncommitted changes are marked with `*`
+- **Remote origin display**: Shows the user/repo from git remote (e.g., `aallbrig/allbctl`)
+- **Last modified timestamp**: Displays when each repo was last touched
+- **Recent activity**: Sorted by modification time (most recent first)
+- **Integrated into status**: The `allbctl status` command includes a Projects section showing:
+  - Total repo count and number of dirty repos
+  - Last 5 recently touched repos with dirty indicators, remote origin, and timestamps
+  - Helps catch uncommitted work that might be forgotten
+
+**Example output:**
+```
+Total repos: 4 (3 dirty)
+
+Last 5 recently touched:
+  ~/src/allbctl*           aallbrig/allbctl           2025-12-22 17:09
+  ~/src/dice-gnome-redux*  aallbrig/dice-gnome-redux  2025-12-21 11:50
+  ~/src/godot-mcp          Coding-Solo/godot-mcp      2025-12-20 11:19
+  ~/src/dotfiles*          aallbrig/dotfiles          2025-12-16 21:18
+```
+
+The output is formatted as a table with three aligned columns:
+- **Column 1**: Repository path with `*` for uncommitted changes
+- **Column 2**: Remote origin (user/repo) extracted from git remote URL
+- **Column 3**: Last modified date and time
+
+The summary shows total repos with dirty count in parentheses: `4 (3 dirty)`
+
+This feature is particularly useful for developers juggling multiple projects to quickly see which repos have uncommitted work.
 
 #### Reset Configuration
 The `reset` command resets your machine configuration:
