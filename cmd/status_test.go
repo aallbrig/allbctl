@@ -103,3 +103,24 @@ func Test_GetAIAgentVersion(t *testing.T) {
 		})
 	}
 }
+
+func Test_GetVersionManagerVersion(t *testing.T) {
+	tests := []struct {
+		name    string
+		manager string
+	}{
+		{"nvm", "nvm"},
+		{"pyenv", "pyenv"},
+		{"rbenv", "rbenv"},
+		{"rustup", "rustup"},
+		{"unknown", "unknown-vm-xyz"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			version := getVersionManagerVersion(tt.manager)
+			// Version might be empty if manager not installed
+			t.Logf("Version manager %s version: %s", tt.manager, version)
+		})
+	}
+}

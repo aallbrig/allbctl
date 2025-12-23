@@ -67,7 +67,10 @@ The `status` and `cs status` commands provide a neofetch-inspired view of your s
 - **System Info**: Shell, terminal, CPU with core count and frequency, GPU(s), memory usage
 - **Network**: Network interfaces, router IP, connection type
 - **AI Agents**: Detected AI coding assistants with versions (e.g., "copilot (0.0.365), claude (2.0.76)")
-- **Package Managers**: Detected package managers with versions (e.g., "apt (2.8.3), npm (11.6.2)")
+- **Package Managers**: 
+  - **System**: System package managers with versions (e.g., "apt (2.8.3), flatpak (1.14.6)")
+  - **Language**: Language version managers with versions (e.g., "nvm (0.40.3), pyenv (2.3.0)")
+  - **Runtime**: Runtime package managers with versions (e.g., "npm (11.6.2), pip (24.0)")
 - **Runtimes**: Detected programming language runtimes with versions (e.g., "Python (3.12.3), Node.js (24.11.1)")
 - **Computer Setup Status**: Dotfiles location, required directories, installed tools, SSH configuration
 
@@ -82,6 +85,16 @@ The `status` command detects the following AI coding assistants:
 - **Tabby** (`tabby`)
 - **Ollama** (`ollama`)
 - **Amazon CodeWhisperer** (`codewhisperer`)
+
+##### Supported Language Version Managers
+The `status` command detects the following language version managers:
+- **NVM** (Node Version Manager) (`nvm`)
+- **pyenv** (Python) (`pyenv`)
+- **rbenv** (Ruby) (`rbenv`)
+- **jenv** (Java) (`jenv`)
+- **rustup** (Rust) (`rustup`)
+- **asdf** (Universal version manager) (`asdf`)
+- **SDKMAN** (Software Development Kit Manager) (`sdkman`)
 
 #### Package Management
 Multi-platform package detection supporting:
