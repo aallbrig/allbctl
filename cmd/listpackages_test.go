@@ -55,7 +55,7 @@ func TestExists_AllSupportedCommands(t *testing.T) {
 }
 
 func TestGetPackages_AllSupportedManagers(t *testing.T) {
-	managers := []string{"apt", "snap", "flatpak", "dnf", "yum", "pacman", "brew", "choco", "winget", "scoop", "npm", "pip", "gem", "cargo", "go", "pipx"}
+	managers := []string{"apt", "snap", "flatpak", "dnf", "yum", "pacman", "brew", "choco", "winget", "scoop", "npm", "pip", "gem", "cargo", "go", "pipx", "ollama"}
 	for _, m := range managers {
 		_ = getPackages(m) // Should not panic or error
 	}
@@ -107,4 +107,24 @@ func TestCountPackages_Pipx(t *testing.T) {
 	if count != 2 {
 		t.Errorf("Expected 2 packages for pipx, got %d", count)
 	}
+}
+
+func TestCountPackages_Ollama(t *testing.T) {
+	output := "NAME                      ID              SIZE      MODIFIED\nllama3.2:latest          a80c4f17acd5    2.0 GB    3 days ago\ncodellama:latest         8fdf8f752f6e    3.8 GB    2 weeks ago\nqwen2.5-coder:latest     6c701bcd39d9    4.7 GB    1 week ago\n"
+	count := countPackages("ollama", output)
+	if count != 3 {
+		t.Errorf("Expected 3 models for ollama, got %d", count)
+	}
+}
+
+func TestCountPackages_Ollama_EmptyOutput(t *testing.T) {
+	output := "NAME    ID    SIZE    MODIFIED\n"
+	count := countPackages("ollama", output)
+	if count != 0 {
+		t.Errorf("Expected 0 models for empty ollama output, got %d", count)
+	}
+}
+
+func TestGetPackages_Ollama(t *testing.T) {
+	_ = getPackages("ollama") // Should not panic
 }

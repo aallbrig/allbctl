@@ -129,6 +129,9 @@ func listInstalledPackages(args []string) {
 	if exists("go") {
 		managers = append(managers, "go")
 	}
+	if exists("ollama") {
+		managers = append(managers, "ollama")
+	}
 
 	if len(managers) == 0 {
 		fmt.Println("No known package managers detected.")
@@ -151,7 +154,11 @@ func listInstalledPackages(args []string) {
 			pkgs := getPackages(m)
 			if pkgs != "" {
 				count := countPackages(m, pkgs)
-				fmt.Printf("%-15s %d packages\n", m+":", count)
+				if m == "ollama" {
+					fmt.Printf("%-15s %d models\n", m+":", count)
+				} else {
+					fmt.Printf("%-15s %d packages\n", m+":", count)
+				}
 			}
 		}
 		fmt.Println("\nUse --detail flag to see the full list of all installed packages.")
@@ -215,6 +222,8 @@ func getQueryCommand(manager string) string {
 		return "cargo install --list"
 	case "go":
 		return "ls -1 $(go env GOPATH)/bin"
+	case "ollama":
+		return "ollama list"
 	default:
 		return ""
 	}
@@ -285,6 +294,9 @@ func getPackages(manager string) string {
 		// Go doesn't have a traditional global install list
 		// List binaries in GOPATH/bin or GOBIN
 		output = runCmd("bash -c 'ls -1 $(go env GOPATH)/bin 2>/dev/null || echo \"No Go binaries found\"'")
+	case "ollama":
+		// List ollama models
+		output = runCmd("ollama list")
 	default:
 		return ""
 	}
@@ -393,6 +405,18 @@ func countPackages(manager string, output string) int {
 			if strings.Contains(line, " ") && !strings.HasSuffix(line, ":") {
 				count++
 			}
+		}
+		return count
+	case "ollama":
+		// ollama list has 1 header line: "NAME    ID    SIZE    MODIFIED"
+		// Count data lines (skip header)
+		count := 0
+		for i, line := range lines {
+			line = strings.TrimSpace(line)
+			if i == 0 || line == "" {
+				continue // Skip header and empty lines
+			}
+			count++
 		}
 		return count
 	default:
