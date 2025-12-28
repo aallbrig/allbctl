@@ -105,11 +105,11 @@ func printProjectsSummary() {
 			fmt.Printf("Total repos: %d\n", len(repos))
 		}
 
-		fmt.Printf("\nLast 5 recently touched:\n")
 		count := 5
 		if len(filtered) < count {
 			count = len(filtered)
 		}
+		fmt.Printf("\nLast %d recently touched:\n", count)
 		printRepoTable(filtered[:count], "  ")
 	} else {
 		fmt.Printf("Total repos: %d\n\n", len(filtered))
@@ -154,7 +154,7 @@ func printProjectsInline() {
 	if len(repoInfos) < count {
 		count = len(repoInfos)
 	}
-	fmt.Printf("  Last 5 recently touched:\n")
+	fmt.Printf("  Last %d recently touched:\n", count)
 	printRepoTable(repoInfos[:count], "    ")
 }
 
