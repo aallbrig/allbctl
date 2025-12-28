@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 	"time"
@@ -466,7 +467,6 @@ func getWindowsGPUInfo() []GPUInfo {
 }
 
 // detectVendor detects GPU vendor from the name
-// detectVendor detects GPU vendor from the name
 func detectVendor(name string) string {
 	nameLower := strings.ToLower(name)
 
@@ -475,8 +475,11 @@ func detectVendor(name string) string {
 		return "NVIDIA"
 	} else if strings.Contains(nameLower, "radeon") || (strings.Contains(nameLower, "amd") && !strings.Contains(nameLower, "amdahl")) {
 		return "AMD"
-	} else if strings.Contains(nameLower, "ati technologies") || (strings.Contains(nameLower, "ati ") || strings.HasPrefix(nameLower, "ati") || strings.HasSuffix(nameLower, "ati")) {
-		return "AMD" // ATI is now part of AMD
+	} else if strings.Contains(nameLower, "ati technologies") {
+		return "AMD" // ATI Technologies is now part of AMD
+	} else if matched, _ := regexp.MatchString(`\bati\b`, nameLower); matched {
+		// Match ATI as a whole word to avoid false matches in words like "Corporation"
+		return "AMD"
 	} else if strings.Contains(nameLower, "intel") {
 		return "Intel"
 	} else if strings.Contains(nameLower, "apple") {

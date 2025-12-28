@@ -127,7 +127,7 @@ func Test_GetVersionManagerVersion(t *testing.T) {
 
 func Test_GetDetailedCPUInfo(t *testing.T) {
 	cpuDetails := getDetailedCPUInfo()
-	
+
 	// Should always have some basic info
 	if cpuDetails.ModelName == "" || cpuDetails.ModelName == "Unknown" {
 		t.Error("CPU model name should not be empty or Unknown")
@@ -138,17 +138,17 @@ func Test_GetDetailedCPUInfo(t *testing.T) {
 	if cpuDetails.LogicalCores == 0 {
 		t.Error("Logical cores should be greater than 0")
 	}
-	
-	t.Logf("CPU Details: Model=%s, Arch=%s, Logical=%d, Physical=%d", 
+
+	t.Logf("CPU Details: Model=%s, Arch=%s, Logical=%d, Physical=%d",
 		cpuDetails.ModelName, cpuDetails.Architecture, cpuDetails.LogicalCores, cpuDetails.PhysicalCores)
 }
 
 func Test_GetDetailedGPUInfo(t *testing.T) {
 	gpus := getDetailedGPUInfo()
-	
+
 	// May be empty on systems without GPU, that's ok
 	t.Logf("Detected %d GPU(s)", len(gpus))
-	
+
 	for i, gpu := range gpus {
 		t.Logf("GPU %d: Name=%s, Vendor=%s", i, gpu.Name, gpu.Vendor)
 		if gpu.Name == "" {
@@ -168,10 +168,12 @@ func Test_DetectVendor(t *testing.T) {
 		{"Intel UHD", "Intel UHD Graphics 630", "Intel"},
 		{"Apple M1", "Apple M1", "Apple"},
 		{"Microsoft Hyper-V", "Microsoft Corporation Hyper-V virtual VGA", "Microsoft"},
-		{"ATI in word", "Corporation ATI Device", "AMD"}, // ATI as standalone word or part of compound
+		{"ATI in word", "ATI Radeon HD 5000", "AMD"}, // ATI as a standalone word
+		{"ATI Technologies", "ATI Technologies Inc. Radeon", "AMD"},
+		{"Corporation (no ATI match)", "Some Corporation Graphics Card", "Unknown"}, // Should NOT match ATI
 		{"Unknown", "Some Generic GPU", "Unknown"},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			vendor := detectVendor(tt.gpuName)
@@ -185,14 +187,14 @@ func Test_DetectVendor(t *testing.T) {
 func Test_PrintCPUInfo(t *testing.T) {
 	// Test that printCPUInfo doesn't panic
 	details := CPUDetails{
-		ModelName:     "Test CPU",
-		Architecture:  "x86_64",
-		LogicalCores:  8,
-		PhysicalCores: 4,
+		ModelName:      "Test CPU",
+		Architecture:   "x86_64",
+		LogicalCores:   8,
+		PhysicalCores:  4,
 		ThreadsPerCore: 2,
-		BaseClock:     "3.5 GHz",
+		BaseClock:      "3.5 GHz",
 	}
-	
+
 	// Redirect stdout to capture output
 	oldStdout := os.Stdout
 	r, w, err := os.Pipe()
@@ -200,19 +202,19 @@ func Test_PrintCPUInfo(t *testing.T) {
 		t.Fatalf("Failed to create pipe: %v", err)
 	}
 	os.Stdout = w
-	
+
 	printCPUInfo(details)
-	
+
 	w.Close()
 	os.Stdout = oldStdout
-	
+
 	var sb strings.Builder
 	_, err = io.Copy(&sb, r)
 	if err != nil {
 		t.Fatalf("Failed to read output: %v", err)
 	}
 	output := sb.String()
-	
+
 	// Check for expected fields
 	if !strings.Contains(output, "Test CPU") {
 		t.Error("Output should contain CPU model name")
@@ -238,7 +240,7 @@ func Test_PrintGPUInfo(t *testing.T) {
 			ClockMemory:   "7000 MHz",
 		},
 	}
-	
+
 	// Redirect stdout to capture output
 	oldStdout := os.Stdout
 	r, w, err := os.Pipe()
@@ -246,19 +248,19 @@ func Test_PrintGPUInfo(t *testing.T) {
 		t.Fatalf("Failed to create pipe: %v", err)
 	}
 	os.Stdout = w
-	
+
 	printGPUInfo(gpus)
-	
+
 	w.Close()
 	os.Stdout = oldStdout
-	
+
 	var sb strings.Builder
 	_, err = io.Copy(&sb, r)
 	if err != nil {
 		t.Fatalf("Failed to read output: %v", err)
 	}
 	output := sb.String()
-	
+
 	// Check for expected fields
 	if !strings.Contains(output, "Test GPU") {
 		t.Error("Output should contain GPU name")
@@ -270,4 +272,3 @@ func Test_PrintGPUInfo(t *testing.T) {
 		t.Error("Output should contain memory")
 	}
 }
-
