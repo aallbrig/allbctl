@@ -17,6 +17,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// browserVersionRegex is used to extract version numbers from browser output
+var browserVersionRegex = regexp.MustCompile(`\d+\.\d+[\d.]*`)
+
 // StatusCmd represents status command
 var StatusCmd = &cobra.Command{
 	Use:   "status",
@@ -127,31 +130,34 @@ func detectMacBrowsers() []BrowserInfo {
 func detectWindowsBrowsers() []BrowserInfo {
 	var browsers []BrowserInfo
 
-	// Check common browser paths
+	// Check common browser paths using filepath.Join for cross-platform compatibility
+	programFiles := `C:\Program Files`
+	programFilesX86 := `C:\Program Files (x86)`
+
 	browserPaths := map[string][]string{
 		"Chrome": {
-			`C:\Program Files\Google\Chrome\Application\chrome.exe`,
-			`C:\Program Files (x86)\Google\Chrome\Application\chrome.exe`,
+			filepath.Join(programFiles, "Google", "Chrome", "Application", "chrome.exe"),
+			filepath.Join(programFilesX86, "Google", "Chrome", "Application", "chrome.exe"),
 		},
 		"Firefox": {
-			`C:\Program Files\Mozilla Firefox\firefox.exe`,
-			`C:\Program Files (x86)\Mozilla Firefox\firefox.exe`,
+			filepath.Join(programFiles, "Mozilla Firefox", "firefox.exe"),
+			filepath.Join(programFilesX86, "Mozilla Firefox", "firefox.exe"),
 		},
 		"Edge": {
-			`C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe`,
-			`C:\Program Files\Microsoft\Edge\Application\msedge.exe`,
+			filepath.Join(programFilesX86, "Microsoft", "Edge", "Application", "msedge.exe"),
+			filepath.Join(programFiles, "Microsoft", "Edge", "Application", "msedge.exe"),
 		},
 		"Brave": {
-			`C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe`,
-			`C:\Program Files (x86)\BraveSoftware\Brave-Browser\Application\brave.exe`,
+			filepath.Join(programFiles, "BraveSoftware", "Brave-Browser", "Application", "brave.exe"),
+			filepath.Join(programFilesX86, "BraveSoftware", "Brave-Browser", "Application", "brave.exe"),
 		},
 		"Opera": {
-			`C:\Program Files\Opera\launcher.exe`,
-			`C:\Program Files (x86)\Opera\launcher.exe`,
+			filepath.Join(programFiles, "Opera", "launcher.exe"),
+			filepath.Join(programFilesX86, "Opera", "launcher.exe"),
 		},
 		"Vivaldi": {
-			`C:\Program Files\Vivaldi\Application\vivaldi.exe`,
-			`C:\Program Files (x86)\Vivaldi\Application\vivaldi.exe`,
+			filepath.Join(programFiles, "Vivaldi", "Application", "vivaldi.exe"),
+			filepath.Join(programFilesX86, "Vivaldi", "Application", "vivaldi.exe"),
 		},
 	}
 
@@ -201,9 +207,6 @@ func parseBrowserVersion(output string) string {
 	// "Mozilla Firefox 121.0"
 	// "Brave 1.61.109 Chromium: 120.0.6099.109"
 
-	// Use regex to extract version number (more robust)
-	versionRegex := regexp.MustCompile(`\d+\.\d+[\d.]*`)
-
 	// Try to find version pattern in each field
 	fields := strings.Fields(firstLine)
 	for i, field := range fields {
@@ -218,13 +221,13 @@ func parseBrowserVersion(output string) string {
 
 		// Check if this is a version label followed by version
 		if fieldLower == "version" && i+1 < len(fields) {
-			if version := versionRegex.FindString(fields[i+1]); version != "" {
+			if version := browserVersionRegex.FindString(fields[i+1]); version != "" {
 				return version
 			}
 		}
 
 		// Look for version pattern directly
-		if version := versionRegex.FindString(field); version != "" {
+		if version := browserVersionRegex.FindString(field); version != "" {
 			return version
 		}
 	}
@@ -256,7 +259,7 @@ func isVersionString(s string) bool {
 		return false
 	}
 	// Check if it starts with a digit and contains a dot
-	return len(s) > 0 && (s[0] >= '0' && s[0] <= '9') && strings.Contains(s, ".")
+	return s[0] >= '0' && s[0] <= '9' && strings.Contains(s, ".")
 }
 
 // getWindowsBrowserVersion gets browser version on Windows
@@ -265,9 +268,9 @@ func getWindowsBrowserVersion(browserPath string) string {
 	dir := filepath.Dir(browserPath)
 
 	// Look for version info in the directory (version folders for Chrome/Edge)
-	chromePattern := filepath.Join("Google", "Chrome")
-	edgePattern := filepath.Join("Microsoft", "Edge")
-	if strings.Contains(browserPath, chromePattern) || strings.Contains(browserPath, edgePattern) {
+	// These browsers store their version as a folder name in the Application directory
+	if strings.Contains(browserPath, filepath.Join("Google", "Chrome")) ||
+		strings.Contains(browserPath, filepath.Join("Microsoft", "Edge")) {
 		entries, err := os.ReadDir(dir)
 		if err == nil {
 			for _, entry := range entries {
