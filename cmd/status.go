@@ -201,7 +201,10 @@ func parseBrowserVersion(output string) string {
 	// "Mozilla Firefox 121.0"
 	// "Brave 1.61.109 Chromium: 120.0.6099.109"
 
-	// Try to extract version number (digits and dots)
+	// Use regex to extract version number (more robust)
+	versionRegex := regexp.MustCompile(`\d+\.\d+[\d.]*`)
+
+	// Try to find version pattern in each field
 	fields := strings.Fields(firstLine)
 	for i, field := range fields {
 		// Skip known browser name prefixes
@@ -213,19 +216,16 @@ func parseBrowserVersion(output string) string {
 			continue
 		}
 
-		// Look for version pattern
-		if strings.Contains(field, ".") && len(field) > 0 && (field[0] >= '0' && field[0] <= '9') {
-			// Clean up trailing characters
-			field = strings.TrimRight(field, ",-_:")
-			return field
-		}
-
 		// Check if this is a version label followed by version
 		if fieldLower == "version" && i+1 < len(fields) {
-			nextField := fields[i+1]
-			if strings.Contains(nextField, ".") {
-				return strings.TrimRight(nextField, ",-_:")
+			if version := versionRegex.FindString(fields[i+1]); version != "" {
+				return version
 			}
+		}
+
+		// Look for version pattern directly
+		if version := versionRegex.FindString(field); version != "" {
+			return version
 		}
 	}
 
@@ -250,20 +250,31 @@ func getMacAppVersion(appPath string) string {
 	return version
 }
 
+// isVersionString checks if a string looks like a version number
+func isVersionString(s string) bool {
+	if s == "" {
+		return false
+	}
+	// Check if it starts with a digit and contains a dot
+	return len(s) > 0 && (s[0] >= '0' && s[0] <= '9') && strings.Contains(s, ".")
+}
+
 // getWindowsBrowserVersion gets browser version on Windows
 func getWindowsBrowserVersion(browserPath string) string {
 	// Try to get version from file properties using wmic
 	dir := filepath.Dir(browserPath)
 
 	// Look for version info in the directory (version folders for Chrome/Edge)
-	if strings.Contains(browserPath, "Google\\Chrome") || strings.Contains(browserPath, "Microsoft\\Edge") {
+	chromePattern := filepath.Join("Google", "Chrome")
+	edgePattern := filepath.Join("Microsoft", "Edge")
+	if strings.Contains(browserPath, chromePattern) || strings.Contains(browserPath, edgePattern) {
 		entries, err := os.ReadDir(dir)
 		if err == nil {
 			for _, entry := range entries {
 				if entry.IsDir() {
-					// Check if directory name looks like a version (e.g., "120.0.6099.109")
+					// Check if directory name looks like a version
 					name := entry.Name()
-					if strings.Contains(name, ".") && len(name) > 0 && (name[0] >= '0' && name[0] <= '9') {
+					if isVersionString(name) {
 						return name
 					}
 				}
