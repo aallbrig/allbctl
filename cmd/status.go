@@ -26,6 +26,274 @@ var StatusCmd = &cobra.Command{
 	},
 }
 
+// BrowserInfo holds browser information
+type BrowserInfo struct {
+	Name    string
+	Version string
+}
+
+// detectBrowsers detects installed web browsers and their versions
+func detectBrowsers() []BrowserInfo {
+	var browsers []BrowserInfo
+	osType := runtime.GOOS
+
+	switch osType {
+	case "linux":
+		browsers = detectLinuxBrowsers()
+	case "darwin":
+		browsers = detectMacBrowsers()
+	case "windows":
+		browsers = detectWindowsBrowsers()
+	}
+
+	return browsers
+}
+
+// detectLinuxBrowsers detects browsers on Linux
+func detectLinuxBrowsers() []BrowserInfo {
+	var browsers []BrowserInfo
+
+	// Chrome/Chromium
+	if version := getBrowserVersion("google-chrome", "--version"); version != "" {
+		browsers = append(browsers, BrowserInfo{Name: "Chrome", Version: version})
+	} else if version := getBrowserVersion("chromium", "--version"); version != "" {
+		browsers = append(browsers, BrowserInfo{Name: "Chromium", Version: version})
+	} else if version := getBrowserVersion("chromium-browser", "--version"); version != "" {
+		browsers = append(browsers, BrowserInfo{Name: "Chromium", Version: version})
+	}
+
+	// Firefox
+	if version := getBrowserVersion("firefox", "--version"); version != "" {
+		browsers = append(browsers, BrowserInfo{Name: "Firefox", Version: version})
+	}
+
+	// Brave
+	if version := getBrowserVersion("brave-browser", "--version"); version != "" {
+		browsers = append(browsers, BrowserInfo{Name: "Brave", Version: version})
+	} else if version := getBrowserVersion("brave", "--version"); version != "" {
+		browsers = append(browsers, BrowserInfo{Name: "Brave", Version: version})
+	}
+
+	// Edge
+	if version := getBrowserVersion("microsoft-edge", "--version"); version != "" {
+		browsers = append(browsers, BrowserInfo{Name: "Edge", Version: version})
+	} else if version := getBrowserVersion("microsoft-edge-stable", "--version"); version != "" {
+		browsers = append(browsers, BrowserInfo{Name: "Edge", Version: version})
+	}
+
+	// Opera
+	if version := getBrowserVersion("opera", "--version"); version != "" {
+		browsers = append(browsers, BrowserInfo{Name: "Opera", Version: version})
+	}
+
+	// Vivaldi
+	if version := getBrowserVersion("vivaldi", "--version"); version != "" {
+		browsers = append(browsers, BrowserInfo{Name: "Vivaldi", Version: version})
+	}
+
+	return browsers
+}
+
+// detectMacBrowsers detects browsers on macOS
+func detectMacBrowsers() []BrowserInfo {
+	var browsers []BrowserInfo
+
+	// Check for browsers in /Applications
+	appPaths := map[string]string{
+		"Chrome":  "/Applications/Google Chrome.app",
+		"Firefox": "/Applications/Firefox.app",
+		"Safari":  "/Applications/Safari.app",
+		"Brave":   "/Applications/Brave Browser.app",
+		"Edge":    "/Applications/Microsoft Edge.app",
+		"Opera":   "/Applications/Opera.app",
+		"Vivaldi": "/Applications/Vivaldi.app",
+	}
+
+	for name, appPath := range appPaths {
+		if _, err := os.Stat(appPath); err == nil {
+			version := getMacAppVersion(appPath)
+			if version != "" {
+				browsers = append(browsers, BrowserInfo{Name: name, Version: version})
+			} else {
+				browsers = append(browsers, BrowserInfo{Name: name, Version: "installed"})
+			}
+		}
+	}
+
+	return browsers
+}
+
+// detectWindowsBrowsers detects browsers on Windows
+func detectWindowsBrowsers() []BrowserInfo {
+	var browsers []BrowserInfo
+
+	// Check common browser paths
+	browserPaths := map[string][]string{
+		"Chrome": {
+			`C:\Program Files\Google\Chrome\Application\chrome.exe`,
+			`C:\Program Files (x86)\Google\Chrome\Application\chrome.exe`,
+		},
+		"Firefox": {
+			`C:\Program Files\Mozilla Firefox\firefox.exe`,
+			`C:\Program Files (x86)\Mozilla Firefox\firefox.exe`,
+		},
+		"Edge": {
+			`C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe`,
+			`C:\Program Files\Microsoft\Edge\Application\msedge.exe`,
+		},
+		"Brave": {
+			`C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe`,
+			`C:\Program Files (x86)\BraveSoftware\Brave-Browser\Application\brave.exe`,
+		},
+		"Opera": {
+			`C:\Program Files\Opera\launcher.exe`,
+			`C:\Program Files (x86)\Opera\launcher.exe`,
+		},
+		"Vivaldi": {
+			`C:\Program Files\Vivaldi\Application\vivaldi.exe`,
+			`C:\Program Files (x86)\Vivaldi\Application\vivaldi.exe`,
+		},
+	}
+
+	for name, paths := range browserPaths {
+		for _, path := range paths {
+			if _, err := os.Stat(path); err == nil {
+				version := getWindowsBrowserVersion(path)
+				if version != "" {
+					browsers = append(browsers, BrowserInfo{Name: name, Version: version})
+				} else {
+					browsers = append(browsers, BrowserInfo{Name: name, Version: "installed"})
+				}
+				break
+			}
+		}
+	}
+
+	return browsers
+}
+
+// getBrowserVersion gets browser version using command line
+func getBrowserVersion(command string, args ...string) string {
+	cmd := exec.Command(command, args...)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return ""
+	}
+
+	version := strings.TrimSpace(string(output))
+	return parseBrowserVersion(version)
+}
+
+// parseBrowserVersion extracts version number from browser output
+func parseBrowserVersion(output string) string {
+	output = strings.TrimSpace(output)
+	if output == "" {
+		return ""
+	}
+
+	// Take first line
+	lines := strings.Split(output, "\n")
+	firstLine := strings.TrimSpace(lines[0])
+
+	// Common patterns:
+	// "Google Chrome 120.0.6099.109"
+	// "Chromium 120.0.6099.109"
+	// "Mozilla Firefox 121.0"
+	// "Brave 1.61.109 Chromium: 120.0.6099.109"
+
+	// Try to extract version number (digits and dots)
+	fields := strings.Fields(firstLine)
+	for i, field := range fields {
+		// Skip known browser name prefixes
+		fieldLower := strings.ToLower(field)
+		if fieldLower == "google" || fieldLower == "chrome" || fieldLower == "chromium" ||
+			fieldLower == "mozilla" || fieldLower == "firefox" || fieldLower == "brave" ||
+			fieldLower == "microsoft" || fieldLower == "edge" || fieldLower == "opera" ||
+			fieldLower == "vivaldi" {
+			continue
+		}
+
+		// Look for version pattern
+		if strings.Contains(field, ".") && len(field) > 0 && (field[0] >= '0' && field[0] <= '9') {
+			// Clean up trailing characters
+			field = strings.TrimRight(field, ",-_:")
+			return field
+		}
+
+		// Check if this is a version label followed by version
+		if fieldLower == "version" && i+1 < len(fields) {
+			nextField := fields[i+1]
+			if strings.Contains(nextField, ".") {
+				return strings.TrimRight(nextField, ",-_:")
+			}
+		}
+	}
+
+	return firstLine
+}
+
+// getMacAppVersion gets version from macOS app bundle
+func getMacAppVersion(appPath string) string {
+	plistPath := filepath.Join(appPath, "Contents", "Info.plist")
+	cmd := exec.Command("defaults", "read", plistPath, "CFBundleShortVersionString")
+	output, err := cmd.Output()
+	if err != nil {
+		// Try alternative version key
+		cmd = exec.Command("defaults", "read", plistPath, "CFBundleVersion")
+		output, err = cmd.Output()
+		if err != nil {
+			return ""
+		}
+	}
+
+	version := strings.TrimSpace(string(output))
+	return version
+}
+
+// getWindowsBrowserVersion gets browser version on Windows
+func getWindowsBrowserVersion(browserPath string) string {
+	// Try to get version from file properties using wmic
+	dir := filepath.Dir(browserPath)
+
+	// Look for version info in the directory (version folders for Chrome/Edge)
+	if strings.Contains(browserPath, "Google\\Chrome") || strings.Contains(browserPath, "Microsoft\\Edge") {
+		entries, err := os.ReadDir(dir)
+		if err == nil {
+			for _, entry := range entries {
+				if entry.IsDir() {
+					// Check if directory name looks like a version (e.g., "120.0.6099.109")
+					name := entry.Name()
+					if strings.Contains(name, ".") && len(name) > 0 && (name[0] >= '0' && name[0] <= '9') {
+						return name
+					}
+				}
+			}
+		}
+	}
+
+	return ""
+}
+
+// printBrowsers displays detected browsers
+func printBrowsers(browsers []BrowserInfo) {
+	if len(browsers) == 0 {
+		return
+	}
+
+	var browserStrings []string
+	for _, browser := range browsers {
+		if browser.Version != "" && browser.Version != "installed" {
+			browserStrings = append(browserStrings, fmt.Sprintf("%s (%s)", browser.Name, browser.Version))
+		} else {
+			browserStrings = append(browserStrings, browser.Name)
+		}
+	}
+
+	if len(browserStrings) > 0 {
+		fmt.Printf("  %s\n", strings.Join(browserStrings, ", "))
+	}
+}
+
 // printSystemInfo collects and prints system information in a structured format
 func printSystemInfo() {
 	// Get current user for header
@@ -111,6 +379,14 @@ func printSystemInfo() {
 	fmt.Println("Network:")
 	printNetworkInfo()
 	fmt.Println()
+
+	// Browsers section
+	browsers := detectBrowsers()
+	if len(browsers) > 0 {
+		fmt.Println("Browsers:")
+		printBrowsers(browsers)
+		fmt.Println()
+	}
 
 	// AI Agents section
 	fmt.Println("AI Agents:")
