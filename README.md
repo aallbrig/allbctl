@@ -13,7 +13,7 @@ allbctl cs status                  # Same as above (alias)
                                    # - User@hostname header with separator
                                    # - OS, kernel, uptime, host/virtualization info
                                    # - Package counts (dpkg, rpm, flatpak, snap, brew, etc.)
-                                   # - Shell, terminal, CPU, GPU(s), memory
+                                   # - Shell, terminal, detailed CPU and GPU info, memory
                                    # - Computer setup status (dotfiles, directories, tools)
 
 # List installed packages
@@ -73,7 +73,20 @@ The `status` and `cs status` commands provide a neofetch-inspired view of your s
 - **OS Information**: Platform, version, architecture, kernel version
 - **System Details**: Host/virtualization info, uptime
 - **Package Counts**: Inline display of packages from detected package managers (dpkg, rpm, pacman, snap, flatpak, brew, choco, winget)
-- **System Info**: Shell, terminal, CPU with core count and frequency, GPU(s), memory usage
+- **CPU Information**: Detailed CPU details including:
+  - Model name and architecture (x86_64, arm64, etc.)
+  - Base clock speed (when available)
+  - Physical vs logical cores with threads per core
+  - Cores per socket and socket count
+  - P-cores and E-cores for Apple Silicon (when available)
+- **GPU Information**: Detailed GPU information including:
+  - GPU name and vendor (NVIDIA, AMD, Intel, Apple, Microsoft)
+  - Memory size (when available)
+  - Driver version (when available)
+  - Compute capability for NVIDIA GPUs
+  - Clock speeds (graphics and memory) for NVIDIA GPUs
+  - Supports nvidia-smi for NVIDIA GPUs and fallback to platform-specific detection (lspci on Linux, system_profiler on macOS, wmic on Windows)
+- **Memory**: Memory usage
 - **Runtimes**: Detected programming languages with versions (e.g., "Python (3.12.3), Node.js (24.11.1), Go (1.25.5)")
 - **Network**: Network interfaces, router IP, connection type
 - **AI Agents**: Detected AI coding assistants with versions (e.g., "copilot (0.0.365), claude (2.0.76)")
