@@ -1,0 +1,143 @@
+Windows PowerShell
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+Try the new cross-platform PowerShell https://aka.ms/pscore6
+
+PS C:\WINDOWS\system32> cd C:\Users\aallb\Downloads\
+PS C:\Users\aallb\Downloads> cd .\allbctl-windows-amd64\
+PS C:\Users\aallb\Downloads\allbctl-windows-amd64> .\allbctl-windows-amd64.exe --help
+allbctl (aka allbrightctl) is a CLI for Andrew Allbright specific tasks.
+
+Example commands for allbctl:
+
+$ allbctl bootstrap status
+$ allbctl bootstrap install
+$ allbctl status
+
+Usage:
+  allbctl [flags]
+  allbctl [command]
+
+Available Commands:
+  bootstrap     Manage workstation bootstrap configuration
+  completion    Generate the autocompletion script for the specified shell
+  help          Help about any command
+  list-packages Show package count summary from all detected package managers
+  runtimes      Detects programmer development environment runtimes and displays their versions.
+  status        Display system information (like neofetch)
+
+Flags:
+      --config string   config file (default is $HOME/.allbctl.yaml)
+  -h, --help            help for allbctl
+
+Use "allbctl [command] --help" for more information about a command.
+PS C:\Users\aallb\Downloads\allbctl-windows-amd64> .\allbctl-windows-amd64.exe status
+aallb@DESKTOP-QHH7IEU
+
+OS:        Microsoft Windows 10 Home 22H2
+Hostname:  DESKTOP-QHH7IEU
+Shell:     C:\WINDOWS\system32\cmd.exe
+Terminal:  Unknown
+CPU:       Intel(R) Core(TM) i9-14900KF (32 cores)
+GPU(s):
+  NVIDIA GeForce RTX 4070 Ti SUPER
+Memory:    8.7 GiB / 34.2 GiB
+Hardware:  DESKTOP-QHH7IEU Microsoft Windows 10 Home
+
+Network:
+  Ethernet 2: 192.168.50.166/24
+  Ethernet: 169.254.100.106/16
+  Wi-Fi: 169.254.26.127/16
+  Local Area Connection* 1: 169.254.132.35/16
+  Local Area Connection* 2: 169.254.35.92/16
+  Bluetooth Network Connection: 169.254.253.195/16
+  Loopback Pseudo-Interface 1: 127.0.0.1/8
+  Router:    Unknown
+  Type:      Unknown
+
+Package Managers:
+  System:    winget
+
+Packages:
+  winget:         0 packages
+PS C:\Users\aallb\Downloads\allbctl-windows-amd64> .\allbctl-windows-amd64.exe bootstrap status
+Workstation Bootstrap Status:
+
+  Expected Directories
+  -----
+  PRESENT C:\Users\aallb\src
+  Required Tools
+  -----
+  NOT FOUND git
+  NOT FOUND gh
+  SSH Configuration
+  -----
+  GITHUB CLI NOT FOUND (required for SSH key registration)
+  Dotfiles
+  -----
+  NOT CLONED C:\Users\aallb\src\dotfiles
+  Shell Config Tools
+  -----
+  No tools found in shell config files
+PS C:\Users\aallb\Downloads\allbctl-windows-amd64> .\allbctl-windows-amd64.exe bootstrap install
+Applying configuration: Expected Directories
+PRESENT C:\Users\aallb\src
+
+Applying configuration: Required Tools
+NOT FOUND git
+NOT FOUND gh
+
+        Installing: Installable Command: git
+Installing git...
+Using: winget install Git.Git
+The `msstore` source requires that you view the following agreements before using.
+Terms of Transaction: https://aka.ms/microsoft-store-terms-of-transaction
+The source requires the current machine's 2-letter geographic region to be sent to the backend service to function properly (ex. "US").
+
+Do you agree to all the source agreements terms?
+[Y] Yes  [N] No: An unexpected error occurred while executing the command:
+0x8a150042 : Error reading input in prompt
+❌ Failed to install git
+        Installing: Installable Command: gh
+Installing gh...
+Using: winget install GitHub.cli
+The `msstore` source requires that you view the following agreements before using.
+Terms of Transaction: https://aka.ms/microsoft-store-terms-of-transaction
+The source requires the current machine's 2-letter geographic region to be sent to the backend service to function properly (ex. "US").
+
+Do you agree to all the source agreements terms?
+[Y] Yes  [N] No: An unexpected error occurred while executing the command:
+0x8a150042 : Error reading input in prompt
+❌ Failed to install gh
+
+Applying configuration: SSH Configuration
+GITHUB CLI NOT FOUND (required for SSH key registration)
+
+        Installing: SSH Key GitHub Registration
+GITHUB CLI NOT FOUND (required for SSH key registration)
+
+Applying configuration: Dotfiles
+NOT CLONED C:\Users\aallb\src\dotfiles
+
+        Installing: Dotfiles Setup
+NOT CLONED C:\Users\aallb\src\dotfiles
+Cloning https://github.com/aallbrig/dotfiles to C:\Users\aallb\src\dotfiles...
+❌ Failed to clone dotfiles
+
+Applying configuration: Shell Config Tools
+No tools found in shell config files
+
+PS C:\Users\aallb\Downloads\allbctl-windows-amd64> .\allbctl-windows-amd64.exe list-packages
+Detected OS: windows
+
+winget:         1 packages
+
+Use --detail flag to see the full list of all installed packages.
+Or specify a package manager: allbctl list-packages <manager>
+PS C:\Users\aallb\Downloads\allbctl-windows-amd64> .\allbctl-windows-amd64.exe list-packages --detail
+Detected OS: windows
+
+Packages installed via winget:
+Error running winget list: exit status 0x8a150042
+
+PS C:\Users\aallb\Downloads\allbctl-windows-amd64>

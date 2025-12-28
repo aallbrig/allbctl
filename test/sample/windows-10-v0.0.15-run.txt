@@ -1,0 +1,48 @@
+PS C:\Users\aallb\Downloads\allbctl-windows-amd64> .\allbctl-windows-amd64.exe status
+aallb@DESKTOP-QHH7IEU
+
+OS:        Microsoft Windows 10 Home 22H2
+Hostname:  DESKTOP-QHH7IEU
+Shell:     C:\WINDOWS\system32\cmd.exe
+Terminal:  Unknown
+CPU:       Intel(R) Core(TM) i9-14900KF (32 cores)
+GPU(s):
+  NVIDIA GeForce RTX 4070 Ti SUPER
+Memory:    7.8 GiB / 34.2 GiB
+Hardware:  DESKTOP-QHH7IEU Microsoft Windows 10 Home
+
+Network:
+  Ethernet 2: 192.168.50.166/24
+  Ethernet: 169.254.100.106/16
+  Wi-Fi: 169.254.26.127/16
+  Local Area Connection* 1: 169.254.132.35/16
+  Local Area Connection* 2: 169.254.35.92/16
+  Bluetooth Network Connection: 169.254.253.195/16
+  Loopback Pseudo-Interface 1: 127.0.0.1/8
+  Router:    Unknown
+  Type:      Unknown
+
+Package Managers:
+  System:    winget
+
+Packages:
+  winget:         0 packages
+PS C:\Users\aallb\Downloads\allbctl-windows-amd64> .\allbctl-windows-amd64.exe bootstrap status
+Workstation Bootstrap Status:
+
+  Expected Directories
+  -----
+  PRESENT C:\Users\aallb\src
+  Required Tools
+  -----
+  NOT FOUND git
+  NOT FOUND gh
+  SSH Configuration
+  -----
+  GITHUB CLI NOT FOUND (required for SSH key registration)
+  Dotfiles
+  -----
+  NOT CLONED C:\Users\aallb\src\dotfiles
+  Shell Config Tools
+  -----
+  No tools found in shell config files
