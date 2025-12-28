@@ -55,7 +55,7 @@ func TestExists_AllSupportedCommands(t *testing.T) {
 }
 
 func TestGetPackages_AllSupportedManagers(t *testing.T) {
-	managers := []string{"apt", "snap", "flatpak", "dnf", "yum", "pacman", "brew", "choco", "winget", "scoop", "npm", "pip", "gem", "cargo", "go", "pipx", "ollama"}
+	managers := []string{"apt", "snap", "flatpak", "dnf", "yum", "pacman", "brew", "choco", "winget", "scoop", "npm", "pip", "gem", "cargo", "go", "pipx", "ollama", "vagrant"}
 	for _, m := range managers {
 		_ = getPackages(m) // Should not panic or error
 	}
@@ -127,4 +127,32 @@ func TestCountPackages_Ollama_EmptyOutput(t *testing.T) {
 
 func TestGetPackages_Ollama(t *testing.T) {
 	_ = getPackages("ollama") // Should not panic
+}
+
+func TestCountPackages_Vagrant(t *testing.T) {
+	output := "gusztavvargadr/windows-10 (virtualbox, 2511.0.0, (amd64))\nubuntu/focal64            (virtualbox, 20240821.0.0)\n"
+	count := countPackages("vagrant", output)
+	if count != 2 {
+		t.Errorf("Expected 2 VMs for vagrant, got %d", count)
+	}
+}
+
+func TestCountPackages_Vagrant_EmptyOutput(t *testing.T) {
+	output := ""
+	count := countPackages("vagrant", output)
+	if count != 0 {
+		t.Errorf("Expected 0 VMs for empty vagrant output, got %d", count)
+	}
+}
+
+func TestGetPackages_Vagrant(t *testing.T) {
+	_ = getPackages("vagrant") // Should not panic
+}
+
+func TestGetQueryCommand_Vagrant(t *testing.T) {
+	cmd := getQueryCommand("vagrant")
+	expected := "vagrant box list"
+	if cmd != expected {
+		t.Errorf("Expected query command '%s', got '%s'", expected, cmd)
+	}
 }

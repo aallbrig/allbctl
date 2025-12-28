@@ -1083,6 +1083,9 @@ func printPackageSummary() {
 	if exists("ollama") {
 		managers = append(managers, "ollama")
 	}
+	if exists("vagrant") {
+		managers = append(managers, "vagrant")
+	}
 
 	if len(managers) == 0 {
 		fmt.Println("  No package managers detected")
@@ -1096,6 +1099,8 @@ func printPackageSummary() {
 			count := countPackages(m, pkgs)
 			if m == "ollama" {
 				fmt.Printf("  %-15s %d models\n", m+":", count)
+			} else if m == "vagrant" {
+				fmt.Printf("  %-15s %d VMs\n", m+":", count)
 			} else {
 				fmt.Printf("  %-15s %d packages\n", m+":", count)
 			}

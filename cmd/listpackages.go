@@ -132,6 +132,9 @@ func listInstalledPackages(args []string) {
 	if exists("ollama") {
 		managers = append(managers, "ollama")
 	}
+	if exists("vagrant") {
+		managers = append(managers, "vagrant")
+	}
 
 	if len(managers) == 0 {
 		fmt.Println("No known package managers detected.")
@@ -156,6 +159,8 @@ func listInstalledPackages(args []string) {
 				count := countPackages(m, pkgs)
 				if m == "ollama" {
 					fmt.Printf("%-15s %d models\n", m+":", count)
+				} else if m == "vagrant" {
+					fmt.Printf("%-15s %d VMs\n", m+":", count)
 				} else {
 					fmt.Printf("%-15s %d packages\n", m+":", count)
 				}
@@ -224,6 +229,8 @@ func getQueryCommand(manager string) string {
 		return "ls -1 $(go env GOPATH)/bin"
 	case "ollama":
 		return "ollama list"
+	case "vagrant":
+		return "vagrant box list"
 	default:
 		return ""
 	}
@@ -297,6 +304,9 @@ func getPackages(manager string) string {
 	case "ollama":
 		// List ollama models
 		output = runCmd("ollama list")
+	case "vagrant":
+		// List vagrant boxes
+		output = runCmd("vagrant box list")
 	default:
 		return ""
 	}
@@ -415,6 +425,18 @@ func countPackages(manager string, output string) int {
 			line = strings.TrimSpace(line)
 			if i == 0 || line == "" {
 				continue // Skip header and empty lines
+			}
+			count++
+		}
+		return count
+	case "vagrant":
+		// vagrant box list output: "box-name (provider, version)"
+		// Each line represents one box
+		count := 0
+		for _, line := range lines {
+			line = strings.TrimSpace(line)
+			if line == "" {
+				continue
 			}
 			count++
 		}
