@@ -24,12 +24,13 @@ allbctl list-packages apt          # List only apt packages (shows command for c
 allbctl list-packages npm          # List only npm packages (shows command for copy/paste)
 allbctl list-packages flatpak      # List only flatpak packages (shows command for copy/paste)
 
-# Detect runtimes (programming languages, databases, cloud tools)
+# Detect runtimes (programming languages, databases, cloud tools, gaming platforms)
 allbctl runtimes                   # Shows detected development runtimes with versions:
-                                   # - Languages: Node.js, Go, PHP, Java, Python
+                                   # - Languages: Node.js, Go, PHP, Java, Python, Ruby, Rust, Perl, etc.
                                    # - Databases: MySQL, PostgreSQL, SQLite, MariaDB, MongoDB, Redis
                                    # - Cloud: Kubernetes, AWS CLI, Azure CLI, Google Cloud SDK
                                    # - HashiCorp: Terraform, Vault, Consul, Nomad
+                                   # - Gaming Platforms: Steam (cross-platform detection)
 
 # Projects (git repositories in ~/src)
 allbctl projects                   # Shows summary: count and last 5 recently touched repos
@@ -72,6 +73,7 @@ The `status` and `cs status` commands provide a neofetch-inspired view of your s
 - **System Details**: Host/virtualization info, uptime
 - **Package Counts**: Inline display of packages from detected package managers (dpkg, rpm, pacman, snap, flatpak, brew, choco, winget)
 - **System Info**: Shell, terminal, CPU with core count and frequency, GPU(s), memory usage
+- **Runtimes**: Detected programming languages with versions (e.g., "Python (3.12.3), Node.js (24.11.1), Go (1.25.5)")
 - **Network**: Network interfaces, router IP, connection type
 - **AI Agents**: Detected AI coding assistants with versions (e.g., "copilot (0.0.365), claude (2.0.76)")
 - **Package Managers**: 
@@ -200,18 +202,26 @@ allbctl cs install
 ### Additional Commands
 
 #### Runtimes Detection
-The `runtimes` command detects programming languages, databases, and cloud tools installed on your system:
+The `runtimes` command detects programming languages, databases, cloud tools, and gaming platforms installed on your system:
 
 ```bash
 allbctl runtimes
 ```
 
 **Detects:**
-- **Programming Languages**: Node.js, Go, PHP, Java, Python
+- **Programming Languages**: Node.js, Go, PHP, Java, Python, Ruby, Rust, Perl, R, Scala, Kotlin, Swift, Elixir, Erlang, Haskell, Lua, Dart, Zig, C#
+- **Version Managers**: nvm, pyenv, rbenv, jenv, rustup, sdkman, asdf
+- **Gaming Platforms**: Steam (cross-platform detection for Linux, macOS, and Windows)
 - **SQL Databases**: MySQL, PostgreSQL, SQLite, MariaDB, SQL Server, Oracle
 - **NoSQL Databases**: MongoDB, Redis, Cassandra
 - **Kubernetes & Cloud**: kubectl, AWS CLI, Azure CLI, Google Cloud SDK
 - **HashiCorp Tools**: Terraform, Vault, Consul, Nomad
+
+**Gaming Platform Detection:**
+Steam is detected across platforms by checking:
+- Linux: Command-line `steam` in PATH, `~/.steam/steam.sh`, `~/.local/share/Steam/steam.sh`, `/usr/bin/steam`, `/usr/games/steam`
+- macOS: `/Applications/Steam.app`, `~/Applications/Steam.app`
+- Windows: Windows Registry (`HKCU\Software\Valve\Steam`), `C:\Program Files (x86)\Steam\steam.exe`, `C:\Program Files\Steam\steam.exe`
 
 #### Projects Management
 The `projects` command helps you track git repositories in your `~/src` directory:
