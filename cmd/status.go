@@ -271,13 +271,13 @@ func getGPUInfoList() []string {
 
 // GPUInfo holds detailed GPU information
 type GPUInfo struct {
-	Name            string
-	Vendor          string
-	Memory          string
-	Driver          string
-	ComputeCap      string
-	ClockGraphics   string
-	ClockMemory     string
+	Name          string
+	Vendor        string
+	Memory        string
+	Driver        string
+	ComputeCap    string
+	ClockGraphics string
+	ClockMemory   string
 }
 
 // getDetailedGPUInfo gathers detailed GPU information from multiple sources
@@ -358,7 +358,7 @@ func getLinuxGPUInfo() []GPUInfo {
 		if len(parts) >= 3 {
 			name := strings.TrimSpace(parts[2])
 			vendor := detectVendor(name)
-			
+
 			gpu := GPUInfo{
 				Name:   name,
 				Vendor: vendor,
@@ -469,7 +469,7 @@ func getWindowsGPUInfo() []GPUInfo {
 // detectVendor detects GPU vendor from the name
 func detectVendor(name string) string {
 	nameLower := strings.ToLower(name)
-	
+
 	// Check for specific vendor patterns (order matters - check more specific patterns first)
 	if strings.Contains(nameLower, "nvidia") || strings.Contains(nameLower, "geforce") || strings.Contains(nameLower, "quadro") || strings.Contains(nameLower, "tesla") {
 		return "NVIDIA"
@@ -522,18 +522,18 @@ func printGPUInfo(gpus []GPUInfo) {
 
 // CPUDetails holds detailed CPU information
 type CPUDetails struct {
-	ModelName        string
-	Architecture     string
-	Cores            int
-	ThreadsPerCore   int
-	CoresPerSocket   int
-	Sockets          int
-	PhysicalCores    int
-	LogicalCores     int
-	BaseClock        string
-	PCores           int
-	ECores           int
-	HasPECores       bool
+	ModelName      string
+	Architecture   string
+	Cores          int
+	ThreadsPerCore int
+	CoresPerSocket int
+	Sockets        int
+	PhysicalCores  int
+	LogicalCores   int
+	BaseClock      string
+	PCores         int
+	ECores         int
+	HasPECores     bool
 }
 
 // getDetailedCPUInfo gathers detailed CPU information from multiple sources
@@ -666,11 +666,11 @@ func getDetailedCPUInfo() CPUDetails {
 func printCPUInfo(details CPUDetails) {
 	fmt.Printf("  Model:     %s\n", details.ModelName)
 	fmt.Printf("  Arch:      %s\n", details.Architecture)
-	
+
 	if details.BaseClock != "" {
 		fmt.Printf("  Clock:     %s\n", details.BaseClock)
 	}
-	
+
 	// Show physical vs logical cores
 	if details.PhysicalCores > 0 && details.LogicalCores > 0 {
 		fmt.Printf("  Cores:     %d physical, %d logical", details.PhysicalCores, details.LogicalCores)
@@ -681,13 +681,13 @@ func printCPUInfo(details CPUDetails) {
 	} else {
 		fmt.Printf("  Cores:     %d\n", details.LogicalCores)
 	}
-	
+
 	// Show P/E core breakdown if available (Apple Silicon)
 	if details.HasPECores && (details.PCores > 0 || details.ECores > 0) {
 		fmt.Printf("  P-cores:   %d (performance)\n", details.PCores)
 		fmt.Printf("  E-cores:   %d (efficiency)\n", details.ECores)
 	}
-	
+
 	// Show socket/core organization if multiple sockets or meaningful
 	if details.Sockets > 1 || (details.CoresPerSocket > 0 && details.CoresPerSocket != details.PhysicalCores) {
 		fmt.Printf("  Layout:    %d socket(s), %d core(s) per socket\n", details.Sockets, details.CoresPerSocket)
