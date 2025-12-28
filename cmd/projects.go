@@ -320,8 +320,8 @@ func formatRepoLine(repo RepoInfo) string {
 	// Format the path with dirty marker
 	path := formatRepoPath(repo.Path, repo.Dirty)
 
-	// Format the date/time (e.g., "2024-12-23 15:30")
-	dateTime := repo.ModTime.Format("2006-01-02 15:04")
+	// Format the date/time (e.g., "2024-12-23 15:30 MST -0700")
+	dateTime := repo.ModTime.Format("2006-01-02 15:04 MST -0700")
 
 	// Build the line with proper spacing
 	// Format: "  ~/src/project*  user/repo  2024-12-23 15:30"
@@ -365,7 +365,7 @@ func printRepoTable(repos []RepoInfo, indent string) {
 		if remote == "" {
 			remote = "-"
 		}
-		dateTime := repo.ModTime.Format("2006-01-02 15:04")
+		dateTime := repo.ModTime.Format("2006-01-02 15:04 MST -0700")
 
 		// Format with right-aligned columns
 		fmt.Printf("%s%-*s  %-*s  %s\n", indent, maxPathLen, path, maxRemoteLen, remote, dateTime)

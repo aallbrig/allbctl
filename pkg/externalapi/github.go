@@ -3,16 +3,15 @@ package externalapi
 import (
 	"context"
 	"fmt"
+	"os"
+
 	"github.com/google/go-github/github"
 	"golang.org/x/oauth2"
-	"os"
 )
 
 // GithubAuthTokenEnvVar https://cli.github.com/manual/gh_help_environment
 // default environment variables: GH_TOKEN, GITHUB_TOKEN
 var GithubAuthTokenEnvVar = "GITHUB_TOKEN"
-var tokenProvider IGithubTokenProvider = &GithubAuthTokenProvider{}
-var ghProvider IGithubClientProvider = &GithubClientProvider{}
 
 type tokenSource struct {
 	AccessToken string
@@ -80,34 +79,5 @@ func (provider *GithubClientProvider) GetGithubClient(accessToken string) (clien
 		Search: ghClient.Search,
 	}
 
-	return
-}
-
-// GetMyDotfiles gets dotfile repos from my github
-func GetMyDotfiles() (repositories []github.Repository, err error) {
-	ctx := context.TODO()
-
-	githubAuthToken, err := tokenProvider.GetAuthToken()
-	if err != nil {
-		return
-	}
-
-	ghClient, err := ghProvider.GetGithubClient(githubAuthToken)
-	if err != nil {
-		return
-	}
-
-	user, _, err := ghClient.Users.Get(ctx, "")
-	if err != nil {
-		return
-	}
-
-	searchQuery := fmt.Sprintf("dotfiles user:%s", *user.Login)
-	reposResponse, _, err := ghClient.Search.Repositories(ctx, searchQuery, nil)
-	if err != nil {
-		return
-	}
-
-	repositories = reposResponse.Repositories
 	return
 }

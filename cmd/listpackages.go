@@ -314,6 +314,12 @@ func getPackages(manager string) string {
 }
 
 func runCmd(command string) string {
+	// Add non-interactive flags for commands that require them
+	if strings.HasPrefix(command, "winget ") {
+		// winget requires --accept-source-agreements to avoid interactive prompts
+		command = strings.Replace(command, "winget ", "winget --accept-source-agreements ", 1)
+	}
+
 	parts := strings.Fields(command)
 	cmd := exec.Command(parts[0], parts[1:]...)
 	output, err := cmd.CombinedOutput()

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os/exec"
 	"runtime"
+	"strings"
 
 	"github.com/fatih/color"
 )
@@ -149,12 +150,22 @@ func (i InstallableCommand) installOnWindows(out *bytes.Buffer) (*bytes.Buffer, 
 }
 
 func (i InstallableCommand) installWithPackageManager(out *bytes.Buffer, pmCommand, packageName string) (*bytes.Buffer, error) {
-	out.WriteString(fmt.Sprintf("Using: %s %s\n", pmCommand, packageName))
+	// Add non-interactive flags for package managers that require them
+	fullCommand := fmt.Sprintf("%s %s", pmCommand, packageName)
+
+	// winget requires --accept-source-agreements to avoid interactive prompts
+	if strings.HasPrefix(pmCommand, "winget") {
+		fullCommand = fmt.Sprintf("%s --accept-source-agreements %s", pmCommand, packageName)
+	}
+
+	out.WriteString(fmt.Sprintf("Using: %s\n", fullCommand))
 
 	// Split the command for exec
-	cmd := exec.Command("sh", "-c", fmt.Sprintf("%s %s", pmCommand, packageName))
+	var cmd *exec.Cmd
 	if runtime.GOOS == "windows" {
-		cmd = exec.Command("cmd", "/c", fmt.Sprintf("%s %s", pmCommand, packageName))
+		cmd = exec.Command("cmd", "/c", fullCommand)
+	} else {
+		cmd = exec.Command("sh", "-c", fullCommand)
 	}
 
 	output, err := cmd.CombinedOutput()
