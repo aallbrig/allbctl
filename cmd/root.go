@@ -25,7 +25,7 @@ $ allbctl status
 `,
 	Version: Version,
 	Run: func(cmd *cobra.Command, args []string) {
-		cmd.Help()
+		_ = cmd.Help() //nolint:errcheck // Help always succeeds
 	},
 }
 

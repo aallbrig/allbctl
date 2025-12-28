@@ -25,7 +25,7 @@ Available subcommands:
   install - Apply bootstrap configuration to setup this machine
   reset - Reset bootstrap configuration`,
 	Run: func(cmd *cobra.Command, args []string) {
-		cmd.Help()
+		_ = cmd.Help() //nolint:errcheck // Help always succeeds
 	},
 }
 
