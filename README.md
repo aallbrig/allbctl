@@ -23,6 +23,7 @@ allbctl list-packages -d           # Short version of --detail
 allbctl list-packages apt          # List only apt packages (shows command for copy/paste)
 allbctl list-packages npm          # List only npm packages (shows command for copy/paste)
 allbctl list-packages flatpak      # List only flatpak packages (shows command for copy/paste)
+allbctl list-packages vagrant      # List only vagrant VMs (shows command for copy/paste)
 
 # Detect runtimes (programming languages, databases, cloud tools, gaming platforms)
 allbctl runtimes                   # Shows detected development runtimes with versions:
@@ -115,6 +116,7 @@ Multi-platform package detection supporting:
 - **macOS**: homebrew, macports, nix
 - **Windows**: chocolatey, winget, scoop, plus WSL package managers
 - **Runtime**: npm, pip, pipx, gem, cargo, composer, maven, gradle, go (all platforms)
+- **Virtualization**: vagrant (cross-platform VM management)
 
 ##### Supported Package Managers
 
@@ -138,10 +140,11 @@ Multi-platform package detection supporting:
 | **gem** | ✅ | ✅ | ✅ | Runtime |
 | **cargo** | ✅ | ✅ | ✅ | Runtime |
 | **go** | ✅ | ✅ | ✅ | Runtime |
+| **vagrant** | ✅ | ✅ | ✅ | Virtualization |
 
 **Usage:**
 - `allbctl list-packages` - Summary of all detected package managers
-- `allbctl list-packages <manager>` - List packages for a specific manager (e.g., `apt`, `npm`, `flatpak`)
+- `allbctl list-packages <manager>` - List packages for a specific manager (e.g., `apt`, `npm`, `flatpak`, `vagrant`)
   - Displays the underlying command for easy copy/paste (e.g., "Command: apt-mark showmanual")
 - `allbctl list-packages --detail` - Full listing of all packages from all managers
 
