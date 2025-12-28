@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 	"time"
@@ -63,15 +64,11 @@ func printSystemInfo() {
 	// Terminal
 	terminal := detectTerminal()
 
-	// CPU Info using gopsutil
-	cpuInfo, err := cpu.Info()
-	cpuStr := "Unknown"
-	if err == nil && len(cpuInfo) > 0 {
-		cpuStr = fmt.Sprintf("%s (%d cores)", cpuInfo[0].ModelName, runtime.NumCPU())
-	}
+	// CPU Info - get detailed information
+	cpuDetails := getDetailedCPUInfo()
 
-	// GPU Info
-	gpuList := getGPUInfoList()
+	// GPU Info - get detailed information
+	gpuDetails := getDetailedGPUInfo()
 
 	// Memory using gopsutil
 	memInfo, err := mem.VirtualMemory()
@@ -99,15 +96,10 @@ func printSystemInfo() {
 	fmt.Printf("Hostname:  %s\n", hostname)
 	fmt.Printf("Shell:     %s\n", shell)
 	fmt.Printf("Terminal:  %s\n", terminal)
-	fmt.Printf("CPU:       %s\n", cpuStr)
+	fmt.Printf("CPU:\n")
+	printCPUInfo(cpuDetails)
 	fmt.Printf("GPU(s):\n")
-	if len(gpuList) == 0 {
-		fmt.Printf("  Unavailable\n")
-	} else {
-		for _, gpu := range gpuList {
-			fmt.Printf("  %s\n", gpu)
-		}
-	}
+	printGPUInfo(gpuDetails)
 	fmt.Printf("Memory:    %s\n", memStr)
 	fmt.Printf("Hardware:  %s\n", hwStr)
 	if runtimesInline != "" {
@@ -276,6 +268,433 @@ func getGPUInfoList() []string {
 		}
 	}
 	return nil
+}
+
+// GPUInfo holds detailed GPU information
+type GPUInfo struct {
+	Name          string
+	Vendor        string
+	Memory        string
+	Driver        string
+	ComputeCap    string
+	ClockGraphics string
+	ClockMemory   string
+}
+
+// getDetailedGPUInfo gathers detailed GPU information from multiple sources
+func getDetailedGPUInfo() []GPUInfo {
+	var gpus []GPUInfo
+
+	osType := runtime.GOOS
+
+	// Try nvidia-smi first for NVIDIA GPUs
+	if exists("nvidia-smi") {
+		nvidiaGPUs := getNvidiaGPUInfo()
+		gpus = append(gpus, nvidiaGPUs...)
+	}
+
+	// Fall back to platform-specific detection
+	if len(gpus) == 0 {
+		switch osType {
+		case "linux":
+			gpus = getLinuxGPUInfo()
+		case "darwin":
+			gpus = getMacGPUInfo()
+		case "windows":
+			gpus = getWindowsGPUInfo()
+		}
+	}
+
+	return gpus
+}
+
+// getNvidiaGPUInfo gets GPU information from nvidia-smi
+func getNvidiaGPUInfo() []GPUInfo {
+	var gpus []GPUInfo
+
+	cmd := exec.Command("nvidia-smi", "--query-gpu=name,memory.total,driver_version,compute_cap,clocks.current.graphics,clocks.current.memory", "--format=csv,noheader,nounits")
+	out, err := cmd.Output()
+	if err != nil {
+		return gpus
+	}
+
+	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
+	for _, line := range lines {
+		fields := strings.Split(line, ",")
+		if len(fields) >= 6 {
+			gpu := GPUInfo{
+				Name:          strings.TrimSpace(fields[0]),
+				Vendor:        "NVIDIA",
+				Memory:        strings.TrimSpace(fields[1]) + " MiB",
+				Driver:        strings.TrimSpace(fields[2]),
+				ComputeCap:    strings.TrimSpace(fields[3]),
+				ClockGraphics: strings.TrimSpace(fields[4]) + " MHz",
+				ClockMemory:   strings.TrimSpace(fields[5]) + " MHz",
+			}
+			gpus = append(gpus, gpu)
+		}
+	}
+
+	return gpus
+}
+
+// getLinuxGPUInfo gets GPU information on Linux using lspci
+func getLinuxGPUInfo() []GPUInfo {
+	var gpus []GPUInfo
+
+	cmd := exec.Command("sh", "-c", "lspci | grep -Ei 'vga|3d controller'")
+	out, err := cmd.Output()
+	if err != nil {
+		return gpus
+	}
+
+	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
+	for _, line := range lines {
+		if line == "" {
+			continue
+		}
+
+		// Parse lspci output: "00:08.0 VGA compatible controller: Vendor Name Device Name"
+		parts := strings.SplitN(line, ":", 3)
+		if len(parts) >= 3 {
+			name := strings.TrimSpace(parts[2])
+			vendor := detectVendor(name)
+
+			gpu := GPUInfo{
+				Name:   name,
+				Vendor: vendor,
+			}
+
+			// Try to get additional info for AMD GPUs
+			if vendor == "AMD" {
+				// Could add AMD-specific detection here with rocm-smi if needed
+			}
+
+			gpus = append(gpus, gpu)
+		}
+	}
+
+	return gpus
+}
+
+// getMacGPUInfo gets GPU information on macOS
+func getMacGPUInfo() []GPUInfo {
+	var gpus []GPUInfo
+
+	cmd := exec.Command("system_profiler", "SPDisplaysDataType")
+	out, err := cmd.Output()
+	if err != nil {
+		return gpus
+	}
+
+	lines := strings.Split(string(out), "\n")
+	var currentGPU *GPUInfo
+
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+
+		if strings.Contains(line, "Chipset Model:") {
+			if currentGPU != nil {
+				gpus = append(gpus, *currentGPU)
+			}
+			name := strings.TrimSpace(strings.SplitN(line, ":", 2)[1])
+			currentGPU = &GPUInfo{
+				Name:   name,
+				Vendor: detectVendor(name),
+			}
+		} else if currentGPU != nil {
+			if strings.Contains(line, "VRAM (Total):") || strings.Contains(line, "VRAM (Dynamic, Max):") {
+				currentGPU.Memory = strings.TrimSpace(strings.SplitN(line, ":", 2)[1])
+			}
+		}
+	}
+
+	if currentGPU != nil {
+		gpus = append(gpus, *currentGPU)
+	}
+
+	return gpus
+}
+
+// getWindowsGPUInfo gets GPU information on Windows
+func getWindowsGPUInfo() []GPUInfo {
+	var gpus []GPUInfo
+
+	cmd := exec.Command("wmic", "path", "win32_VideoController", "get", "Name,AdapterRAM,DriverVersion", "/format:csv")
+	out, err := cmd.Output()
+	if err != nil {
+		return gpus
+	}
+
+	lines := strings.Split(string(out), "\n")
+	for i, line := range lines {
+		// Skip header and empty lines
+		if i == 0 || strings.TrimSpace(line) == "" {
+			continue
+		}
+
+		fields := strings.Split(line, ",")
+		if len(fields) >= 3 {
+			name := strings.TrimSpace(fields[2])
+			if name == "" || strings.HasPrefix(strings.ToLower(name), "name") {
+				continue
+			}
+
+			gpu := GPUInfo{
+				Name:   name,
+				Vendor: detectVendor(name),
+			}
+
+			// Parse adapter RAM
+			if fields[1] != "" {
+				var ramBytes int64
+				fmt.Sscanf(strings.TrimSpace(fields[1]), "%d", &ramBytes)
+				if ramBytes > 0 {
+					gpu.Memory = fmt.Sprintf("%.0f MB", float64(ramBytes)/1024/1024)
+				}
+			}
+
+			// Driver version
+			if len(fields) >= 4 && fields[3] != "" {
+				gpu.Driver = strings.TrimSpace(fields[3])
+			}
+
+			gpus = append(gpus, gpu)
+		}
+	}
+
+	return gpus
+}
+
+// detectVendor detects GPU vendor from the name
+func detectVendor(name string) string {
+	nameLower := strings.ToLower(name)
+
+	// Check for specific vendor patterns (order matters - check more specific patterns first)
+	if strings.Contains(nameLower, "nvidia") || strings.Contains(nameLower, "geforce") || strings.Contains(nameLower, "quadro") || strings.Contains(nameLower, "tesla") {
+		return "NVIDIA"
+	} else if strings.Contains(nameLower, "radeon") || (strings.Contains(nameLower, "amd") && !strings.Contains(nameLower, "amdahl")) {
+		return "AMD"
+	} else if strings.Contains(nameLower, "ati technologies") {
+		return "AMD" // ATI Technologies is now part of AMD
+	} else if matched, _ := regexp.MatchString(`\bati\b`, nameLower); matched {
+		// Match ATI as a whole word to avoid false matches in words like "Corporation"
+		return "AMD"
+	} else if strings.Contains(nameLower, "intel") {
+		return "Intel"
+	} else if strings.Contains(nameLower, "apple") {
+		return "Apple"
+	} else if strings.Contains(nameLower, "microsoft") || strings.Contains(nameLower, "hyper-v") {
+		return "Microsoft"
+	}
+	return "Unknown"
+}
+
+// printGPUInfo prints detailed GPU information
+func printGPUInfo(gpus []GPUInfo) {
+	if len(gpus) == 0 {
+		fmt.Printf("  Unavailable\n")
+		return
+	}
+
+	for i, gpu := range gpus {
+		if i > 0 {
+			fmt.Println()
+		}
+		fmt.Printf("  Name:      %s\n", gpu.Name)
+		if gpu.Vendor != "" && gpu.Vendor != "Unknown" {
+			fmt.Printf("  Vendor:    %s\n", gpu.Vendor)
+		}
+		if gpu.Memory != "" {
+			fmt.Printf("  Memory:    %s\n", gpu.Memory)
+		}
+		if gpu.Driver != "" {
+			fmt.Printf("  Driver:    %s\n", gpu.Driver)
+		}
+		if gpu.ComputeCap != "" {
+			fmt.Printf("  Compute:   %s\n", gpu.ComputeCap)
+		}
+		if gpu.ClockGraphics != "" {
+			fmt.Printf("  Clock:     %s (graphics)\n", gpu.ClockGraphics)
+		}
+		if gpu.ClockMemory != "" {
+			fmt.Printf("  Clock Mem: %s (memory)\n", gpu.ClockMemory)
+		}
+	}
+}
+
+// CPUDetails holds detailed CPU information
+type CPUDetails struct {
+	ModelName      string
+	Architecture   string
+	Cores          int
+	ThreadsPerCore int
+	CoresPerSocket int
+	Sockets        int
+	PhysicalCores  int
+	LogicalCores   int
+	BaseClock      string
+	PCores         int
+	ECores         int
+	HasPECores     bool
+}
+
+// getDetailedCPUInfo gathers detailed CPU information from multiple sources
+func getDetailedCPUInfo() CPUDetails {
+	details := CPUDetails{
+		ModelName:      "Unknown",
+		Architecture:   runtime.GOARCH,
+		LogicalCores:   runtime.NumCPU(),
+		ThreadsPerCore: 1,
+		CoresPerSocket: runtime.NumCPU(),
+		Sockets:        1,
+	}
+
+	// Try to get CPU info from gopsutil
+	cpuInfo, err := cpu.Info()
+	if err == nil && len(cpuInfo) > 0 {
+		details.ModelName = cpuInfo[0].ModelName
+		if cpuInfo[0].Mhz > 0 {
+			details.BaseClock = fmt.Sprintf("%.2f GHz", cpuInfo[0].Mhz/1000.0)
+		}
+	}
+
+	// On Linux, use lscpu for more detailed information
+	if runtime.GOOS == "linux" {
+		cmd := exec.Command("lscpu")
+		out, err := cmd.Output()
+		if err == nil {
+			lines := strings.Split(string(out), "\n")
+			for _, line := range lines {
+				if strings.HasPrefix(line, "Architecture:") {
+					details.Architecture = strings.TrimSpace(strings.SplitN(line, ":", 2)[1])
+				} else if strings.HasPrefix(line, "Thread(s) per core:") {
+					fmt.Sscanf(strings.TrimSpace(strings.SplitN(line, ":", 2)[1]), "%d", &details.ThreadsPerCore)
+				} else if strings.HasPrefix(line, "Core(s) per socket:") {
+					fmt.Sscanf(strings.TrimSpace(strings.SplitN(line, ":", 2)[1]), "%d", &details.CoresPerSocket)
+				} else if strings.HasPrefix(line, "Socket(s):") {
+					fmt.Sscanf(strings.TrimSpace(strings.SplitN(line, ":", 2)[1]), "%d", &details.Sockets)
+				} else if strings.HasPrefix(line, "CPU(s):") {
+					fmt.Sscanf(strings.TrimSpace(strings.SplitN(line, ":", 2)[1]), "%d", &details.LogicalCores)
+				} else if strings.HasPrefix(line, "CPU max MHz:") {
+					var mhz float64
+					fmt.Sscanf(strings.TrimSpace(strings.SplitN(line, ":", 2)[1]), "%f", &mhz)
+					if mhz > 0 {
+						details.BaseClock = fmt.Sprintf("%.2f GHz", mhz/1000.0)
+					}
+				}
+			}
+		}
+	} else if runtime.GOOS == "darwin" {
+		// On macOS, use sysctl for detailed information
+		cmd := exec.Command("sysctl", "-n", "machdep.cpu.brand_string")
+		if out, err := cmd.Output(); err == nil {
+			details.ModelName = strings.TrimSpace(string(out))
+		}
+
+		// Get core counts
+		cmd = exec.Command("sysctl", "-n", "hw.physicalcpu")
+		if out, err := cmd.Output(); err == nil {
+			fmt.Sscanf(strings.TrimSpace(string(out)), "%d", &details.PhysicalCores)
+		}
+
+		cmd = exec.Command("sysctl", "-n", "hw.logicalcpu")
+		if out, err := cmd.Output(); err == nil {
+			fmt.Sscanf(strings.TrimSpace(string(out)), "%d", &details.LogicalCores)
+		}
+
+		// Try to get P and E core counts (Apple Silicon)
+		cmd = exec.Command("sysctl", "-n", "hw.perflevel0.physicalcpu")
+		if out, err := cmd.Output(); err == nil {
+			fmt.Sscanf(strings.TrimSpace(string(out)), "%d", &details.PCores)
+			details.HasPECores = true
+		}
+
+		cmd = exec.Command("sysctl", "-n", "hw.perflevel1.physicalcpu")
+		if out, err := cmd.Output(); err == nil {
+			fmt.Sscanf(strings.TrimSpace(string(out)), "%d", &details.ECores)
+			details.HasPECores = true
+		}
+
+		// Get base clock
+		cmd = exec.Command("sysctl", "-n", "hw.cpufrequency")
+		if out, err := cmd.Output(); err == nil {
+			var hz int64
+			fmt.Sscanf(strings.TrimSpace(string(out)), "%d", &hz)
+			if hz > 0 {
+				details.BaseClock = fmt.Sprintf("%.2f GHz", float64(hz)/1e9)
+			}
+		}
+	} else if runtime.GOOS == "windows" {
+		// On Windows, use wmic
+		cmd := exec.Command("wmic", "cpu", "get", "Name")
+		if out, err := cmd.Output(); err == nil {
+			lines := strings.Split(string(out), "\n")
+			if len(lines) > 1 {
+				details.ModelName = strings.TrimSpace(lines[1])
+			}
+		}
+
+		cmd = exec.Command("wmic", "cpu", "get", "NumberOfCores")
+		if out, err := cmd.Output(); err == nil {
+			lines := strings.Split(string(out), "\n")
+			if len(lines) > 1 {
+				fmt.Sscanf(strings.TrimSpace(lines[1]), "%d", &details.PhysicalCores)
+			}
+		}
+
+		cmd = exec.Command("wmic", "cpu", "get", "NumberOfLogicalProcessors")
+		if out, err := cmd.Output(); err == nil {
+			lines := strings.Split(string(out), "\n")
+			if len(lines) > 1 {
+				fmt.Sscanf(strings.TrimSpace(lines[1]), "%d", &details.LogicalCores)
+			}
+		}
+	}
+
+	// Calculate physical cores if not set
+	if details.PhysicalCores == 0 {
+		details.PhysicalCores = details.CoresPerSocket * details.Sockets
+	}
+
+	// Ensure logical cores is at least physical cores
+	if details.LogicalCores < details.PhysicalCores {
+		details.LogicalCores = details.PhysicalCores
+	}
+
+	return details
+}
+
+// printCPUInfo prints detailed CPU information
+func printCPUInfo(details CPUDetails) {
+	fmt.Printf("  Model:     %s\n", details.ModelName)
+	fmt.Printf("  Arch:      %s\n", details.Architecture)
+
+	if details.BaseClock != "" {
+		fmt.Printf("  Clock:     %s\n", details.BaseClock)
+	}
+
+	// Show physical vs logical cores
+	if details.PhysicalCores > 0 && details.LogicalCores > 0 {
+		fmt.Printf("  Cores:     %d physical, %d logical", details.PhysicalCores, details.LogicalCores)
+		if details.ThreadsPerCore > 1 {
+			fmt.Printf(" (%d threads/core)", details.ThreadsPerCore)
+		}
+		fmt.Println()
+	} else {
+		fmt.Printf("  Cores:     %d\n", details.LogicalCores)
+	}
+
+	// Show P/E core breakdown if available (Apple Silicon)
+	if details.HasPECores && (details.PCores > 0 || details.ECores > 0) {
+		fmt.Printf("  P-cores:   %d (performance)\n", details.PCores)
+		fmt.Printf("  E-cores:   %d (efficiency)\n", details.ECores)
+	}
+
+	// Show socket/core organization if multiple sockets or meaningful
+	if details.Sockets > 1 || (details.CoresPerSocket > 0 && details.CoresPerSocket != details.PhysicalCores) {
+		fmt.Printf("  Layout:    %d socket(s), %d core(s) per socket\n", details.Sockets, details.CoresPerSocket)
+	}
 }
 
 // detectTerminal tries to determine the terminal emulator in use
