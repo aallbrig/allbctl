@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 )
 
@@ -20,7 +21,7 @@ type RuntimeCheck struct {
 }
 
 func getAllRuntimeChecks() map[string]RuntimeCheck {
-	return map[string]RuntimeCheck{
+	checks := map[string]RuntimeCheck{
 		// Programming Languages
 		"Python":  {[]string{"python3", "--version"}, "language"},
 		"Node.js": {[]string{"node", "--version"}, "language"},
@@ -51,6 +52,14 @@ func getAllRuntimeChecks() map[string]RuntimeCheck {
 		"sdkman": {[]string{"bash", "-c", "source ~/.sdkman/bin/sdkman-init.sh 2>/dev/null && sdk version || echo ''"}, "version-manager"},
 		"asdf":   {[]string{"asdf", "--version"}, "version-manager"},
 	}
+
+	// Add gaming platforms
+	gamingChecks := detectGamingPlatforms()
+	for name, check := range gamingChecks {
+		checks[name] = check
+	}
+
+	return checks
 }
 
 func detectRuntimes() []RuntimeInfo {
@@ -111,12 +120,15 @@ func formatRuntimesOutput(runtimes []RuntimeInfo) string {
 	// Group by category
 	languages := []RuntimeInfo{}
 	versionManagers := []RuntimeInfo{}
+	gaming := []RuntimeInfo{}
 
 	for _, rt := range runtimes {
 		if rt.Category == "language" {
 			languages = append(languages, rt)
 		} else if rt.Category == "version-manager" {
 			versionManagers = append(versionManagers, rt)
+		} else if rt.Category == "gaming" {
+			gaming = append(gaming, rt)
 		}
 	}
 
@@ -133,6 +145,14 @@ func formatRuntimesOutput(runtimes []RuntimeInfo) string {
 	if len(versionManagers) > 0 {
 		output.WriteString("Version Managers:\n")
 		for _, rt := range versionManagers {
+			output.WriteString(fmt.Sprintf("  %-15s %s\n", rt.Name+":", rt.Version))
+		}
+		output.WriteString("\n")
+	}
+
+	if len(gaming) > 0 {
+		output.WriteString("Gaming Platforms:\n")
+		for _, rt := range gaming {
 			output.WriteString(fmt.Sprintf("  %-15s %s\n", rt.Name+":", rt.Version))
 		}
 	}
@@ -304,4 +324,79 @@ func checkNvmInstalled() bool {
 		return true
 	}
 	return false
+}
+
+// detectGamingPlatforms returns gaming platform checks based on the OS
+func detectGamingPlatforms() map[string]RuntimeCheck {
+	checks := make(map[string]RuntimeCheck)
+
+	// Steam detection - cross-platform
+	steamCmd := detectSteamCommand()
+	if len(steamCmd) > 0 {
+		checks["Steam"] = RuntimeCheck{steamCmd, "gaming"}
+	}
+
+	return checks
+}
+
+// detectSteamCommand returns the appropriate command to check Steam installation
+func detectSteamCommand() []string {
+	osType := runtime.GOOS
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return nil
+	}
+
+	switch osType {
+	case "linux":
+		// Try command-line first
+		if exists("steam") {
+			return []string{"bash", "-c", "steam --version 2>/dev/null | head -1 || echo 'Steam (installed)'"}
+		}
+
+		// Check common Linux installation paths
+		linuxPaths := []string{
+			filepath.Join(home, ".steam", "steam.sh"),
+			filepath.Join(home, ".local", "share", "Steam", "steam.sh"),
+			"/usr/bin/steam",
+			"/usr/games/steam",
+		}
+		for _, path := range linuxPaths {
+			if _, err := os.Stat(path); err == nil {
+				return []string{"bash", "-c", fmt.Sprintf("%s --version 2>/dev/null | head -1 || echo 'Steam (installed)'", path)}
+			}
+		}
+
+	case "darwin":
+		// Check for Steam.app on macOS
+		macPaths := []string{
+			"/Applications/Steam.app",
+			filepath.Join(home, "Applications", "Steam.app"),
+		}
+		for _, appPath := range macPaths {
+			if _, err := os.Stat(appPath); err == nil {
+				plistPath := filepath.Join(appPath, "Contents", "Info.plist")
+				return []string{"bash", "-c", fmt.Sprintf("defaults read '%s' CFBundleShortVersionString 2>/dev/null || echo 'Steam (installed)'", plistPath)}
+			}
+		}
+
+	case "windows":
+		// Check Windows registry for Steam installation
+		if exists("reg") {
+			return []string{"cmd", "/c", "reg query \"HKCU\\Software\\Valve\\Steam\" /v SteamPath >nul 2>&1 && echo Steam (installed) || echo"}
+		}
+
+		// Fallback: check Program Files
+		windowsPaths := []string{
+			"C:\\Program Files (x86)\\Steam\\steam.exe",
+			"C:\\Program Files\\Steam\\steam.exe",
+		}
+		for _, path := range windowsPaths {
+			if _, err := os.Stat(path); err == nil {
+				return []string{"cmd", "/c", "echo Steam (installed)"}
+			}
+		}
+	}
+
+	return nil
 }
