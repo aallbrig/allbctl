@@ -8,7 +8,6 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
-	"time"
 
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/host"
@@ -421,145 +420,6 @@ func printSystemInfo() {
 	printProjectsInline()
 }
 
-// formatUptime formats a duration into a human-readable uptime string
-func formatUptime(d time.Duration) string {
-	hours := int(d.Hours())
-	mins := int(d.Minutes()) % 60
-
-	if hours > 24 {
-		days := hours / 24
-		hours = hours % 24
-		if hours > 0 {
-			return fmt.Sprintf("%d days, %d hours, %d mins", days, hours, mins)
-		}
-		return fmt.Sprintf("%d days, %d mins", days, mins)
-	}
-	if hours > 0 {
-		return fmt.Sprintf("%d hours, %d mins", hours, mins)
-	}
-	return fmt.Sprintf("%d mins", mins)
-}
-
-// printPackageCountInline prints package counts in neofetch style (e.g., "Packages: 2035 (dpkg), 9 (flatpak)")
-func printPackageCountInline() {
-	osType := runtime.GOOS
-	var counts []string
-
-	// System package managers
-	switch osType {
-	case "linux":
-		if exists("dpkg") {
-			if pkgs := getPackages("dpkg"); pkgs != "" {
-				count := countPackages("dpkg", pkgs)
-				counts = append(counts, fmt.Sprintf("%d (dpkg)", count))
-			}
-		}
-		if exists("rpm") {
-			if pkgs := getPackages("rpm"); pkgs != "" {
-				count := countPackages("rpm", pkgs)
-				counts = append(counts, fmt.Sprintf("%d (rpm)", count))
-			}
-		}
-		if exists("pacman") {
-			if pkgs := getPackages("pacman"); pkgs != "" {
-				count := countPackages("pacman", pkgs)
-				counts = append(counts, fmt.Sprintf("%d (pacman)", count))
-			}
-		}
-		if exists("snap") {
-			if pkgs := getPackages("snap"); pkgs != "" {
-				count := countPackages("snap", pkgs)
-				counts = append(counts, fmt.Sprintf("%d (snap)", count))
-			}
-		}
-		if exists("flatpak") {
-			if pkgs := getPackages("flatpak"); pkgs != "" {
-				count := countPackages("flatpak", pkgs)
-				counts = append(counts, fmt.Sprintf("%d (flatpak)", count))
-			}
-		}
-	case "darwin":
-		if exists("brew") {
-			if pkgs := getPackages("brew"); pkgs != "" {
-				count := countPackages("brew", pkgs)
-				counts = append(counts, fmt.Sprintf("%d (brew)", count))
-			}
-		}
-	case "windows":
-		if exists("choco") {
-			if pkgs := getPackages("choco"); pkgs != "" {
-				count := countPackages("choco", pkgs)
-				counts = append(counts, fmt.Sprintf("%d (choco)", count))
-			}
-		}
-		if exists("winget") {
-			if pkgs := getPackages("winget"); pkgs != "" {
-				count := countPackages("winget", pkgs)
-				counts = append(counts, fmt.Sprintf("%d (winget)", count))
-			}
-		}
-	}
-
-	if len(counts) > 0 {
-		fmt.Printf("Packages: %s\n", strings.Join(counts, ", "))
-	}
-}
-
-// getGPUInfoList returns a slice of GPU model names using platform-specific commands
-func getGPUInfoList() []string {
-	osType := runtime.GOOS
-	switch osType {
-	case "linux":
-		cmd := exec.Command("sh", "-c", "lspci | grep -Ei 'vga|3d controller' | cut -d ':' -f3")
-		out, err := cmd.Output()
-		if err == nil && len(out) > 0 {
-			lines := strings.Split(strings.TrimSpace(string(out)), "\n")
-			var gpus []string
-			for _, line := range lines {
-				gpu := strings.TrimSpace(line)
-				if gpu != "" {
-					gpus = append(gpus, gpu)
-				}
-			}
-			if len(gpus) > 0 {
-				return gpus
-			}
-		}
-	case "darwin":
-		cmd := exec.Command("system_profiler", "SPDisplaysDataType")
-		out, err := cmd.Output()
-		if err == nil {
-			lines := strings.Split(string(out), "\n")
-			var gpus []string
-			for _, line := range lines {
-				if strings.Contains(line, "Chipset Model:") {
-					gpus = append(gpus, strings.TrimSpace(strings.SplitN(line, ":", 2)[1]))
-				}
-			}
-			if len(gpus) > 0 {
-				return gpus
-			}
-		}
-	case "windows":
-		cmd := exec.Command("wmic", "path", "win32_VideoController", "get", "name")
-		out, err := cmd.Output()
-		if err == nil {
-			lines := strings.Split(string(out), "\n")
-			var gpus []string
-			for _, line := range lines {
-				line = strings.TrimSpace(line)
-				if line != "" && !strings.HasPrefix(strings.ToLower(line), "name") {
-					gpus = append(gpus, line)
-				}
-			}
-			if len(gpus) > 0 {
-				return gpus
-			}
-		}
-	}
-	return nil
-}
-
 // GPUInfo holds detailed GPU information
 type GPUInfo struct {
 	Name          string
@@ -656,9 +516,8 @@ func getLinuxGPUInfo() []GPUInfo {
 			}
 
 			// Try to get additional info for AMD GPUs
-			if vendor == "AMD" {
-				// Could add AMD-specific detection here with rocm-smi if needed
-			}
+			// Note: Could add AMD-specific detection here with rocm-smi if needed
+			_ = vendor
 
 			gpus = append(gpus, gpu)
 		}
@@ -738,7 +597,8 @@ func getWindowsGPUInfo() []GPUInfo {
 			// Parse adapter RAM
 			if fields[1] != "" {
 				var ramBytes int64
-				fmt.Sscanf(strings.TrimSpace(fields[1]), "%d", &ramBytes)
+				//nolint:errcheck // Sscanf errors are non-critical for best-effort parsing
+				_, _ = fmt.Sscanf(strings.TrimSpace(fields[1]), "%d", &ramBytes)
 				if ramBytes > 0 {
 					gpu.Memory = fmt.Sprintf("%.0f MB", float64(ramBytes)/1024/1024)
 				}
@@ -767,7 +627,7 @@ func detectVendor(name string) string {
 		return "AMD"
 	} else if strings.Contains(nameLower, "ati technologies") {
 		return "AMD" // ATI Technologies is now part of AMD
-	} else if matched, _ := regexp.MatchString(`\bati\b`, nameLower); matched {
+	} else if matched, err := regexp.MatchString(`\bati\b`, nameLower); err == nil && matched {
 		// Match ATI as a whole word to avoid false matches in words like "Corporation"
 		return "AMD"
 	} else if strings.Contains(nameLower, "intel") {
@@ -859,16 +719,21 @@ func getDetailedCPUInfo() CPUDetails {
 				if strings.HasPrefix(line, "Architecture:") {
 					details.Architecture = strings.TrimSpace(strings.SplitN(line, ":", 2)[1])
 				} else if strings.HasPrefix(line, "Thread(s) per core:") {
-					fmt.Sscanf(strings.TrimSpace(strings.SplitN(line, ":", 2)[1]), "%d", &details.ThreadsPerCore)
+					//nolint:errcheck // Sscanf errors are non-critical for best-effort parsing
+					_, _ = fmt.Sscanf(strings.TrimSpace(strings.SplitN(line, ":", 2)[1]), "%d", &details.ThreadsPerCore)
 				} else if strings.HasPrefix(line, "Core(s) per socket:") {
-					fmt.Sscanf(strings.TrimSpace(strings.SplitN(line, ":", 2)[1]), "%d", &details.CoresPerSocket)
+					//nolint:errcheck // Sscanf errors are non-critical for best-effort parsing
+					_, _ = fmt.Sscanf(strings.TrimSpace(strings.SplitN(line, ":", 2)[1]), "%d", &details.CoresPerSocket)
 				} else if strings.HasPrefix(line, "Socket(s):") {
-					fmt.Sscanf(strings.TrimSpace(strings.SplitN(line, ":", 2)[1]), "%d", &details.Sockets)
+					//nolint:errcheck // Sscanf errors are non-critical for best-effort parsing
+					_, _ = fmt.Sscanf(strings.TrimSpace(strings.SplitN(line, ":", 2)[1]), "%d", &details.Sockets)
 				} else if strings.HasPrefix(line, "CPU(s):") {
-					fmt.Sscanf(strings.TrimSpace(strings.SplitN(line, ":", 2)[1]), "%d", &details.LogicalCores)
+					//nolint:errcheck // Sscanf errors are non-critical for best-effort parsing
+					_, _ = fmt.Sscanf(strings.TrimSpace(strings.SplitN(line, ":", 2)[1]), "%d", &details.LogicalCores)
 				} else if strings.HasPrefix(line, "CPU max MHz:") {
 					var mhz float64
-					fmt.Sscanf(strings.TrimSpace(strings.SplitN(line, ":", 2)[1]), "%f", &mhz)
+					//nolint:errcheck // Sscanf errors are non-critical for best-effort parsing
+					_, _ = fmt.Sscanf(strings.TrimSpace(strings.SplitN(line, ":", 2)[1]), "%f", &mhz)
 					if mhz > 0 {
 						details.BaseClock = fmt.Sprintf("%.2f GHz", mhz/1000.0)
 					}
@@ -885,24 +750,28 @@ func getDetailedCPUInfo() CPUDetails {
 		// Get core counts
 		cmd = exec.Command("sysctl", "-n", "hw.physicalcpu")
 		if out, err := cmd.Output(); err == nil {
-			fmt.Sscanf(strings.TrimSpace(string(out)), "%d", &details.PhysicalCores)
+			//nolint:errcheck // Sscanf errors are non-critical for best-effort parsing
+			_, _ = fmt.Sscanf(strings.TrimSpace(string(out)), "%d", &details.PhysicalCores)
 		}
 
 		cmd = exec.Command("sysctl", "-n", "hw.logicalcpu")
 		if out, err := cmd.Output(); err == nil {
-			fmt.Sscanf(strings.TrimSpace(string(out)), "%d", &details.LogicalCores)
+			//nolint:errcheck // Sscanf errors are non-critical for best-effort parsing
+			_, _ = fmt.Sscanf(strings.TrimSpace(string(out)), "%d", &details.LogicalCores)
 		}
 
 		// Try to get P and E core counts (Apple Silicon)
 		cmd = exec.Command("sysctl", "-n", "hw.perflevel0.physicalcpu")
 		if out, err := cmd.Output(); err == nil {
-			fmt.Sscanf(strings.TrimSpace(string(out)), "%d", &details.PCores)
+			//nolint:errcheck // Sscanf errors are non-critical for best-effort parsing
+			_, _ = fmt.Sscanf(strings.TrimSpace(string(out)), "%d", &details.PCores)
 			details.HasPECores = true
 		}
 
 		cmd = exec.Command("sysctl", "-n", "hw.perflevel1.physicalcpu")
 		if out, err := cmd.Output(); err == nil {
-			fmt.Sscanf(strings.TrimSpace(string(out)), "%d", &details.ECores)
+			//nolint:errcheck // Sscanf errors are non-critical for best-effort parsing
+			_, _ = fmt.Sscanf(strings.TrimSpace(string(out)), "%d", &details.ECores)
 			details.HasPECores = true
 		}
 
@@ -910,7 +779,8 @@ func getDetailedCPUInfo() CPUDetails {
 		cmd = exec.Command("sysctl", "-n", "hw.cpufrequency")
 		if out, err := cmd.Output(); err == nil {
 			var hz int64
-			fmt.Sscanf(strings.TrimSpace(string(out)), "%d", &hz)
+			//nolint:errcheck // Sscanf errors are non-critical for best-effort parsing
+			_, _ = fmt.Sscanf(strings.TrimSpace(string(out)), "%d", &hz)
 			if hz > 0 {
 				details.BaseClock = fmt.Sprintf("%.2f GHz", float64(hz)/1e9)
 			}
@@ -929,7 +799,8 @@ func getDetailedCPUInfo() CPUDetails {
 		if out, err := cmd.Output(); err == nil {
 			lines := strings.Split(string(out), "\n")
 			if len(lines) > 1 {
-				fmt.Sscanf(strings.TrimSpace(lines[1]), "%d", &details.PhysicalCores)
+				//nolint:errcheck // Sscanf errors are non-critical for best-effort parsing
+				_, _ = fmt.Sscanf(strings.TrimSpace(lines[1]), "%d", &details.PhysicalCores)
 			}
 		}
 
@@ -937,7 +808,8 @@ func getDetailedCPUInfo() CPUDetails {
 		if out, err := cmd.Output(); err == nil {
 			lines := strings.Split(string(out), "\n")
 			if len(lines) > 1 {
-				fmt.Sscanf(strings.TrimSpace(lines[1]), "%d", &details.LogicalCores)
+				//nolint:errcheck // Sscanf errors are non-critical for best-effort parsing
+				_, _ = fmt.Sscanf(strings.TrimSpace(lines[1]), "%d", &details.LogicalCores)
 			}
 		}
 	}
