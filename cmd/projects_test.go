@@ -21,7 +21,7 @@ func TestFindGitRepos(t *testing.T) {
 	repo2 := filepath.Join(tmpDir, "repo2", ".git")
 	nestedRepo := filepath.Join(tmpDir, "parent", "nested-repo", ".git")
 
-	//nolint:errcheck // Help errors are not critical
+	//nolint:errcheck // Test setup errors are not critical
 	_ = os.MkdirAll(repo1, 0755)
 	//nolint:errcheck // Test setup
 	_ = os.MkdirAll(repo2, 0755)

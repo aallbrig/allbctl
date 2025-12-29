@@ -515,9 +515,7 @@ func getLinuxGPUInfo() []GPUInfo {
 				Vendor: vendor,
 			}
 
-			// Try to get additional info for AMD GPUs
 			// Note: Could add AMD-specific detection here with rocm-smi if needed
-			_ = vendor
 
 			gpus = append(gpus, gpu)
 		}
