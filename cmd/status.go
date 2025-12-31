@@ -62,10 +62,14 @@ func detectLinuxBrowsers() []BrowserInfo {
 		browsers = append(browsers, BrowserInfo{Name: "Chromium", Version: version})
 	} else if version := getBrowserVersion("chromium-browser", "--version"); version != "" {
 		browsers = append(browsers, BrowserInfo{Name: "Chromium", Version: version})
+	} else if version := getFlatpakBrowserVersion("org.chromium.Chromium"); version != "" {
+		browsers = append(browsers, BrowserInfo{Name: "Chromium", Version: version})
 	}
 
 	// Firefox
 	if version := getBrowserVersion("firefox", "--version"); version != "" {
+		browsers = append(browsers, BrowserInfo{Name: "Firefox", Version: version})
+	} else if version := getFlatpakBrowserVersion("org.mozilla.firefox"); version != "" {
 		browsers = append(browsers, BrowserInfo{Name: "Firefox", Version: version})
 	}
 
@@ -74,6 +78,8 @@ func detectLinuxBrowsers() []BrowserInfo {
 		browsers = append(browsers, BrowserInfo{Name: "Brave", Version: version})
 	} else if version := getBrowserVersion("brave", "--version"); version != "" {
 		browsers = append(browsers, BrowserInfo{Name: "Brave", Version: version})
+	} else if version := getFlatpakBrowserVersion("com.brave.Browser"); version != "" {
+		browsers = append(browsers, BrowserInfo{Name: "Brave", Version: version})
 	}
 
 	// Edge
@@ -81,15 +87,21 @@ func detectLinuxBrowsers() []BrowserInfo {
 		browsers = append(browsers, BrowserInfo{Name: "Edge", Version: version})
 	} else if version := getBrowserVersion("microsoft-edge-stable", "--version"); version != "" {
 		browsers = append(browsers, BrowserInfo{Name: "Edge", Version: version})
+	} else if version := getFlatpakBrowserVersion("com.microsoft.Edge"); version != "" {
+		browsers = append(browsers, BrowserInfo{Name: "Edge", Version: version})
 	}
 
 	// Opera
 	if version := getBrowserVersion("opera", "--version"); version != "" {
 		browsers = append(browsers, BrowserInfo{Name: "Opera", Version: version})
+	} else if version := getFlatpakBrowserVersion("com.opera.Opera"); version != "" {
+		browsers = append(browsers, BrowserInfo{Name: "Opera", Version: version})
 	}
 
 	// Vivaldi
 	if version := getBrowserVersion("vivaldi", "--version"); version != "" {
+		browsers = append(browsers, BrowserInfo{Name: "Vivaldi", Version: version})
+	} else if version := getFlatpakBrowserVersion("com.vivaldi.Vivaldi"); version != "" {
 		browsers = append(browsers, BrowserInfo{Name: "Vivaldi", Version: version})
 	}
 
@@ -189,6 +201,18 @@ func getBrowserVersion(command string, args ...string) string {
 	return parseBrowserVersion(version)
 }
 
+// getFlatpakBrowserVersion gets browser version from Flatpak
+func getFlatpakBrowserVersion(appID string) string {
+	cmd := exec.Command("flatpak", "run", appID, "--version")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return ""
+	}
+
+	version := strings.TrimSpace(string(output))
+	return parseBrowserVersion(version)
+}
+
 // parseBrowserVersion extracts version number from browser output
 func parseBrowserVersion(output string) string {
 	output = strings.TrimSpace(output)
@@ -196,42 +220,57 @@ func parseBrowserVersion(output string) string {
 		return ""
 	}
 
-	// Take first line
-	lines := strings.Split(output, "\n")
-	firstLine := strings.TrimSpace(lines[0])
-
 	// Common patterns:
 	// "Google Chrome 120.0.6099.109"
 	// "Chromium 120.0.6099.109"
 	// "Mozilla Firefox 121.0"
 	// "Brave 1.61.109 Chromium: 120.0.6099.109"
+	// Multi-line with warnings:
+	// "Gtk-Message: ...\nChromium 143.0.7499.169"
 
-	// Try to find version pattern in each field
-	fields := strings.Fields(firstLine)
-	for i, field := range fields {
-		// Skip known browser name prefixes
-		fieldLower := strings.ToLower(field)
-		if fieldLower == "google" || fieldLower == "chrome" || fieldLower == "chromium" ||
-			fieldLower == "mozilla" || fieldLower == "firefox" || fieldLower == "brave" ||
-			fieldLower == "microsoft" || fieldLower == "edge" || fieldLower == "opera" ||
-			fieldLower == "vivaldi" {
+	// Process each line to find the browser version line
+	lines := strings.Split(output, "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
 			continue
 		}
 
-		// Check if this is a version label followed by version
-		if fieldLower == "version" && i+1 < len(fields) {
-			if version := browserVersionRegex.FindString(fields[i+1]); version != "" {
+		// Skip known warning/message lines
+		lineLower := strings.ToLower(line)
+		if strings.HasPrefix(lineLower, "gtk-message:") ||
+			strings.HasPrefix(lineLower, "warning:") ||
+			strings.HasPrefix(lineLower, "error:") {
+			continue
+		}
+
+		// Try to find version pattern in each field
+		fields := strings.Fields(line)
+		for i, field := range fields {
+			// Skip known browser name prefixes
+			fieldLower := strings.ToLower(field)
+			if fieldLower == "google" || fieldLower == "chrome" || fieldLower == "chromium" ||
+				fieldLower == "mozilla" || fieldLower == "firefox" || fieldLower == "brave" ||
+				fieldLower == "microsoft" || fieldLower == "edge" || fieldLower == "opera" ||
+				fieldLower == "vivaldi" {
+				continue
+			}
+
+			// Check if this is a version label followed by version
+			if fieldLower == "version" && i+1 < len(fields) {
+				if version := browserVersionRegex.FindString(fields[i+1]); version != "" {
+					return version
+				}
+			}
+
+			// Look for version pattern directly
+			if version := browserVersionRegex.FindString(field); version != "" {
 				return version
 			}
 		}
-
-		// Look for version pattern directly
-		if version := browserVersionRegex.FindString(field); version != "" {
-			return version
-		}
 	}
 
-	return firstLine
+	return ""
 }
 
 // getMacAppVersion gets version from macOS app bundle

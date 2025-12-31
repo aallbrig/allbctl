@@ -347,3 +347,56 @@ func Test_PrintBrowsers(t *testing.T) {
 		t.Error("Output should contain Firefox")
 	}
 }
+
+func Test_ParseBrowserVersion(t *testing.T) {
+	tests := []struct {
+		name   string
+		output string
+		want   string
+	}{
+		{
+			name:   "Chrome standard output",
+			output: "Google Chrome 120.0.6099.109",
+			want:   "120.0.6099.109",
+		},
+		{
+			name:   "Chromium standard output",
+			output: "Chromium 143.0.7499.169",
+			want:   "143.0.7499.169",
+		},
+		{
+			name:   "Firefox standard output",
+			output: "Mozilla Firefox 121.0",
+			want:   "121.0",
+		},
+		{
+			name:   "Brave with Chromium version",
+			output: "Brave 1.61.109 Chromium: 120.0.6099.109",
+			want:   "1.61.109",
+		},
+		{
+			name:   "Flatpak Chromium with GTK message",
+			output: "Gtk-Message: 11:15:45.479: Failed to load module \"xapp-gtk3-module\"\nChromium 143.0.7499.169",
+			want:   "143.0.7499.169",
+		},
+		{
+			name:   "Empty output",
+			output: "",
+			want:   "",
+		},
+		{
+			name:   "No version found",
+			output: "Some random text",
+			want:   "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := parseBrowserVersion(tt.output)
+			if got != tt.want {
+				t.Errorf("parseBrowserVersion(%q) = %q, want %q", tt.output, got, tt.want)
+			}
+		})
+	}
+}
