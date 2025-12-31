@@ -21,12 +21,16 @@ func TestFindGitRepos(t *testing.T) {
 	repo2 := filepath.Join(tmpDir, "repo2", ".git")
 	nestedRepo := filepath.Join(tmpDir, "parent", "nested-repo", ".git")
 
-	os.MkdirAll(repo1, 0755)
-	os.MkdirAll(repo2, 0755)
-	os.MkdirAll(nestedRepo, 0755)
+	//nolint:errcheck // Test setup errors are not critical
+	_ = os.MkdirAll(repo1, 0755)
+	//nolint:errcheck // Test setup
+	_ = os.MkdirAll(repo2, 0755)
+	//nolint:errcheck // Test setup
+	_ = os.MkdirAll(nestedRepo, 0755)
+	//nolint:errcheck // Test setup
 
 	// Create non-repo directory
-	os.MkdirAll(filepath.Join(tmpDir, "not-a-repo"), 0755)
+	_ = os.MkdirAll(filepath.Join(tmpDir, "not-a-repo"), 0755) //nolint:errcheck // Test setup
 
 	repos := findGitRepos(tmpDir)
 	if len(repos) != 3 {
@@ -62,11 +66,11 @@ func TestGetReposByModTime(t *testing.T) {
 	repo2 := filepath.Join(tmpDir, "repo2")
 	repo3 := filepath.Join(tmpDir, "repo3")
 
-	os.MkdirAll(repo1, 0755)
+	_ = os.MkdirAll(repo1, 0755) //nolint:errcheck // Test setup
 	time.Sleep(10 * time.Millisecond)
-	os.MkdirAll(repo2, 0755)
+	_ = os.MkdirAll(repo2, 0755) //nolint:errcheck // Test setup
 	time.Sleep(10 * time.Millisecond)
-	os.MkdirAll(repo3, 0755)
+	_ = os.MkdirAll(repo3, 0755) //nolint:errcheck // Test setup
 
 	repos := []string{repo1, repo2, repo3}
 	sorted := getReposByModTime(repos)
@@ -82,7 +86,10 @@ func TestGetReposByModTime(t *testing.T) {
 }
 
 func TestFormatRepoPath(t *testing.T) {
-	home, _ := os.UserHomeDir()
+	home, err := os.UserHomeDir()
+	if err != nil {
+		t.Fatal(err)
+	}
 	testPath := filepath.Join(home, "src", "myproject")
 
 	formatted := formatRepoPath(testPath, false)
@@ -122,7 +129,10 @@ func TestGetRemoteRepo(t *testing.T) {
 }
 
 func TestFormatRepoLine(t *testing.T) {
-	home, _ := os.UserHomeDir()
+	home, err := os.UserHomeDir()
+	if err != nil {
+		t.Fatal(err)
+	}
 	testPath := filepath.Join(home, "src", "allbctl")
 	testTime := time.Date(2024, 12, 23, 15, 30, 0, 0, time.Local)
 

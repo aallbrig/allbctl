@@ -8,7 +8,6 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
-	"time"
 
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/host"
@@ -17,6 +16,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// browserVersionRegex is used to extract version numbers from browser output
+var browserVersionRegex = regexp.MustCompile(`\d+\.\d+[\d.]*`)
+
 // StatusCmd represents status command
 var StatusCmd = &cobra.Command{
 	Use:   "status",
@@ -24,6 +26,285 @@ var StatusCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		printSystemInfo()
 	},
+}
+
+// BrowserInfo holds browser information
+type BrowserInfo struct {
+	Name    string
+	Version string
+}
+
+// detectBrowsers detects installed web browsers and their versions
+func detectBrowsers() []BrowserInfo {
+	var browsers []BrowserInfo
+	osType := runtime.GOOS
+
+	switch osType {
+	case "linux":
+		browsers = detectLinuxBrowsers()
+	case "darwin":
+		browsers = detectMacBrowsers()
+	case "windows":
+		browsers = detectWindowsBrowsers()
+	}
+
+	return browsers
+}
+
+// detectLinuxBrowsers detects browsers on Linux
+func detectLinuxBrowsers() []BrowserInfo {
+	var browsers []BrowserInfo
+
+	// Chrome/Chromium
+	if version := getBrowserVersion("google-chrome", "--version"); version != "" {
+		browsers = append(browsers, BrowserInfo{Name: "Chrome", Version: version})
+	} else if version := getBrowserVersion("chromium", "--version"); version != "" {
+		browsers = append(browsers, BrowserInfo{Name: "Chromium", Version: version})
+	} else if version := getBrowserVersion("chromium-browser", "--version"); version != "" {
+		browsers = append(browsers, BrowserInfo{Name: "Chromium", Version: version})
+	}
+
+	// Firefox
+	if version := getBrowserVersion("firefox", "--version"); version != "" {
+		browsers = append(browsers, BrowserInfo{Name: "Firefox", Version: version})
+	}
+
+	// Brave
+	if version := getBrowserVersion("brave-browser", "--version"); version != "" {
+		browsers = append(browsers, BrowserInfo{Name: "Brave", Version: version})
+	} else if version := getBrowserVersion("brave", "--version"); version != "" {
+		browsers = append(browsers, BrowserInfo{Name: "Brave", Version: version})
+	}
+
+	// Edge
+	if version := getBrowserVersion("microsoft-edge", "--version"); version != "" {
+		browsers = append(browsers, BrowserInfo{Name: "Edge", Version: version})
+	} else if version := getBrowserVersion("microsoft-edge-stable", "--version"); version != "" {
+		browsers = append(browsers, BrowserInfo{Name: "Edge", Version: version})
+	}
+
+	// Opera
+	if version := getBrowserVersion("opera", "--version"); version != "" {
+		browsers = append(browsers, BrowserInfo{Name: "Opera", Version: version})
+	}
+
+	// Vivaldi
+	if version := getBrowserVersion("vivaldi", "--version"); version != "" {
+		browsers = append(browsers, BrowserInfo{Name: "Vivaldi", Version: version})
+	}
+
+	return browsers
+}
+
+// detectMacBrowsers detects browsers on macOS
+func detectMacBrowsers() []BrowserInfo {
+	var browsers []BrowserInfo
+
+	// Check for browsers in /Applications
+	appPaths := map[string]string{
+		"Chrome":  "/Applications/Google Chrome.app",
+		"Firefox": "/Applications/Firefox.app",
+		"Safari":  "/Applications/Safari.app",
+		"Brave":   "/Applications/Brave Browser.app",
+		"Edge":    "/Applications/Microsoft Edge.app",
+		"Opera":   "/Applications/Opera.app",
+		"Vivaldi": "/Applications/Vivaldi.app",
+	}
+
+	for name, appPath := range appPaths {
+		if _, err := os.Stat(appPath); err == nil {
+			version := getMacAppVersion(appPath)
+			if version != "" {
+				browsers = append(browsers, BrowserInfo{Name: name, Version: version})
+			} else {
+				browsers = append(browsers, BrowserInfo{Name: name, Version: "installed"})
+			}
+		}
+	}
+
+	return browsers
+}
+
+// detectWindowsBrowsers detects browsers on Windows
+func detectWindowsBrowsers() []BrowserInfo {
+	var browsers []BrowserInfo
+
+	// Check common browser paths using filepath.Join for cross-platform compatibility
+	programFiles := `C:\Program Files`
+	programFilesX86 := `C:\Program Files (x86)`
+
+	browserPaths := map[string][]string{
+		"Chrome": {
+			filepath.Join(programFiles, "Google", "Chrome", "Application", "chrome.exe"),
+			filepath.Join(programFilesX86, "Google", "Chrome", "Application", "chrome.exe"),
+		},
+		"Firefox": {
+			filepath.Join(programFiles, "Mozilla Firefox", "firefox.exe"),
+			filepath.Join(programFilesX86, "Mozilla Firefox", "firefox.exe"),
+		},
+		"Edge": {
+			filepath.Join(programFilesX86, "Microsoft", "Edge", "Application", "msedge.exe"),
+			filepath.Join(programFiles, "Microsoft", "Edge", "Application", "msedge.exe"),
+		},
+		"Brave": {
+			filepath.Join(programFiles, "BraveSoftware", "Brave-Browser", "Application", "brave.exe"),
+			filepath.Join(programFilesX86, "BraveSoftware", "Brave-Browser", "Application", "brave.exe"),
+		},
+		"Opera": {
+			filepath.Join(programFiles, "Opera", "launcher.exe"),
+			filepath.Join(programFilesX86, "Opera", "launcher.exe"),
+		},
+		"Vivaldi": {
+			filepath.Join(programFiles, "Vivaldi", "Application", "vivaldi.exe"),
+			filepath.Join(programFilesX86, "Vivaldi", "Application", "vivaldi.exe"),
+		},
+	}
+
+	for name, paths := range browserPaths {
+		for _, path := range paths {
+			if _, err := os.Stat(path); err == nil {
+				version := getWindowsBrowserVersion(path)
+				if version != "" {
+					browsers = append(browsers, BrowserInfo{Name: name, Version: version})
+				} else {
+					browsers = append(browsers, BrowserInfo{Name: name, Version: "installed"})
+				}
+				break
+			}
+		}
+	}
+
+	return browsers
+}
+
+// getBrowserVersion gets browser version using command line
+func getBrowserVersion(command string, args ...string) string {
+	cmd := exec.Command(command, args...)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return ""
+	}
+
+	version := strings.TrimSpace(string(output))
+	return parseBrowserVersion(version)
+}
+
+// parseBrowserVersion extracts version number from browser output
+func parseBrowserVersion(output string) string {
+	output = strings.TrimSpace(output)
+	if output == "" {
+		return ""
+	}
+
+	// Take first line
+	lines := strings.Split(output, "\n")
+	firstLine := strings.TrimSpace(lines[0])
+
+	// Common patterns:
+	// "Google Chrome 120.0.6099.109"
+	// "Chromium 120.0.6099.109"
+	// "Mozilla Firefox 121.0"
+	// "Brave 1.61.109 Chromium: 120.0.6099.109"
+
+	// Try to find version pattern in each field
+	fields := strings.Fields(firstLine)
+	for i, field := range fields {
+		// Skip known browser name prefixes
+		fieldLower := strings.ToLower(field)
+		if fieldLower == "google" || fieldLower == "chrome" || fieldLower == "chromium" ||
+			fieldLower == "mozilla" || fieldLower == "firefox" || fieldLower == "brave" ||
+			fieldLower == "microsoft" || fieldLower == "edge" || fieldLower == "opera" ||
+			fieldLower == "vivaldi" {
+			continue
+		}
+
+		// Check if this is a version label followed by version
+		if fieldLower == "version" && i+1 < len(fields) {
+			if version := browserVersionRegex.FindString(fields[i+1]); version != "" {
+				return version
+			}
+		}
+
+		// Look for version pattern directly
+		if version := browserVersionRegex.FindString(field); version != "" {
+			return version
+		}
+	}
+
+	return firstLine
+}
+
+// getMacAppVersion gets version from macOS app bundle
+func getMacAppVersion(appPath string) string {
+	plistPath := filepath.Join(appPath, "Contents", "Info.plist")
+	cmd := exec.Command("defaults", "read", plistPath, "CFBundleShortVersionString")
+	output, err := cmd.Output()
+	if err != nil {
+		// Try alternative version key
+		cmd = exec.Command("defaults", "read", plistPath, "CFBundleVersion")
+		output, err = cmd.Output()
+		if err != nil {
+			return ""
+		}
+	}
+
+	version := strings.TrimSpace(string(output))
+	return version
+}
+
+// isVersionString checks if a string looks like a version number
+func isVersionString(s string) bool {
+	if s == "" {
+		return false
+	}
+	// Check if it starts with a digit and contains a dot
+	return s[0] >= '0' && s[0] <= '9' && strings.Contains(s, ".")
+}
+
+// getWindowsBrowserVersion gets browser version on Windows
+func getWindowsBrowserVersion(browserPath string) string {
+	// Try to get version from file properties using wmic
+	dir := filepath.Dir(browserPath)
+
+	// Look for version info in the directory (version folders for Chrome/Edge)
+	// These browsers store their version as a folder name in the Application directory
+	if strings.Contains(browserPath, filepath.Join("Google", "Chrome")) ||
+		strings.Contains(browserPath, filepath.Join("Microsoft", "Edge")) {
+		entries, err := os.ReadDir(dir)
+		if err == nil {
+			for _, entry := range entries {
+				if entry.IsDir() {
+					// Check if directory name looks like a version
+					name := entry.Name()
+					if isVersionString(name) {
+						return name
+					}
+				}
+			}
+		}
+	}
+
+	return ""
+}
+
+// printBrowsers displays detected browsers
+func printBrowsers(browsers []BrowserInfo) {
+	if len(browsers) == 0 {
+		return
+	}
+
+	var browserStrings []string
+	for _, browser := range browsers {
+		if browser.Version != "" && browser.Version != "installed" {
+			browserStrings = append(browserStrings, fmt.Sprintf("%s (%s)", browser.Name, browser.Version))
+		} else {
+			browserStrings = append(browserStrings, browser.Name)
+		}
+	}
+
+	if len(browserStrings) > 0 {
+		fmt.Printf("  %s\n", strings.Join(browserStrings, ", "))
+	}
 }
 
 // printSystemInfo collects and prints system information in a structured format
@@ -112,6 +393,14 @@ func printSystemInfo() {
 	printNetworkInfo()
 	fmt.Println()
 
+	// Browsers section
+	browsers := detectBrowsers()
+	if len(browsers) > 0 {
+		fmt.Println("Browsers:")
+		printBrowsers(browsers)
+		fmt.Println()
+	}
+
 	// AI Agents section
 	fmt.Println("AI Agents:")
 	printAIAgents()
@@ -129,145 +418,6 @@ func printSystemInfo() {
 
 	// Projects section
 	printProjectsInline()
-}
-
-// formatUptime formats a duration into a human-readable uptime string
-func formatUptime(d time.Duration) string {
-	hours := int(d.Hours())
-	mins := int(d.Minutes()) % 60
-
-	if hours > 24 {
-		days := hours / 24
-		hours = hours % 24
-		if hours > 0 {
-			return fmt.Sprintf("%d days, %d hours, %d mins", days, hours, mins)
-		}
-		return fmt.Sprintf("%d days, %d mins", days, mins)
-	}
-	if hours > 0 {
-		return fmt.Sprintf("%d hours, %d mins", hours, mins)
-	}
-	return fmt.Sprintf("%d mins", mins)
-}
-
-// printPackageCountInline prints package counts in neofetch style (e.g., "Packages: 2035 (dpkg), 9 (flatpak)")
-func printPackageCountInline() {
-	osType := runtime.GOOS
-	var counts []string
-
-	// System package managers
-	switch osType {
-	case "linux":
-		if exists("dpkg") {
-			if pkgs := getPackages("dpkg"); pkgs != "" {
-				count := countPackages("dpkg", pkgs)
-				counts = append(counts, fmt.Sprintf("%d (dpkg)", count))
-			}
-		}
-		if exists("rpm") {
-			if pkgs := getPackages("rpm"); pkgs != "" {
-				count := countPackages("rpm", pkgs)
-				counts = append(counts, fmt.Sprintf("%d (rpm)", count))
-			}
-		}
-		if exists("pacman") {
-			if pkgs := getPackages("pacman"); pkgs != "" {
-				count := countPackages("pacman", pkgs)
-				counts = append(counts, fmt.Sprintf("%d (pacman)", count))
-			}
-		}
-		if exists("snap") {
-			if pkgs := getPackages("snap"); pkgs != "" {
-				count := countPackages("snap", pkgs)
-				counts = append(counts, fmt.Sprintf("%d (snap)", count))
-			}
-		}
-		if exists("flatpak") {
-			if pkgs := getPackages("flatpak"); pkgs != "" {
-				count := countPackages("flatpak", pkgs)
-				counts = append(counts, fmt.Sprintf("%d (flatpak)", count))
-			}
-		}
-	case "darwin":
-		if exists("brew") {
-			if pkgs := getPackages("brew"); pkgs != "" {
-				count := countPackages("brew", pkgs)
-				counts = append(counts, fmt.Sprintf("%d (brew)", count))
-			}
-		}
-	case "windows":
-		if exists("choco") {
-			if pkgs := getPackages("choco"); pkgs != "" {
-				count := countPackages("choco", pkgs)
-				counts = append(counts, fmt.Sprintf("%d (choco)", count))
-			}
-		}
-		if exists("winget") {
-			if pkgs := getPackages("winget"); pkgs != "" {
-				count := countPackages("winget", pkgs)
-				counts = append(counts, fmt.Sprintf("%d (winget)", count))
-			}
-		}
-	}
-
-	if len(counts) > 0 {
-		fmt.Printf("Packages: %s\n", strings.Join(counts, ", "))
-	}
-}
-
-// getGPUInfoList returns a slice of GPU model names using platform-specific commands
-func getGPUInfoList() []string {
-	osType := runtime.GOOS
-	switch osType {
-	case "linux":
-		cmd := exec.Command("sh", "-c", "lspci | grep -Ei 'vga|3d controller' | cut -d ':' -f3")
-		out, err := cmd.Output()
-		if err == nil && len(out) > 0 {
-			lines := strings.Split(strings.TrimSpace(string(out)), "\n")
-			var gpus []string
-			for _, line := range lines {
-				gpu := strings.TrimSpace(line)
-				if gpu != "" {
-					gpus = append(gpus, gpu)
-				}
-			}
-			if len(gpus) > 0 {
-				return gpus
-			}
-		}
-	case "darwin":
-		cmd := exec.Command("system_profiler", "SPDisplaysDataType")
-		out, err := cmd.Output()
-		if err == nil {
-			lines := strings.Split(string(out), "\n")
-			var gpus []string
-			for _, line := range lines {
-				if strings.Contains(line, "Chipset Model:") {
-					gpus = append(gpus, strings.TrimSpace(strings.SplitN(line, ":", 2)[1]))
-				}
-			}
-			if len(gpus) > 0 {
-				return gpus
-			}
-		}
-	case "windows":
-		cmd := exec.Command("wmic", "path", "win32_VideoController", "get", "name")
-		out, err := cmd.Output()
-		if err == nil {
-			lines := strings.Split(string(out), "\n")
-			var gpus []string
-			for _, line := range lines {
-				line = strings.TrimSpace(line)
-				if line != "" && !strings.HasPrefix(strings.ToLower(line), "name") {
-					gpus = append(gpus, line)
-				}
-			}
-			if len(gpus) > 0 {
-				return gpus
-			}
-		}
-	}
-	return nil
 }
 
 // GPUInfo holds detailed GPU information
@@ -365,10 +515,7 @@ func getLinuxGPUInfo() []GPUInfo {
 				Vendor: vendor,
 			}
 
-			// Try to get additional info for AMD GPUs
-			if vendor == "AMD" {
-				// Could add AMD-specific detection here with rocm-smi if needed
-			}
+			// Note: Could add AMD-specific detection here with rocm-smi if needed
 
 			gpus = append(gpus, gpu)
 		}
@@ -448,7 +595,8 @@ func getWindowsGPUInfo() []GPUInfo {
 			// Parse adapter RAM
 			if fields[1] != "" {
 				var ramBytes int64
-				fmt.Sscanf(strings.TrimSpace(fields[1]), "%d", &ramBytes)
+				//nolint:errcheck // Sscanf errors are non-critical for best-effort parsing
+				_, _ = fmt.Sscanf(strings.TrimSpace(fields[1]), "%d", &ramBytes)
 				if ramBytes > 0 {
 					gpu.Memory = fmt.Sprintf("%.0f MB", float64(ramBytes)/1024/1024)
 				}
@@ -477,7 +625,7 @@ func detectVendor(name string) string {
 		return "AMD"
 	} else if strings.Contains(nameLower, "ati technologies") {
 		return "AMD" // ATI Technologies is now part of AMD
-	} else if matched, _ := regexp.MatchString(`\bati\b`, nameLower); matched {
+	} else if matched, err := regexp.MatchString(`\bati\b`, nameLower); err == nil && matched {
 		// Match ATI as a whole word to avoid false matches in words like "Corporation"
 		return "AMD"
 	} else if strings.Contains(nameLower, "intel") {
@@ -569,16 +717,21 @@ func getDetailedCPUInfo() CPUDetails {
 				if strings.HasPrefix(line, "Architecture:") {
 					details.Architecture = strings.TrimSpace(strings.SplitN(line, ":", 2)[1])
 				} else if strings.HasPrefix(line, "Thread(s) per core:") {
-					fmt.Sscanf(strings.TrimSpace(strings.SplitN(line, ":", 2)[1]), "%d", &details.ThreadsPerCore)
+					//nolint:errcheck // Sscanf errors are non-critical for best-effort parsing
+					_, _ = fmt.Sscanf(strings.TrimSpace(strings.SplitN(line, ":", 2)[1]), "%d", &details.ThreadsPerCore)
 				} else if strings.HasPrefix(line, "Core(s) per socket:") {
-					fmt.Sscanf(strings.TrimSpace(strings.SplitN(line, ":", 2)[1]), "%d", &details.CoresPerSocket)
+					//nolint:errcheck // Sscanf errors are non-critical for best-effort parsing
+					_, _ = fmt.Sscanf(strings.TrimSpace(strings.SplitN(line, ":", 2)[1]), "%d", &details.CoresPerSocket)
 				} else if strings.HasPrefix(line, "Socket(s):") {
-					fmt.Sscanf(strings.TrimSpace(strings.SplitN(line, ":", 2)[1]), "%d", &details.Sockets)
+					//nolint:errcheck // Sscanf errors are non-critical for best-effort parsing
+					_, _ = fmt.Sscanf(strings.TrimSpace(strings.SplitN(line, ":", 2)[1]), "%d", &details.Sockets)
 				} else if strings.HasPrefix(line, "CPU(s):") {
-					fmt.Sscanf(strings.TrimSpace(strings.SplitN(line, ":", 2)[1]), "%d", &details.LogicalCores)
+					//nolint:errcheck // Sscanf errors are non-critical for best-effort parsing
+					_, _ = fmt.Sscanf(strings.TrimSpace(strings.SplitN(line, ":", 2)[1]), "%d", &details.LogicalCores)
 				} else if strings.HasPrefix(line, "CPU max MHz:") {
 					var mhz float64
-					fmt.Sscanf(strings.TrimSpace(strings.SplitN(line, ":", 2)[1]), "%f", &mhz)
+					//nolint:errcheck // Sscanf errors are non-critical for best-effort parsing
+					_, _ = fmt.Sscanf(strings.TrimSpace(strings.SplitN(line, ":", 2)[1]), "%f", &mhz)
 					if mhz > 0 {
 						details.BaseClock = fmt.Sprintf("%.2f GHz", mhz/1000.0)
 					}
@@ -595,24 +748,28 @@ func getDetailedCPUInfo() CPUDetails {
 		// Get core counts
 		cmd = exec.Command("sysctl", "-n", "hw.physicalcpu")
 		if out, err := cmd.Output(); err == nil {
-			fmt.Sscanf(strings.TrimSpace(string(out)), "%d", &details.PhysicalCores)
+			//nolint:errcheck // Sscanf errors are non-critical for best-effort parsing
+			_, _ = fmt.Sscanf(strings.TrimSpace(string(out)), "%d", &details.PhysicalCores)
 		}
 
 		cmd = exec.Command("sysctl", "-n", "hw.logicalcpu")
 		if out, err := cmd.Output(); err == nil {
-			fmt.Sscanf(strings.TrimSpace(string(out)), "%d", &details.LogicalCores)
+			//nolint:errcheck // Sscanf errors are non-critical for best-effort parsing
+			_, _ = fmt.Sscanf(strings.TrimSpace(string(out)), "%d", &details.LogicalCores)
 		}
 
 		// Try to get P and E core counts (Apple Silicon)
 		cmd = exec.Command("sysctl", "-n", "hw.perflevel0.physicalcpu")
 		if out, err := cmd.Output(); err == nil {
-			fmt.Sscanf(strings.TrimSpace(string(out)), "%d", &details.PCores)
+			//nolint:errcheck // Sscanf errors are non-critical for best-effort parsing
+			_, _ = fmt.Sscanf(strings.TrimSpace(string(out)), "%d", &details.PCores)
 			details.HasPECores = true
 		}
 
 		cmd = exec.Command("sysctl", "-n", "hw.perflevel1.physicalcpu")
 		if out, err := cmd.Output(); err == nil {
-			fmt.Sscanf(strings.TrimSpace(string(out)), "%d", &details.ECores)
+			//nolint:errcheck // Sscanf errors are non-critical for best-effort parsing
+			_, _ = fmt.Sscanf(strings.TrimSpace(string(out)), "%d", &details.ECores)
 			details.HasPECores = true
 		}
 
@@ -620,7 +777,8 @@ func getDetailedCPUInfo() CPUDetails {
 		cmd = exec.Command("sysctl", "-n", "hw.cpufrequency")
 		if out, err := cmd.Output(); err == nil {
 			var hz int64
-			fmt.Sscanf(strings.TrimSpace(string(out)), "%d", &hz)
+			//nolint:errcheck // Sscanf errors are non-critical for best-effort parsing
+			_, _ = fmt.Sscanf(strings.TrimSpace(string(out)), "%d", &hz)
 			if hz > 0 {
 				details.BaseClock = fmt.Sprintf("%.2f GHz", float64(hz)/1e9)
 			}
@@ -639,7 +797,8 @@ func getDetailedCPUInfo() CPUDetails {
 		if out, err := cmd.Output(); err == nil {
 			lines := strings.Split(string(out), "\n")
 			if len(lines) > 1 {
-				fmt.Sscanf(strings.TrimSpace(lines[1]), "%d", &details.PhysicalCores)
+				//nolint:errcheck // Sscanf errors are non-critical for best-effort parsing
+				_, _ = fmt.Sscanf(strings.TrimSpace(lines[1]), "%d", &details.PhysicalCores)
 			}
 		}
 
@@ -647,7 +806,8 @@ func getDetailedCPUInfo() CPUDetails {
 		if out, err := cmd.Output(); err == nil {
 			lines := strings.Split(string(out), "\n")
 			if len(lines) > 1 {
-				fmt.Sscanf(strings.TrimSpace(lines[1]), "%d", &details.LogicalCores)
+				//nolint:errcheck // Sscanf errors are non-critical for best-effort parsing
+				_, _ = fmt.Sscanf(strings.TrimSpace(lines[1]), "%d", &details.LogicalCores)
 			}
 		}
 	}

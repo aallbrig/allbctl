@@ -272,3 +272,78 @@ func Test_PrintGPUInfo(t *testing.T) {
 		t.Error("Output should contain memory")
 	}
 }
+
+func Test_DetectBrowsers(t *testing.T) {
+	browsers := detectBrowsers()
+
+	// May be empty on systems without browsers, that's ok
+	t.Logf("Detected %d browser(s)", len(browsers))
+
+	for i, browser := range browsers {
+		t.Logf("Browser %d: Name=%s, Version=%s", i, browser.Name, browser.Version)
+		if browser.Name == "" {
+			t.Errorf("Browser %d should have a name", i)
+		}
+	}
+}
+
+func Test_PrintBrowsers(t *testing.T) {
+	// Test with empty browser list
+	oldStdout := os.Stdout
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("Failed to create pipe: %v", err)
+	}
+	os.Stdout = w
+
+	printBrowsers([]BrowserInfo{})
+
+	w.Close()
+	os.Stdout = oldStdout
+
+	var sb strings.Builder
+	_, err = io.Copy(&sb, r)
+	if err != nil {
+		t.Fatalf("Failed to read output: %v", err)
+	}
+	output := sb.String()
+
+	// Empty list should not produce output
+	if strings.TrimSpace(output) != "" {
+		t.Error("Empty browser list should not produce output")
+	}
+
+	// Test with browser list
+	browsers := []BrowserInfo{
+		{Name: "Chrome", Version: "120.0.6099.109"},
+		{Name: "Firefox", Version: "121.0"},
+	}
+
+	r2, w2, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("Failed to create pipe: %v", err)
+	}
+	os.Stdout = w2
+
+	printBrowsers(browsers)
+
+	w2.Close()
+	os.Stdout = oldStdout
+
+	var sb2 strings.Builder
+	_, err = io.Copy(&sb2, r2)
+	if err != nil {
+		t.Fatalf("Failed to read output: %v", err)
+	}
+	output2 := sb2.String()
+
+	if !strings.Contains(output2, "Chrome") {
+		t.Error("Output should contain Chrome")
+	}
+	if !strings.Contains(output2, "120.0.6099.109") {
+		t.Error("Output should contain Chrome version")
+	}
+	if !strings.Contains(output2, "Firefox") {
+		t.Error("Output should contain Firefox")
+	}
+}
