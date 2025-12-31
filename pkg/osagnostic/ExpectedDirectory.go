@@ -22,10 +22,16 @@ func (e ExpectedDirectory) Name() string {
 
 func (e ExpectedDirectory) Validate() (out *bytes.Buffer, err error) {
 	out = bytes.NewBufferString("")
-	if stat, statErr := os.Stat(e.Path); statErr != nil && !os.IsNotExist(statErr) {
-		_, _ = color.New(color.FgRed).Fprint(out, "stat error")
-		err = statErr
-	} else if stat != nil && !stat.IsDir() {
+	stat, statErr := os.Stat(e.Path)
+
+	if statErr != nil {
+		if os.IsNotExist(statErr) {
+			_, _ = color.New(color.FgRed).Fprint(out, "NOT FOUND")
+		} else {
+			_, _ = color.New(color.FgRed).Fprint(out, "stat error")
+			err = statErr
+		}
+	} else if !stat.IsDir() {
 		_, _ = color.New(color.FgRed).Fprint(out, "expected directory is file")
 		err = fmt.Errorf("directory %s cannot be created due to conflict", e.Path)
 	} else {

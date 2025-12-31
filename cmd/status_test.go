@@ -458,9 +458,9 @@ func Test_ParseBrowserVersion(t *testing.T) {
 
 func Test_ExtractPackageManagerVersion_VBoxManage(t *testing.T) {
 	tests := []struct {
-		name    string
-		output  string
-		want    string
+		name   string
+		output string
+		want   string
 	}{
 		{
 			name:   "VBoxManage standard version output",
