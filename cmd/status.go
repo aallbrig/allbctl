@@ -482,15 +482,43 @@ func getDetailedGPUInfo() []GPUInfo {
 		gpus = append(gpus, nvidiaGPUs...)
 	}
 
-	// Fall back to platform-specific detection
-	if len(gpus) == 0 {
-		switch osType {
-		case "linux":
-			gpus = getLinuxGPUInfo()
-		case "darwin":
-			gpus = getMacGPUInfo()
-		case "windows":
-			gpus = getWindowsGPUInfo()
+	// Always run platform-specific detection to find all GPUs (e.g., integrated Intel GPUs)
+	var platformGPUs []GPUInfo
+	switch osType {
+	case "linux":
+		platformGPUs = getLinuxGPUInfo()
+	case "darwin":
+		platformGPUs = getMacGPUInfo()
+	case "windows":
+		platformGPUs = getWindowsGPUInfo()
+	}
+
+	// Merge platform-specific GPUs with NVIDIA GPUs, avoiding duplicates
+	// Skip NVIDIA GPUs from platform detection if we already have them from nvidia-smi
+	hasNvidiaFromSmi := false
+	for _, gpu := range gpus {
+		if gpu.Vendor == "NVIDIA" {
+			hasNvidiaFromSmi = true
+			break
+		}
+	}
+
+	for _, platformGPU := range platformGPUs {
+		// Skip NVIDIA GPUs from platform detection if nvidia-smi already detected them
+		if hasNvidiaFromSmi && platformGPU.Vendor == "NVIDIA" {
+			continue
+		}
+
+		isDuplicate := false
+		for _, gpu := range gpus {
+			// Check if this GPU is already in the list (basic duplicate detection by name)
+			if gpu.Name == platformGPU.Name {
+				isDuplicate = true
+				break
+			}
+		}
+		if !isDuplicate {
+			gpus = append(gpus, platformGPU)
 		}
 	}
 
