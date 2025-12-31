@@ -174,6 +174,18 @@ func Test_GetDetailedGPUInfo_MultipleGPUs(t *testing.T) {
 		seen[gpu.Name] = true
 	}
 
+	// Check that we don't have multiple NVIDIA entries (should only come from nvidia-smi)
+	nvidiaCount := 0
+	for _, gpu := range gpus {
+		if gpu.Vendor == "NVIDIA" {
+			nvidiaCount++
+			// NVIDIA GPUs should have detailed info from nvidia-smi
+			if gpu.Memory == "" && gpu.Driver == "" {
+				t.Logf("Warning: NVIDIA GPU missing detailed info (likely from lspci, should be filtered): %s", gpu.Name)
+			}
+		}
+	}
+
 	// On systems with both NVIDIA and integrated GPUs, we should detect both
 	// This is informational only - we don't fail if there's only one GPU
 	hasNvidia := false

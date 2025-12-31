@@ -455,10 +455,24 @@ func getDetailedGPUInfo() []GPUInfo {
 	}
 
 	// Merge platform-specific GPUs with NVIDIA GPUs, avoiding duplicates
+	// Skip NVIDIA GPUs from platform detection if we already have them from nvidia-smi
+	hasNvidiaFromSmi := false
+	for _, gpu := range gpus {
+		if gpu.Vendor == "NVIDIA" {
+			hasNvidiaFromSmi = true
+			break
+		}
+	}
+
 	for _, platformGPU := range platformGPUs {
+		// Skip NVIDIA GPUs from platform detection if nvidia-smi already detected them
+		if hasNvidiaFromSmi && platformGPU.Vendor == "NVIDIA" {
+			continue
+		}
+
 		isDuplicate := false
 		for _, gpu := range gpus {
-			// Check if this GPU is already in the list (basic duplicate detection)
+			// Check if this GPU is already in the list (basic duplicate detection by name)
 			if gpu.Name == platformGPU.Name {
 				isDuplicate = true
 				break
