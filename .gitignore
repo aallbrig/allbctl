@@ -1,3 +1,4 @@
+*.output.txt
 # vendor folder
 vendor
 # build artifacts
