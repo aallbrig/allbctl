@@ -1205,6 +1205,7 @@ func printPackageManagers() {
 	systemAvailable := []string{}
 	languageAvailable := []string{}
 	runtimeAvailable := []string{}
+	infrastructureAvailable := []string{}
 
 	// System package managers
 	switch osType {
@@ -1398,15 +1399,28 @@ func printPackageManagers() {
 		}
 	}
 
+	// Infrastructure package managers
+	if exists("VBoxManage") {
+		version := getPackageManagerVersion("vboxmanage")
+		if version != "" {
+			infrastructureAvailable = append(infrastructureAvailable, fmt.Sprintf("VBoxManage (%s)", version))
+		} else {
+			infrastructureAvailable = append(infrastructureAvailable, "VBoxManage")
+		}
+	}
+
 	// Print
 	if len(systemAvailable) > 0 {
-		fmt.Printf("  System:    %s\n", strings.Join(systemAvailable, ", "))
+		fmt.Printf("  System:         %s\n", strings.Join(systemAvailable, ", "))
 	}
 	if len(languageAvailable) > 0 {
-		fmt.Printf("  Language:  %s\n", strings.Join(languageAvailable, ", "))
+		fmt.Printf("  Language:       %s\n", strings.Join(languageAvailable, ", "))
 	}
 	if len(runtimeAvailable) > 0 {
-		fmt.Printf("  Runtime:   %s\n", strings.Join(runtimeAvailable, ", "))
+		fmt.Printf("  Runtime:        %s\n", strings.Join(runtimeAvailable, ", "))
+	}
+	if len(infrastructureAvailable) > 0 {
+		fmt.Printf("  Infrastructure: %s\n", strings.Join(infrastructureAvailable, ", "))
 	}
 }
 
@@ -1449,6 +1463,8 @@ func getPackageManagerVersion(manager string) string {
 		cmd = exec.Command("cargo", "--version")
 	case "go":
 		cmd = exec.Command("go", "version")
+	case "vboxmanage":
+		cmd = exec.Command("VBoxManage", "--version")
 	default:
 		return ""
 	}
@@ -1548,6 +1564,9 @@ func extractPackageManagerVersion(manager, output string) string {
 		}
 	case "choco", "winget":
 		// Usually just version number
+		return output
+	case "vboxmanage":
+		// "7.0.14r161095" - just the version number
 		return output
 	}
 
@@ -1732,6 +1751,9 @@ func printPackageSummary() {
 	if exists("vagrant") {
 		managers = append(managers, "vagrant")
 	}
+	if exists("VBoxManage") {
+		managers = append(managers, "vboxmanage")
+	}
 
 	if len(managers) == 0 {
 		fmt.Println("  No package managers detected")
@@ -1745,7 +1767,7 @@ func printPackageSummary() {
 			count := countPackages(m, pkgs)
 			if m == "ollama" {
 				fmt.Printf("  %-15s %d models\n", m+":", count)
-			} else if m == "vagrant" {
+			} else if m == "vagrant" || m == "vboxmanage" {
 				fmt.Printf("  %-15s %d VMs\n", m+":", count)
 			} else {
 				fmt.Printf("  %-15s %d packages\n", m+":", count)

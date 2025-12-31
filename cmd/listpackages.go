@@ -135,6 +135,9 @@ func listInstalledPackages(args []string) {
 	if exists("vagrant") {
 		managers = append(managers, "vagrant")
 	}
+	if exists("VBoxManage") {
+		managers = append(managers, "vboxmanage")
+	}
 
 	if len(managers) == 0 {
 		fmt.Println("No known package managers detected.")
@@ -159,7 +162,7 @@ func listInstalledPackages(args []string) {
 				count := countPackages(m, pkgs)
 				if m == "ollama" {
 					fmt.Printf("%-15s %d models\n", m+":", count)
-				} else if m == "vagrant" {
+				} else if m == "vagrant" || m == "vboxmanage" {
 					fmt.Printf("%-15s %d VMs\n", m+":", count)
 				} else {
 					fmt.Printf("%-15s %d packages\n", m+":", count)
@@ -180,6 +183,8 @@ func getCommandForManager(manager string) string {
 			return "pip3"
 		}
 		return "pip"
+	case "vboxmanage":
+		return "VBoxManage"
 	default:
 		return manager
 	}
@@ -231,6 +236,8 @@ func getQueryCommand(manager string) string {
 		return "ollama list"
 	case "vagrant":
 		return "vagrant box list"
+	case "vboxmanage":
+		return "VBoxManage list vms"
 	default:
 		return ""
 	}
@@ -307,6 +314,9 @@ func getPackages(manager string) string {
 	case "vagrant":
 		// List vagrant boxes
 		output = runCmd("vagrant box list")
+	case "vboxmanage":
+		// List VirtualBox VMs
+		output = runCmd("VBoxManage list vms")
 	default:
 		return ""
 	}
@@ -438,6 +448,18 @@ func countPackages(manager string, output string) int {
 	case "vagrant":
 		// vagrant box list output: "box-name (provider, version)"
 		// Each line represents one box
+		count := 0
+		for _, line := range lines {
+			line = strings.TrimSpace(line)
+			if line == "" {
+				continue
+			}
+			count++
+		}
+		return count
+	case "vboxmanage":
+		// VBoxManage list vms output: "VM-name" {uuid}
+		// Each line represents one VM
 		count := 0
 		for _, line := range lines {
 			line = strings.TrimSpace(line)

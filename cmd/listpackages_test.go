@@ -55,7 +55,7 @@ func TestExists_AllSupportedCommands(t *testing.T) {
 }
 
 func TestGetPackages_AllSupportedManagers(t *testing.T) {
-	managers := []string{"apt", "snap", "flatpak", "dnf", "yum", "pacman", "brew", "choco", "winget", "scoop", "npm", "pip", "gem", "cargo", "go", "pipx", "ollama", "vagrant"}
+	managers := []string{"apt", "snap", "flatpak", "dnf", "yum", "pacman", "brew", "choco", "winget", "scoop", "npm", "pip", "gem", "cargo", "go", "pipx", "ollama", "vagrant", "vboxmanage"}
 	for _, m := range managers {
 		_ = getPackages(m) // Should not panic or error
 	}
@@ -154,5 +154,42 @@ func TestGetQueryCommand_Vagrant(t *testing.T) {
 	expected := "vagrant box list"
 	if cmd != expected {
 		t.Errorf("Expected query command '%s', got '%s'", expected, cmd)
+	}
+}
+
+func TestCountPackages_VBoxManage(t *testing.T) {
+	output := `"VM1" {12345678-1234-1234-1234-123456789012}
+"VM2" {87654321-4321-4321-4321-210987654321}`
+	count := countPackages("vboxmanage", output)
+	if count != 2 {
+		t.Errorf("Expected 2 VMs for vboxmanage, got %d", count)
+	}
+}
+
+func TestCountPackages_VBoxManage_EmptyOutput(t *testing.T) {
+	output := ""
+	count := countPackages("vboxmanage", output)
+	if count != 0 {
+		t.Errorf("Expected 0 VMs for empty vboxmanage output, got %d", count)
+	}
+}
+
+func TestGetPackages_VBoxManage(t *testing.T) {
+	_ = getPackages("vboxmanage") // Should not panic
+}
+
+func TestGetQueryCommand_VBoxManage(t *testing.T) {
+	cmd := getQueryCommand("vboxmanage")
+	expected := "VBoxManage list vms"
+	if cmd != expected {
+		t.Errorf("Expected query command '%s', got '%s'", expected, cmd)
+	}
+}
+
+func TestGetCommandForManager_VBoxManage(t *testing.T) {
+	cmd := getCommandForManager("vboxmanage")
+	expected := "VBoxManage"
+	if cmd != expected {
+		t.Errorf("Expected command '%s', got '%s'", expected, cmd)
 	}
 }

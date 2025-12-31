@@ -455,3 +455,36 @@ func Test_ParseBrowserVersion(t *testing.T) {
 		})
 	}
 }
+
+func Test_ExtractPackageManagerVersion_VBoxManage(t *testing.T) {
+	tests := []struct {
+		name    string
+		output  string
+		want    string
+	}{
+		{
+			name:   "VBoxManage standard version output",
+			output: "7.0.14r161095",
+			want:   "7.0.14r161095",
+		},
+		{
+			name:   "VBoxManage version with whitespace",
+			output: "  7.1.0r164728  \n",
+			want:   "7.1.0r164728",
+		},
+		{
+			name:   "VBoxManage empty output",
+			output: "",
+			want:   "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := extractPackageManagerVersion("vboxmanage", tt.output)
+			if got != tt.want {
+				t.Errorf("extractPackageManagerVersion('vboxmanage', %q) = %q, want %q", tt.output, got, tt.want)
+			}
+		})
+	}
+}
