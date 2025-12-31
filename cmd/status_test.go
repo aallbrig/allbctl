@@ -157,6 +157,49 @@ func Test_GetDetailedGPUInfo(t *testing.T) {
 	}
 }
 
+func Test_GetDetailedGPUInfo_MultipleGPUs(t *testing.T) {
+	// This test verifies that the function can detect multiple GPUs
+	// on systems with both integrated and discrete GPUs (e.g., Intel + NVIDIA)
+	gpus := getDetailedGPUInfo()
+
+	t.Logf("Detected %d GPU(s)", len(gpus))
+
+	// Check for duplicate GPUs (by name)
+	seen := make(map[string]bool)
+	for i, gpu := range gpus {
+		t.Logf("GPU %d: Name=%s, Vendor=%s, Memory=%s", i, gpu.Name, gpu.Vendor, gpu.Memory)
+		if seen[gpu.Name] {
+			t.Errorf("Duplicate GPU detected: %s", gpu.Name)
+		}
+		seen[gpu.Name] = true
+	}
+
+	// On systems with both NVIDIA and integrated GPUs, we should detect both
+	// This is informational only - we don't fail if there's only one GPU
+	hasNvidia := false
+	hasIntel := false
+	hasAMD := false
+	for _, gpu := range gpus {
+		switch gpu.Vendor {
+		case "NVIDIA":
+			hasNvidia = true
+		case "Intel":
+			hasIntel = true
+		case "AMD":
+			hasAMD = true
+		}
+	}
+
+	if hasNvidia && (hasIntel || hasAMD) {
+		t.Logf("✓ Multiple GPUs detected: NVIDIA + %s", func() string {
+			if hasIntel {
+				return "Intel"
+			}
+			return "AMD"
+		}())
+	}
+}
+
 func Test_DetectVendor(t *testing.T) {
 	tests := []struct {
 		name       string
