@@ -14,6 +14,8 @@ allbctl cs status                  # Same as above (alias)
                                    # - OS, kernel, uptime, host/virtualization info
                                    # - Package counts (dpkg, rpm, flatpak, snap, brew, etc.)
                                    # - Shell, terminal, detailed CPU and GPU info, memory
+                                   # - Network interfaces and connection type
+                                   # - Installed browsers (Chrome, Firefox, Edge, Safari, Brave, etc.)
                                    # - Computer setup status (dotfiles, directories, tools)
 
 # List installed packages
@@ -89,6 +91,10 @@ The `status` and `cs status` commands provide a neofetch-inspired view of your s
 - **Memory**: Memory usage
 - **Runtimes**: Detected programming languages with versions (e.g., "Python (3.12.3), Node.js (24.11.1), Go (1.25.5)")
 - **Network**: Network interfaces, router IP, connection type
+- **Browsers**: Detected web browsers with versions (e.g., "Chrome (143.0.7499.109), Firefox (146.0), Edge (143.0.3650.80)")
+  - Supports Chrome, Chromium, Firefox, Edge, Safari, Brave, Opera, Vivaldi
+  - Cross-platform detection for Linux, macOS, and Windows
+  - Only displays browsers that are actually installed
 - **AI Agents**: Detected AI coding assistants with versions (e.g., "copilot (0.0.365), claude (2.0.76)")
 - **Package Managers**: 
   - **System**: System package managers with versions (e.g., "apt (2.8.3), flatpak (1.14.6)")
@@ -100,6 +106,18 @@ The `status` and `cs status` commands provide a neofetch-inspired view of your s
   - Last 5 recently touched repos in a table format
   - Three aligned columns: path (with `*` for dirty), remote origin (user/repo), and last modified date/time
 - **Computer Setup Status**: Dotfiles location, required directories, installed tools, SSH configuration
+
+##### Supported Browsers
+The `status` command detects the following web browsers:
+- **Chrome** (`google-chrome`, `chromium`)
+- **Firefox** (`firefox`)
+- **Edge** (`microsoft-edge`)
+- **Safari** (macOS only, via `/Applications/Safari.app`)
+- **Brave** (`brave-browser`)
+- **Opera** (`opera`)
+- **Vivaldi** (`vivaldi`)
+
+Browser detection works across all platforms (Linux, macOS, Windows) and only displays browsers that are actually installed on your system.
 
 ##### Supported AI Agents
 The `status` command detects the following AI coding assistants:
