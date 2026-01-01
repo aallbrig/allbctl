@@ -22,6 +22,9 @@ Example commands for allbctl:
 $ allbctl bootstrap status
 $ allbctl bootstrap install
 $ allbctl status
+$ allbctl status runtimes              # Show detected programming runtimes
+$ allbctl status projects              # Show git repositories in ~/src
+$ allbctl status list-packages         # Show package counts from all package managers
 `,
 	Version: Version,
 	Run: func(cmd *cobra.Command, args []string) {
@@ -41,9 +44,11 @@ func init() {
 	cobra.OnInitialize(initConfig)
 	rootCmd.AddCommand(BootstrapCmd)
 	rootCmd.AddCommand(StatusCmd)
-	rootCmd.AddCommand(RuntimesCmd)
-	rootCmd.AddCommand(ListPackagesCmd)
-	rootCmd.AddCommand(ProjectsCmd)
+
+	// Add subcommands to status
+	StatusCmd.AddCommand(RuntimesCmd)
+	StatusCmd.AddCommand(ListPackagesCmd)
+	StatusCmd.AddCommand(ProjectsCmd)
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.allbctl.yaml)")
 

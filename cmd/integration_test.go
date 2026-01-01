@@ -26,8 +26,18 @@ func TestCLICommandsExist(t *testing.T) {
 			expectError: false,
 		},
 		{
-			name:        "list-packages command",
-			args:        []string{"list-packages", "--help"},
+			name:        "status list-packages subcommand",
+			args:        []string{"status", "list-packages", "--help"},
+			expectError: false,
+		},
+		{
+			name:        "status runtimes subcommand",
+			args:        []string{"status", "runtimes", "--help"},
+			expectError: false,
+		},
+		{
+			name:        "status projects subcommand",
+			args:        []string{"status", "projects", "--help"},
 			expectError: false,
 		},
 		{
@@ -47,7 +57,7 @@ func TestCLICommandsExist(t *testing.T) {
 		},
 		{
 			name:        "runtimes command",
-			args:        []string{"runtimes", "--help"},
+			args:        []string{"status", "runtimes", "--help"},
 			expectError: false,
 		},
 		{
@@ -102,7 +112,7 @@ func TestRootCommandOutput(t *testing.T) {
 	}
 
 	// Verify all commands are registered
-	commands := []string{"computer-setup", "list-packages", "status", "runtimes", "reset"}
+	commands := []string{"computer-setup", "status", "reset"}
 	for _, cmd := range commands {
 		found := false
 		for _, c := range rootCmd.Commands() {
@@ -113,6 +123,21 @@ func TestRootCommandOutput(t *testing.T) {
 		}
 		if !found {
 			t.Errorf("Command %s not found in root command", cmd)
+		}
+	}
+
+	// Verify status subcommands are registered
+	statusSubcommands := []string{"list-packages", "runtimes", "projects"}
+	for _, cmd := range statusSubcommands {
+		found := false
+		for _, c := range StatusCmd.Commands() {
+			if c.Name() == cmd {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("Subcommand %s not found under status command", cmd)
 		}
 	}
 }
