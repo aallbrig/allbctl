@@ -408,9 +408,6 @@ func printSystemInfo() {
 		}
 	}
 
-	// Runtimes (inline)
-	runtimesInline := detectRuntimesInline()
-
 	// Print system information (no "Host:" header)
 	fmt.Printf("OS:        %s\n", osStr)
 	fmt.Printf("Hostname:  %s\n", hostname)
@@ -422,6 +419,9 @@ func printSystemInfo() {
 	printGPUInfo(gpuDetails)
 	fmt.Printf("Memory:    %s\n", memStr)
 	fmt.Printf("Hardware:  %s\n", hwStr)
+
+	// Runtimes (using shared function)
+	runtimesInline := detectRuntimesInline()
 	if runtimesInline != "" {
 		fmt.Printf("Runtimes:  %s\n", runtimesInline)
 	}
@@ -452,7 +452,7 @@ func printSystemInfo() {
 
 	// Packages section
 	fmt.Println("Packages:")
-	printPackageSummary()
+	PrintPackageSummary()
 	fmt.Println()
 
 	// Projects section
@@ -1694,84 +1694,4 @@ func extractVersionManagerVersion(manager, output string) string {
 	}
 
 	return firstLine
-}
-
-// printPackageSummary runs the list-packages summary logic
-func printPackageSummary() {
-	osType := runtime.GOOS
-	var managers []string
-
-	// System package managers
-	switch osType {
-	case "linux":
-		if exists("apt-mark") {
-			managers = append(managers, "apt")
-		}
-		if exists("snap") {
-			managers = append(managers, "snap")
-		}
-		if exists("flatpak") {
-			managers = append(managers, "flatpak")
-		}
-	case "darwin":
-		if exists("brew") {
-			managers = append(managers, "brew")
-		}
-	case "windows":
-		if exists("choco") {
-			managers = append(managers, "choco")
-		}
-		if exists("winget") {
-			managers = append(managers, "winget")
-		}
-	}
-
-	// Programming runtime package managers
-	if exists("npm") {
-		managers = append(managers, "npm")
-	}
-	if exists("pip") || exists("pip3") {
-		managers = append(managers, "pip")
-	}
-	if exists("pipx") {
-		managers = append(managers, "pipx")
-	}
-	if exists("gem") {
-		managers = append(managers, "gem")
-	}
-	if exists("cargo") {
-		managers = append(managers, "cargo")
-	}
-	if exists("go") {
-		managers = append(managers, "go")
-	}
-	if exists("ollama") {
-		managers = append(managers, "ollama")
-	}
-	if exists("vagrant") {
-		managers = append(managers, "vagrant")
-	}
-	if exists("VBoxManage") {
-		managers = append(managers, "vboxmanage")
-	}
-
-	if len(managers) == 0 {
-		fmt.Println("  No package managers detected")
-		return
-	}
-
-	// Summary mode: just count packages
-	for _, m := range managers {
-		pkgs := getPackages(m)
-		if pkgs != "" {
-			count := countPackages(m, pkgs)
-			if m == "ollama" {
-				fmt.Printf("  %-15s %d models\n", m+":", count)
-			} else if m == "vagrant" || m == "vboxmanage" {
-				fmt.Printf("  %-15s %d VMs\n", m+":", count)
-			} else {
-				fmt.Printf("  %-15s %d packages\n", m+":", count)
-			}
-		}
-	}
 }

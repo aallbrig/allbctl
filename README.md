@@ -18,29 +18,23 @@ allbctl cs status                  # Same as above (alias)
                                    # - Installed browsers (Chrome, Firefox, Edge, Safari, Brave, etc.)
                                    # - Computer setup status (dotfiles, directories, tools)
 
-# List installed packages
-allbctl list-packages              # Summary: just show counts per package manager (default)
-allbctl list-packages --detail     # Full listing of all packages
-allbctl list-packages -d           # Short version of --detail
-allbctl list-packages apt          # List only apt packages (shows command for copy/paste)
-allbctl list-packages npm          # List only npm packages (shows command for copy/paste)
-allbctl list-packages flatpak      # List only flatpak packages (shows command for copy/paste)
-allbctl list-packages vagrant      # List only vagrant VMs (shows command for copy/paste)
+# Status subcommands (show specific sections from status output)
+allbctl status runtimes            # Shows detected development runtimes with versions:
+                                   # Example: Python (3.12.3), Node.js (24.11.1), Go (1.25.5)
 
-# Detect runtimes (programming languages, databases, cloud tools, gaming platforms)
-allbctl runtimes                   # Shows detected development runtimes with versions:
-                                   # - Languages: Node.js, Go, PHP, Java, Python, Ruby, Rust, Perl, etc.
-                                   # - Databases: MySQL, PostgreSQL, SQLite, MariaDB, MongoDB, Redis
-                                   # - Cloud: Kubernetes, AWS CLI, Azure CLI, Google Cloud SDK
-                                   # - HashiCorp: Terraform, Vault, Consul, Nomad
-                                   # - Gaming Platforms: Steam (cross-platform detection)
-
-# Projects (git repositories in ~/src)
-allbctl projects                   # Shows summary: count and last 5 recently touched repos
-allbctl projects --all             # Shows all git repos in ~/src
-allbctl projects --dirty           # Shows only repos with uncommitted changes
-allbctl projects --clean           # Shows only clean repos
+allbctl status projects            # Shows summary: count and last 5 recently touched repos
+allbctl status projects --all      # Shows all git repos in ~/src
+allbctl status projects --dirty    # Shows only repos with uncommitted changes
+allbctl status projects --clean    # Shows only clean repos
                                    # Dirty repos are marked with * (e.g., "~/src/myproject*")
+
+allbctl status list-packages       # Summary: just show counts per package manager (default)
+allbctl status list-packages --detail  # Full listing of all packages
+allbctl status list-packages -d    # Short version of --detail
+allbctl status list-packages apt   # List only apt packages (shows command for copy/paste)
+allbctl status list-packages npm   # List only npm packages (shows command for copy/paste)
+allbctl status list-packages flatpak # List only flatpak packages (shows command for copy/paste)
+allbctl status list-packages vagrant # List only vagrant VMs (shows command for copy/paste)
 
 # Computer setup (bootstrap development environment)
 allbctl computer-setup status      # Check what's set up and what's missing

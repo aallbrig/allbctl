@@ -16,6 +16,8 @@ var ListPackagesCmd = &cobra.Command{
 	Use:   "list-packages [package-manager]",
 	Short: "Show package count summary from all detected package managers",
 	Long: `Show package count summary from all detected package managers.
+
+By default, shows the same summary as the 'Packages:' section in 'allbctl status'.
 	
 For system package managers (apt, yum, brew, chocolatey, etc.), only explicitly 
 installed packages are counted, not their dependencies.
@@ -40,30 +42,9 @@ func init() {
 	ListPackagesCmd.Flags().BoolVarP(&detailFlag, "detail", "d", false, "Show detailed list of all packages instead of just counts")
 }
 
-func listInstalledPackages(args []string) {
+// getDetectedPackageManagers returns a list of all detected package managers
+func getDetectedPackageManagers() []string {
 	osType := runtime.GOOS
-
-	// If a specific package manager is requested
-	if len(args) > 0 {
-		manager := args[0]
-		if !exists(getCommandForManager(manager)) {
-			fmt.Printf("Package manager '%s' not found on this system.\n", manager)
-			return
-		}
-		pkgs := getPackages(manager)
-		if pkgs != "" {
-			fmt.Printf("Packages installed via %s:\n", manager)
-			fmt.Println(pkgs)
-			fmt.Printf("\nCommand: %s\n", getQueryCommand(manager))
-		} else {
-			fmt.Printf("No packages found for %s\n", manager)
-			fmt.Printf("\nCommand: %s\n", getQueryCommand(manager))
-		}
-		return
-	}
-
-	// Otherwise, list all detected package managers
-	fmt.Printf("Detected OS: %s\n\n", osType)
 
 	var managers []string
 
@@ -139,6 +120,57 @@ func listInstalledPackages(args []string) {
 		managers = append(managers, "vboxmanage")
 	}
 
+	return managers
+}
+
+// PrintPackageSummary prints package counts for all detected package managers (for status command)
+func PrintPackageSummary() {
+	managers := getDetectedPackageManagers()
+
+	if len(managers) == 0 {
+		fmt.Println("  No package managers detected")
+		return
+	}
+
+	// Summary mode: just count packages with indentation for status output
+	for _, m := range managers {
+		pkgs := getPackages(m)
+		if pkgs != "" {
+			count := countPackages(m, pkgs)
+			if m == "ollama" {
+				fmt.Printf("  %-15s %d models\n", m+":", count)
+			} else if m == "vagrant" || m == "vboxmanage" {
+				fmt.Printf("  %-15s %d VMs\n", m+":", count)
+			} else {
+				fmt.Printf("  %-15s %d packages\n", m+":", count)
+			}
+		}
+	}
+}
+
+func listInstalledPackages(args []string) {
+	// If a specific package manager is requested
+	if len(args) > 0 {
+		manager := args[0]
+		if !exists(getCommandForManager(manager)) {
+			fmt.Printf("Package manager '%s' not found on this system.\n", manager)
+			return
+		}
+		pkgs := getPackages(manager)
+		if pkgs != "" {
+			fmt.Printf("Packages installed via %s:\n", manager)
+			fmt.Println(pkgs)
+			fmt.Printf("\nCommand: %s\n", getQueryCommand(manager))
+		} else {
+			fmt.Printf("No packages found for %s\n", manager)
+			fmt.Printf("\nCommand: %s\n", getQueryCommand(manager))
+		}
+		return
+	}
+
+	// Otherwise, list all detected package managers
+	managers := getDetectedPackageManagers()
+
 	if len(managers) == 0 {
 		fmt.Println("No known package managers detected.")
 		return
@@ -155,7 +187,7 @@ func listInstalledPackages(args []string) {
 			}
 		}
 	} else {
-		// Summary mode (default): just count packages
+		// Summary mode (default): just count packages (no indentation for direct command)
 		for _, m := range managers {
 			pkgs := getPackages(m)
 			if pkgs != "" {
@@ -170,7 +202,7 @@ func listInstalledPackages(args []string) {
 			}
 		}
 		fmt.Println("\nUse --detail flag to see the full list of all installed packages.")
-		fmt.Println("Or specify a package manager: allbctl list-packages <manager>")
+		fmt.Println("Or specify a package manager: allbctl status list-packages <manager>")
 	}
 }
 

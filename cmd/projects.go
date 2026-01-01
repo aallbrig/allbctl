@@ -24,16 +24,21 @@ var ProjectsCmd = &cobra.Command{
 	Short: "Display git repositories in ~/src",
 	Long: `Display a summary of git repositories found in ~/src directory.
 
-By default, shows a count and the last 5 recently touched repos.
+By default, shows the same summary as the 'Projects:' section in 'allbctl status'.
 Dirty repos are marked with an asterisk (*).
 
 Examples:
-  allbctl projects           # Show summary (default)
-  allbctl projects --all     # Show all repos
-  allbctl projects --dirty   # Show only dirty repos
-  allbctl projects --clean   # Show only clean repos`,
+  allbctl status projects           # Show summary (default, same as status)
+  allbctl status projects --all     # Show all repos
+  allbctl status projects --dirty   # Show only dirty repos
+  allbctl status projects --clean   # Show only clean repos`,
 	Run: func(cmd *cobra.Command, args []string) {
-		printProjectsSummary()
+		if allFlag || dirtyFlag || cleanFlag {
+			printProjectsSummary()
+		} else {
+			// Default: use the same output as status command
+			printProjectsInline()
+		}
 	},
 }
 
