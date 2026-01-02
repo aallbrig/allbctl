@@ -12,6 +12,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var (
+	registerSSHKeys bool
+)
+
 var BootstrapCmd = &cobra.Command{
 	Use: "bootstrap",
 	Aliases: []string{
@@ -41,7 +45,10 @@ var bootstrapStatusCmd = &cobra.Command{
 var bootstrapInstallCmd = &cobra.Command{
 	Use:   "install",
 	Short: "Install and configure workstation bootstrap",
-	Long:  `Install and configure workstation bootstrap including directories, tools, SSH keys, and dotfiles.`,
+	Long: `Install and configure workstation bootstrap including directories, tools, SSH keys, and dotfiles.
+
+By default, SSH key generation and GitHub registration are SKIPPED.
+Use --register-ssh-keys flag to enable SSH key generation and GitHub registration.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		os := osagnostic.NewOperatingSystem()
 		identifier := computerSetup.MachineIdentifier{}
@@ -51,7 +58,13 @@ var bootstrapInstallCmd = &cobra.Command{
 			return
 		}
 
-		tweaker := computerSetup.NewMachineTweaker(configProvider.GetConfiguration())
+		// Get configuration and filter out SSH key registration if flag not set
+		configs := configProvider.GetConfiguration()
+		if !registerSSHKeys {
+			configs = computerSetup.FilterOutSSHKeyRegistration(configs)
+		}
+
+		tweaker := computerSetup.NewMachineTweaker(configs)
 		_, out := tweaker.ApplyConfiguration()
 		fmt.Print(out.String())
 	},
@@ -113,4 +126,7 @@ func init() {
 	BootstrapCmd.AddCommand(bootstrapStatusCmd)
 	BootstrapCmd.AddCommand(bootstrapInstallCmd)
 	BootstrapCmd.AddCommand(bootstrapResetCmd)
+
+	// Add flags to install command
+	bootstrapInstallCmd.Flags().BoolVar(&registerSSHKeys, "register-ssh-keys", false, "Generate SSH keys and register with GitHub (requires gh CLI)")
 }

@@ -44,17 +44,24 @@ func (e ExpectedDirectory) Validate() (out *bytes.Buffer, err error) {
 
 func (e ExpectedDirectory) Install() (*bytes.Buffer, error) {
 	out := bytes.NewBufferString("")
+
+	// Check if already exists
 	validateOut, err := e.Validate()
-	out.WriteString(validateOut.String() + "\n")
-	if err != nil {
-		return out, err
+	if err == nil {
+		// Already exists
+		out.WriteString(validateOut.String() + "\n")
+		_, _ = color.New(color.FgGreen).Fprint(out, "✅ Directory already exists\n")
+		return out, nil
 	}
 
-	err = os.Mkdir(e.Path, e.Permission)
+	out.WriteString(validateOut.String() + "\n")
+
+	// Create directory with MkdirAll for idempotency
+	err = os.MkdirAll(e.Path, e.Permission)
 	if err != nil {
-		_, _ = color.New(color.FgRed).Fprint(out, fmt.Sprintf("Fail to create %s", e.Path))
+		_, _ = color.New(color.FgRed).Fprint(out, fmt.Sprintf("❌ Failed to create %s: %v\n", e.Path, err))
 	} else {
-		_, _ = color.New(color.FgGreen).Fprint(out, fmt.Sprintf("Create success %s", e.Path))
+		_, _ = color.New(color.FgGreen).Fprint(out, fmt.Sprintf("✅ Created directory %s\n", e.Path))
 	}
 
 	return out, err
