@@ -27,8 +27,56 @@ All Go code must:
 
 ## Documentation
 
+### README.md Updates
 - New functionality must be documented in README.md
 - When refactoring or changing functionality, critically review if README.md needs updates
 - Focus documentation on observable side effects and behavior visible to users
 - Internal implementation changes that don't affect user-facing behavior may not require documentation updates
+
+### Hugo Site Documentation Updates
+When allbctl functionality changes, update the Hugo documentation site:
+
+**Location**: `hugo/site/content/docs/`
+
+**What to update**:
+1. **New commands/subcommands**: Create new markdown files in appropriate section
+2. **Changed behavior**: Update existing documentation pages
+3. **New flags/options**: Add to relevant command documentation
+4. **Examples**: Update code examples to reflect current behavior
+
+**Documentation structure**:
+```
+hugo/site/content/docs/
+├── getting-started/
+│   └── installation.md        # Installation instructions
+├── commands/
+│   └── _index.md             # Commands overview
+├── status/
+│   ├── _index.md             # Status command overview
+│   ├── runtimes.md           # status runtimes subcommand
+│   ├── projects.md           # status projects subcommand
+│   ├── packages.md           # status list-packages subcommand
+│   └── databases.md          # status db subcommand
+└── bootstrap/
+    ├── _index.md             # Bootstrap command overview
+    ├── status.md             # bootstrap status subcommand
+    ├── install.md            # bootstrap install subcommand
+    └── reset.md              # bootstrap reset subcommand
+```
+
+**Testing documentation**:
+```bash
+# Test Hugo site builds
+cd hugo/site
+hugo --minify
+
+# Preview locally
+hugo server --buildDrafts
+```
+
+**Deployment**:
+- Documentation deploys automatically on new releases via GitHub Actions
+- Or manually trigger: Go to Actions → "Deploy Hugo Site to GitHub Pages" → Run workflow
+- Verify at: https://aallbrig.github.io/allbctl/
+
 
