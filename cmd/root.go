@@ -25,6 +25,7 @@ $ allbctl status
 $ allbctl status runtimes              # Show detected programming runtimes
 $ allbctl status projects              # Show git repositories in ~/src
 $ allbctl status list-packages         # Show package counts from all package managers
+$ allbctl status db                    # Show detected databases and their status
 `,
 	Version: Version,
 	Run: func(cmd *cobra.Command, args []string) {
@@ -49,6 +50,7 @@ func init() {
 	StatusCmd.AddCommand(RuntimesCmd)
 	StatusCmd.AddCommand(ListPackagesCmd)
 	StatusCmd.AddCommand(ProjectsCmd)
+	StatusCmd.AddCommand(DbCmd)
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.allbctl.yaml)")
 
