@@ -425,6 +425,9 @@ func printSystemInfo() {
 	if runtimesInline != "" {
 		fmt.Printf("Runtimes:  %s\n", runtimesInline)
 	}
+
+	// Databases summary
+	PrintDatabaseSummaryForStatus()
 	fmt.Println()
 
 	// Network section
