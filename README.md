@@ -2,6 +2,20 @@
 
 `allbctl` is short for allbrightctl and represents a command line interface for computer operations that I (Andrew Allbright) do. This is meant to be a CLI that is used by myself.
 
+**📚 [Full Documentation](https://aallbrig.github.io/allbctl/)** - Complete guide with installation, commands, and examples
+
+### Quick Start
+
+Download the latest release for your platform:
+- **Linux**: [allbctl-linux-amd64](https://github.com/aallbrig/allbctl/releases/latest/download/allbctl-linux-amd64)
+- **macOS**: [allbctl-darwin-amd64](https://github.com/aallbrig/allbctl/releases/latest/download/allbctl-darwin-amd64) | [allbctl-darwin-arm64](https://github.com/aallbrig/allbctl/releases/latest/download/allbctl-darwin-arm64)
+- **Windows**: [allbctl-windows-amd64.exe](https://github.com/aallbrig/allbctl/releases/latest/download/allbctl-windows-amd64.exe)
+
+Or build from source (requires Go 1.20+):
+```bash
+make build
+```
+
 ### Docs
 ```bash
 # Help
