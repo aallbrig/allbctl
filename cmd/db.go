@@ -210,7 +210,9 @@ func findDatabaseFiles(extensions []string) []string {
 		return files
 	}
 
-	filepath.Walk(srcDir, func(path string, info os.FileInfo, err error) error {
+	// Walk the directory, ignoring errors as missing files shouldn't break the detection
+	// nolint:errcheck
+	_ = filepath.Walk(srcDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil
 		}
@@ -302,7 +304,9 @@ func printDatabaseSummary(info *DatabaseInfo) {
 }
 
 func printDatabaseInfo(info *DatabaseInfo, detailed bool) {
-	fmt.Printf("%s:\n", strings.Title(info.Name))
+	// Capitalize first letter (simple replacement for deprecated strings.Title)
+	displayName := strings.ToUpper(info.Name[:1]) + info.Name[1:]
+	fmt.Printf("%s:\n", displayName)
 	fmt.Println("----------------------------------------")
 
 	// Client information
@@ -330,9 +334,12 @@ func printDatabaseInfo(info *DatabaseInfo, detailed bool) {
 			fmt.Printf("  Database Files: (%d found in ~/src)\n", len(info.DatabaseFiles))
 			for _, file := range info.DatabaseFiles {
 				// Convert to relative path from home
-				homeDir, _ := os.UserHomeDir()
-				relPath := strings.Replace(file, homeDir, "~", 1)
-				fmt.Printf("    - %s\n", relPath)
+				if homeDir, err := os.UserHomeDir(); err == nil {
+					relPath := strings.Replace(file, homeDir, "~", 1)
+					fmt.Printf("    - %s\n", relPath)
+				} else {
+					fmt.Printf("    - %s\n", file)
+				}
 			}
 		}
 
