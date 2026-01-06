@@ -46,7 +46,10 @@ allbctl status list-packages       # Summary: just show counts per package manag
 allbctl status list-packages --detail  # Full listing of all packages
 allbctl status list-packages -d    # Short version of --detail
 allbctl status list-packages apt   # List only apt packages (shows command for copy/paste)
+allbctl status list-packages apt --detail  # List apt packages + last 5 installed with timestamps
 allbctl status list-packages npm   # List only npm packages (shows command for copy/paste)
+allbctl status list-packages npm --detail  # List npm packages + last 5 installed with timestamps
+allbctl status list-packages pip --detail  # List pip packages + last 5 installed with timestamps
 allbctl status list-packages flatpak # List only flatpak packages (shows command for copy/paste)
 allbctl status list-packages vagrant # List only vagrant VMs (shows command for copy/paste)
 
