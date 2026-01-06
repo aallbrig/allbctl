@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"runtime"
+	"strings"
 	"testing"
 )
 
@@ -191,5 +192,69 @@ func TestGetCommandForManager_VBoxManage(t *testing.T) {
 	expected := "VBoxManage"
 	if cmd != expected {
 		t.Errorf("Expected command '%s', got '%s'", expected, cmd)
+	}
+}
+
+func TestGetRecentPackages_Apt(t *testing.T) {
+	result := getRecentPackages("apt")
+	_ = result
+}
+
+func TestGetRecentPackages_Dpkg(t *testing.T) {
+	result := getRecentPackages("dpkg")
+	_ = result
+}
+
+func TestGetRecentPackages_Npm(t *testing.T) {
+	result := getRecentPackages("npm")
+	_ = result
+}
+
+func TestGetRecentPackages_Pip(t *testing.T) {
+	result := getRecentPackages("pip")
+	_ = result
+}
+
+func TestGetRecentPackages_UnknownManager(t *testing.T) {
+	result := getRecentPackages("unknown")
+	if result != "" {
+		t.Errorf("Expected empty string for unknown manager, got '%s'", result)
+	}
+}
+
+func TestGetRecentPackagesCommand_Apt(t *testing.T) {
+	cmd := getRecentPackagesCommand("apt")
+	if cmd == "" {
+		t.Error("Expected non-empty command for apt")
+	}
+	if !strings.Contains(cmd, "dpkg.log") {
+		t.Errorf("Expected apt command to contain 'dpkg.log', got '%s'", cmd)
+	}
+}
+
+func TestGetRecentPackagesCommand_Npm(t *testing.T) {
+	cmd := getRecentPackagesCommand("npm")
+	if cmd == "" {
+		t.Error("Expected non-empty command for npm")
+	}
+	if !strings.Contains(cmd, "npm root") {
+		t.Errorf("Expected npm command to contain 'npm root', got '%s'", cmd)
+	}
+}
+
+func TestGetRecentPackagesCommand_Pip(t *testing.T) {
+	cmd := getRecentPackagesCommand("pip")
+	if cmd == "" {
+		t.Error("Expected non-empty command for pip")
+	}
+	if !strings.Contains(cmd, "pkg_resources") {
+		t.Errorf("Expected pip command to contain 'pkg_resources', got '%s'", cmd)
+	}
+}
+
+func TestGetRecentPackagesCommand_UnknownManager(t *testing.T) {
+	cmd := getRecentPackagesCommand("unknown")
+	if cmd != "" {
+		t.Errorf("Expected empty string for unknown manager, got '%s'", cmd)
 	}
 }

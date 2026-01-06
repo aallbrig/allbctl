@@ -161,6 +161,19 @@ func listInstalledPackages(args []string) {
 			fmt.Printf("Packages installed via %s:\n", manager)
 			fmt.Println(pkgs)
 			fmt.Printf("\nCommand: %s\n", getQueryCommand(manager))
+
+			// Show recent installations if --detail flag is used
+			if detailFlag {
+				recent := getRecentPackages(manager)
+				if recent != "" {
+					fmt.Printf("\nLast 5 installed packages:\n")
+					fmt.Print(recent)
+					recentCmd := getRecentPackagesCommand(manager)
+					if recentCmd != "" {
+						fmt.Printf("\nCommand: %s\n", recentCmd)
+					}
+				}
+			}
 		} else {
 			fmt.Printf("No packages found for %s\n", manager)
 			fmt.Printf("\nCommand: %s\n", getQueryCommand(manager))
@@ -369,6 +382,95 @@ func runCmd(command string) string {
 		return fmt.Sprintf("Error running %s: %v", command, err)
 	}
 	return string(output)
+}
+
+func getRecentPackages(manager string) string {
+	const maxRecent = 5
+
+	switch manager {
+	case "apt", "dpkg":
+		// Read dpkg logs to find recent installations
+		// Use sh -c to properly handle pipes
+		cmd := exec.Command("sh", "-c", "cat /var/log/dpkg.log /var/log/dpkg.log.1 2>/dev/null | grep ' install ' | tail -5")
+		output, err := cmd.CombinedOutput()
+		if err != nil || strings.TrimSpace(string(output)) == "" {
+			return ""
+		}
+
+		logs := string(output)
+		var result strings.Builder
+		lines := strings.Split(strings.TrimSpace(logs), "\n")
+		for _, line := range lines {
+			// Format: "2026-01-06 17:08:49 install sqlite3:amd64 <none> 3.45.1-1ubuntu2.5"
+			parts := strings.Fields(line)
+			if len(parts) >= 5 {
+				date := parts[0]
+				time := parts[1]
+				pkgName := parts[3]
+				// Remove architecture suffix
+				if idx := strings.Index(pkgName, ":"); idx > 0 {
+					pkgName = pkgName[:idx]
+				}
+				result.WriteString(fmt.Sprintf("  %s %s - %s\n", date, time, pkgName))
+			}
+		}
+		return result.String()
+
+	case "npm":
+		// Use filesystem timestamps for npm packages
+		cmd := exec.Command("sh", "-c", "ls -lt $(npm root -g 2>/dev/null) 2>/dev/null | grep '^d' | head -5")
+		output, err := cmd.CombinedOutput()
+		if err != nil || strings.TrimSpace(string(output)) == "" {
+			return ""
+		}
+
+		var result strings.Builder
+		lines := strings.Split(strings.TrimSpace(string(output)), "\n")
+		for _, line := range lines {
+			// Format: "drwxrwxr-x 4 user user 4096 Dec 31 13:54 puppeteer-mcp-server"
+			parts := strings.Fields(line)
+			if len(parts) >= 9 {
+				month := parts[5]
+				day := parts[6]
+				timeOrYear := parts[7]
+				pkgName := parts[8]
+				result.WriteString(fmt.Sprintf("  %s %s %s - %s\n", month, day, timeOrYear, pkgName))
+			}
+		}
+		return result.String()
+
+	case "pip":
+		// Use Python to get package timestamps
+		// Suppress pkg_resources deprecation warning with -W ignore
+		cmd := exec.Command("python3", "-W", "ignore::DeprecationWarning", "-c", "import pkg_resources; import os; pkgs = [(p.project_name, p.version, os.stat(p.location).st_mtime) for p in pkg_resources.working_set]; import time; pkgs_sorted = sorted(pkgs, key=lambda x: x[2], reverse=True); [print(f'{time.strftime(\"%Y-%m-%d %H:%M:%S\", time.localtime(p[2]))} - {p[0]} ({p[1]})') for p in pkgs_sorted[:5]]")
+		output, err := cmd.CombinedOutput()
+		if err != nil || strings.TrimSpace(string(output)) == "" {
+			return ""
+		}
+
+		var result strings.Builder
+		lines := strings.Split(strings.TrimSpace(string(output)), "\n")
+		for _, line := range lines {
+			result.WriteString("  " + line + "\n")
+		}
+		return result.String()
+
+	default:
+		return ""
+	}
+}
+
+func getRecentPackagesCommand(manager string) string {
+	switch manager {
+	case "apt", "dpkg":
+		return "cat /var/log/dpkg.log /var/log/dpkg.log.1 2>/dev/null | grep ' install ' | tail -5"
+	case "npm":
+		return "ls -lt $(npm root -g) 2>/dev/null | grep '^d' | head -5"
+	case "pip":
+		return "python3 -c \"import pkg_resources; import os; pkgs = [(p.project_name, p.version, os.stat(p.location).st_mtime) for p in pkg_resources.working_set]; import time; pkgs_sorted = sorted(pkgs, key=lambda x: x[2], reverse=True); [print(f'{time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(p[2]))} - {p[0]} ({p[1]})') for p in pkgs_sorted[:5]]\""
+	default:
+		return ""
+	}
 }
 
 func countPackages(manager string, output string) int {
