@@ -361,15 +361,76 @@ func PrintDatabaseSummaryForStatus() {
 
 	for dbName := range databaseConfigs {
 		if info := detectDatabase(dbName); info != nil {
-			status := ""
-			if info.IsRunning {
-				status = " (running)"
+			// Extract version number
+			version := extractDatabaseVersion(dbName, info.ClientVersion)
+
+			var dbStr string
+			if version != "" {
+				versionStr := formatVersionWithUpdate(dbName, version)
+				dbStr = fmt.Sprintf("%s (%s)", dbName, versionStr)
+			} else {
+				dbStr = dbName
 			}
-			detected = append(detected, dbName+status)
+
+			if info.IsRunning {
+				dbStr += " [running]"
+			}
+
+			detected = append(detected, dbStr)
 		}
 	}
 
 	if len(detected) > 0 {
 		fmt.Printf("Databases: %s\n", strings.Join(detected, ", "))
 	}
+}
+
+// extractDatabaseVersion extracts version number from database version output
+func extractDatabaseVersion(dbName, versionOutput string) string {
+	output := strings.TrimSpace(versionOutput)
+
+	switch dbName {
+	case "sqlite3":
+		// "3.45.1 2024-01-30 16:01:20 ..." -> "3.45.1"
+		parts := strings.Fields(output)
+		if len(parts) > 0 {
+			return parts[0]
+		}
+	case "mysql", "mariadb":
+		// "mysql  Ver 8.0.39 for Linux..." -> "8.0.39"
+		if strings.Contains(output, "Ver ") {
+			parts := strings.Split(output, "Ver ")
+			if len(parts) >= 2 {
+				versionPart := strings.Fields(parts[1])
+				if len(versionPart) > 0 {
+					return versionPart[0]
+				}
+			}
+		}
+	case "postgres":
+		// "psql (PostgreSQL) 16.6" -> "16.6"
+		if strings.Contains(output, "(PostgreSQL)") {
+			parts := strings.Split(output, "(PostgreSQL)")
+			if len(parts) >= 2 {
+				version := strings.TrimSpace(parts[1])
+				return strings.Trim(version, "()")
+			}
+		}
+	case "mongodb":
+		// "2.3.7" or similar
+		parts := strings.Fields(output)
+		for _, part := range parts {
+			if strings.Contains(part, ".") && (part[0] >= '0' && part[0] <= '9') {
+				return part
+			}
+		}
+	case "redis":
+		// "redis-cli 7.0.15" -> "7.0.15"
+		parts := strings.Fields(output)
+		if len(parts) >= 2 {
+			return parts[1]
+		}
+	}
+
+	return ""
 }

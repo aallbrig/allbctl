@@ -132,18 +132,54 @@ func PrintPackageSummary() {
 		return
 	}
 
+	// Parallelize update checks using goroutines and channels
+	type updateResult struct {
+		manager string
+		count   int
+	}
+
+	updateChan := make(chan updateResult, len(managers))
+
+	// Launch goroutines to check updates in parallel
+	for _, m := range managers {
+		go func(manager string) {
+			updateCount, _ := checkPackageUpdates(manager)
+			updateChan <- updateResult{manager: manager, count: updateCount}
+		}(m)
+	}
+
+	// Collect results
+	updateMap := make(map[string]int)
+	for i := 0; i < len(managers); i++ {
+		result := <-updateChan
+		updateMap[result.manager] = result.count
+	}
+	close(updateChan)
+
 	// Summary mode: just count packages with indentation for status output
 	for _, m := range managers {
 		pkgs := getPackages(m)
 		if pkgs != "" {
 			count := countPackages(m, pkgs)
+			updateCount := updateMap[m]
+
+			var output string
 			if m == "ollama" {
-				fmt.Printf("  %-15s %d models\n", m+":", count)
+				if updateCount > 0 {
+					output = fmt.Sprintf("  %-15s %d models (%d want updates)\n", m+":", count, updateCount)
+				} else {
+					output = fmt.Sprintf("  %-15s %d models\n", m+":", count)
+				}
 			} else if m == "vagrant" || m == "vboxmanage" {
-				fmt.Printf("  %-15s %d VMs\n", m+":", count)
+				output = fmt.Sprintf("  %-15s %d VMs\n", m+":", count)
 			} else {
-				fmt.Printf("  %-15s %d packages\n", m+":", count)
+				if updateCount > 0 {
+					output = fmt.Sprintf("  %-15s %d packages (%d want updates)\n", m+":", count, updateCount)
+				} else {
+					output = fmt.Sprintf("  %-15s %d packages\n", m+":", count)
+				}
 			}
+			fmt.Print(output)
 		}
 	}
 }
