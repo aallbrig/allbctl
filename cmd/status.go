@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/shirou/gopsutil/v4/cpu"
+	"github.com/shirou/gopsutil/v4/disk"
 	"github.com/shirou/gopsutil/v4/host"
 	"github.com/shirou/gopsutil/v4/mem"
 	"github.com/spf13/cobra"
@@ -417,6 +418,13 @@ func printSystemInfo() {
 	fmt.Printf("GPU(s):\n")
 	printGPUInfo(gpuDetails)
 	fmt.Printf("Memory:    %s\n", memStr)
+
+	// Disks
+	diskInfo := getDiskInfo()
+	if diskInfo != "" {
+		fmt.Printf("Disks:     %s\n", diskInfo)
+	}
+
 	fmt.Printf("Hardware:  %s\n", hwStr)
 
 	// Runtimes (using shared function)
@@ -431,6 +439,10 @@ func printSystemInfo() {
 
 	// Network section
 	printNetworkInfo()
+	fmt.Println()
+
+	// Ports section
+	printPortsSummary()
 	fmt.Println()
 
 	// Browsers section
@@ -1734,4 +1746,60 @@ func extractVersionManagerVersion(manager, output string) string {
 	}
 
 	return firstLine
+}
+
+// getDiskInfo gets disk information
+func getDiskInfo() string {
+	partitions, err := disk.Partitions(false)
+	if err != nil {
+		return ""
+	}
+
+	diskCount := 0
+	totalSpace := uint64(0)
+	seen := make(map[string]bool)
+
+	for _, partition := range partitions {
+		// Skip special filesystems
+		if strings.HasPrefix(partition.Mountpoint, "/dev") ||
+			strings.HasPrefix(partition.Mountpoint, "/sys") ||
+			strings.HasPrefix(partition.Mountpoint, "/proc") ||
+			strings.HasPrefix(partition.Mountpoint, "/run") {
+			continue
+		}
+
+		// Get usage stats
+		usage, err := disk.Usage(partition.Mountpoint)
+		if err != nil {
+			continue
+		}
+
+		// Track unique devices
+		if !seen[partition.Device] {
+			seen[partition.Device] = true
+			diskCount++
+		}
+
+		totalSpace += usage.Total
+	}
+
+	if diskCount == 0 {
+		return ""
+	}
+
+	totalGB := float64(totalSpace) / 1e9
+	if diskCount == 1 {
+		return fmt.Sprintf("%d disk (%.1f GB)", diskCount, totalGB)
+	}
+	return fmt.Sprintf("%d disks (%.1f GB total)", diskCount, totalGB)
+}
+
+// printPortsSummary prints a summary of listening ports
+func printPortsSummary() {
+	info := gatherPortsInfo()
+	total := info.TCPPorts + info.UDPPorts
+
+	if total > 0 {
+		fmt.Printf("Ports:     %d listening (TCP: %d, UDP: %d)\n", total, info.TCPPorts, info.UDPPorts)
+	}
 }
