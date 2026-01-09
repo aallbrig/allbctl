@@ -173,7 +173,8 @@ func detectRuntimesInline() string {
 			// Extract just the version number for cleaner display
 			version := extractVersionNumber(rt.Version)
 			if version != "" {
-				parts = append(parts, fmt.Sprintf("%s (%s)", rt.Name, version))
+				versionStr := formatVersionWithUpdate(rt.Name, version)
+				parts = append(parts, fmt.Sprintf("%s (%s)", rt.Name, versionStr))
 			} else {
 				parts = append(parts, rt.Name)
 			}

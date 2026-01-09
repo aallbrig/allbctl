@@ -53,6 +53,10 @@ allbctl status list-packages pip --detail  # List pip packages + last 5 installe
 allbctl status list-packages flatpak # List only flatpak packages (shows command for copy/paste)
 allbctl status list-packages vagrant # List only vagrant VMs (shows command for copy/paste)
 
+allbctl status network             # Enhanced network information with VPN detection
+                                    # Shows primary interface, WiFi details, VPN status, DNS, 
+                                    # connectivity check, and public IP
+
 # Computer setup (bootstrap development environment)
 allbctl computer-setup status      # Check what's set up and what's missing
 allbctl computer-setup install     # Install/configure dev environment automatically
@@ -99,20 +103,38 @@ The `status` and `cs status` commands provide a neofetch-inspired view of your s
   - Compute capability for NVIDIA GPUs
   - Clock speeds (graphics and memory) for NVIDIA GPUs
   - Supports nvidia-smi for NVIDIA GPUs and fallback to platform-specific detection (lspci on Linux, system_profiler on macOS, wmic on Windows)
-- **Memory**: Memory usage
+- **Memory**: Total installed memory (e.g., "33.3 GiB")
 - **Runtimes**: Detected programming languages with versions (e.g., "Python (3.12.3), Node.js (24.11.1), Go (1.25.5)")
-- **Network**: Network interfaces, router IP, connection type
+  - **NEW**: Shows available updates with arrow notation (e.g., "Node.js (24.11.1 → 24.12.0 (LTS))")
+  - **NEW**: Highlights LTS versions for Node.js and Java
+- **Databases**: Detected databases with versions (e.g., "sqlite3 (3.45.1)")
+  - **NEW**: Shows version information with update arrows
+- **Network**: Network interfaces, router IP, connection type, and VPN status
+  - **NEW**: Enhanced formatting with colons for readability
+  - **NEW**: VPN detection and status (e.g., "VPN: ✓ Active (tun0)")
+  - **NEW**: Available as enhanced subcommand: `allbctl status network`
+    - **Primary Interface**: Shows main interface with WiFi details (SSID, frequency, signal strength, speed)
+    - **VPN Status**: Prominently displays active VPN tunnels with gateway info
+    - **DNS Configuration**: System and VPN DNS servers separately
+    - **Connectivity**: Internet check and public IP address
+    - **WiFi Quality**: Signal strength with quality rating (Excellent/Good/Fair/Poor)
+    - **Other Interfaces**: All other network interfaces with status
 - **Browsers**: Detected web browsers with versions (e.g., "Chrome (143.0.7499.109), Firefox (146.0), Edge (143.0.3650.80)")
   - Supports Chrome, Chromium, Firefox, Edge, Safari, Brave, Opera, Vivaldi
   - Cross-platform detection for Linux, macOS, and Windows
   - Only displays browsers that are actually installed
 - **AI Agents**: Detected AI coding assistants with versions (e.g., "copilot (0.0.365), claude (2.0.76)")
+  - Infrastructure ready for update detection
 - **Package Managers**: 
   - **System**: System package managers with versions (e.g., "apt (2.8.3), flatpak (1.14.6)")
   - **Language**: Language version managers with versions (e.g., "nvm (0.40.3), pyenv (2.3.0)")
-  - **Runtime**: Runtime package managers with versions (e.g., "npm (11.6.2), pip (24.0)")
-- **Runtimes**: Detected programming language runtimes with versions (e.g., "Python (3.12.3), Node.js (24.11.1)")
-- **Packages**: Summary of installed packages per package manager
+  - **Runtime**: Runtime package managers with versions (e.g., "npm (11.6.2 → 11.7.0), pip (24.0)")
+  - **NEW**: Shows available updates with arrow notation where applicable
+- **Packages**: Summary of installed packages per package manager with update information
+  - Shows package counts and available updates (e.g., "apt: 1969 packages (34 want updates)")
+  - Supported package managers: apt, flatpak, snap, dnf, yum, pacman, brew, choco, winget, npm, pip, pipx
+  - Only displays update counts when updates are available
+  - **NEW**: Parallelized update checks for faster performance
 - **Projects**: Git repositories in ~/src shown as `X total (Y dirty)` with:
   - Last 5 recently touched repos in a table format
   - Three aligned columns: path (with `*` for dirty), remote origin (user/repo), and last modified date/time

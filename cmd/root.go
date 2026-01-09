@@ -51,6 +51,7 @@ func init() {
 	StatusCmd.AddCommand(ListPackagesCmd)
 	StatusCmd.AddCommand(ProjectsCmd)
 	StatusCmd.AddCommand(DbCmd)
+	StatusCmd.AddCommand(NetworkCmd)
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.allbctl.yaml)")
 

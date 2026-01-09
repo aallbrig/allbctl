@@ -12,7 +12,6 @@ import (
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/host"
 	"github.com/shirou/gopsutil/v4/mem"
-	"github.com/shirou/gopsutil/v4/net"
 	"github.com/spf13/cobra"
 )
 
@@ -390,11 +389,11 @@ func printSystemInfo() {
 	// GPU Info - get detailed information
 	gpuDetails := getDetailedGPUInfo()
 
-	// Memory using gopsutil
+	// Memory using gopsutil - show only total installed
 	memInfo, err := mem.VirtualMemory()
 	memStr := "Unknown"
 	if err == nil {
-		memStr = fmt.Sprintf("%.1f GiB / %.1f GiB", float64(memInfo.Used)/1e9, float64(memInfo.Total)/1e9)
+		memStr = fmt.Sprintf("%.1f GiB", float64(memInfo.Total)/1e9)
 	}
 
 	// Hardware Info
@@ -431,7 +430,6 @@ func printSystemInfo() {
 	fmt.Println()
 
 	// Network section
-	fmt.Println("Network:")
 	printNetworkInfo()
 	fmt.Println()
 
@@ -940,40 +938,55 @@ func detectTerminal() string {
 	return "Unknown"
 }
 
-// printNetworkInfo prints network interface information
+// printNetworkInfo prints network information for status command
 func printNetworkInfo() {
-	netIfaces, err := net.Interfaces()
-	if err != nil {
-		fmt.Printf("  Unable to detect network interfaces\n")
-		return
-	}
+	// Use the enhanced network details function from network.go
+	PrintNetworkInfo()
+}
 
-	for _, iface := range netIfaces {
-		if len(iface.Addrs) == 0 {
-			continue
-		}
-		for _, addr := range iface.Addrs {
-			if strings.Contains(addr.Addr, ":") {
-				continue // skip IPv6
-			}
-			fmt.Printf("  %s: %s\n", iface.Name, addr.Addr)
-		}
-	}
+// getRouterIP gets the default gateway IP (exported for network subcommand)
+func getRouterIP() string {
+	osType := runtime.GOOS
 
-	// Try to get router IP (Linux only)
-	routerIP := "Unknown"
-	if runtime.GOOS == "linux" {
+	switch osType {
+	case "linux":
 		cmd := exec.Command("sh", "-c", "ip route | grep default | awk '{print $3}' | head -n1")
 		out, err := cmd.Output()
 		if err == nil && len(out) > 0 {
-			routerIP = strings.TrimSpace(string(out))
+			return strings.TrimSpace(string(out))
+		}
+	case "darwin":
+		cmd := exec.Command("route", "-n", "get", "default")
+		out, err := cmd.Output()
+		if err == nil {
+			for _, line := range strings.Split(string(out), "\n") {
+				if strings.Contains(line, "gateway:") {
+					parts := strings.Fields(line)
+					if len(parts) >= 2 {
+						return parts[1]
+					}
+				}
+			}
+		}
+	case "windows":
+		cmd := exec.Command("ipconfig")
+		out, err := cmd.Output()
+		if err == nil {
+			for _, line := range strings.Split(string(out), "\n") {
+				if strings.Contains(line, "Default Gateway") {
+					parts := strings.Split(line, ":")
+					if len(parts) >= 2 {
+						gateway := strings.TrimSpace(parts[1])
+						if gateway != "" {
+							return gateway
+						}
+					}
+				}
+			}
 		}
 	}
-	fmt.Printf("  Router:    %s\n", routerIP)
 
-	// Internet type
-	internetType := getInternetType()
-	fmt.Printf("  Type:      %s\n", internetType)
+	return "Unknown"
 }
 
 // getInternetType tries to determine the type of internet connection
@@ -1193,7 +1206,8 @@ func printAIAgents() {
 	var agentStrings []string
 	for _, agent := range agents {
 		if agent.Version != "" {
-			agentStrings = append(agentStrings, fmt.Sprintf("%s (%s)", agent.Name, agent.Version))
+			versionStr := formatVersionWithUpdate(agent.Name, agent.Version)
+			agentStrings = append(agentStrings, fmt.Sprintf("%s (%s)", agent.Name, versionStr))
 		} else {
 			agentStrings = append(agentStrings, agent.Name)
 		}
@@ -1216,7 +1230,8 @@ func printPackageManagers() {
 		if exists("apt-get") {
 			version := getPackageManagerVersion("apt")
 			if version != "" {
-				systemAvailable = append(systemAvailable, fmt.Sprintf("apt (%s)", version))
+				versionStr := formatVersionWithUpdate("apt", version)
+				systemAvailable = append(systemAvailable, fmt.Sprintf("apt (%s)", versionStr))
 			} else {
 				systemAvailable = append(systemAvailable, "apt")
 			}
@@ -1224,7 +1239,8 @@ func printPackageManagers() {
 		if exists("flatpak") {
 			version := getPackageManagerVersion("flatpak")
 			if version != "" {
-				systemAvailable = append(systemAvailable, fmt.Sprintf("flatpak (%s)", version))
+				versionStr := formatVersionWithUpdate("flatpak", version)
+				systemAvailable = append(systemAvailable, fmt.Sprintf("flatpak (%s)", versionStr))
 			} else {
 				systemAvailable = append(systemAvailable, "flatpak")
 			}
@@ -1232,7 +1248,8 @@ func printPackageManagers() {
 		if exists("snap") {
 			version := getPackageManagerVersion("snap")
 			if version != "" {
-				systemAvailable = append(systemAvailable, fmt.Sprintf("snap (%s)", version))
+				versionStr := formatVersionWithUpdate("snap", version)
+				systemAvailable = append(systemAvailable, fmt.Sprintf("snap (%s)", versionStr))
 			} else {
 				systemAvailable = append(systemAvailable, "snap")
 			}
@@ -1240,7 +1257,8 @@ func printPackageManagers() {
 		if exists("dnf") {
 			version := getPackageManagerVersion("dnf")
 			if version != "" {
-				systemAvailable = append(systemAvailable, fmt.Sprintf("dnf (%s)", version))
+				versionStr := formatVersionWithUpdate("dnf", version)
+				systemAvailable = append(systemAvailable, fmt.Sprintf("dnf (%s)", versionStr))
 			} else {
 				systemAvailable = append(systemAvailable, "dnf")
 			}
@@ -1248,7 +1266,8 @@ func printPackageManagers() {
 		if exists("yum") {
 			version := getPackageManagerVersion("yum")
 			if version != "" {
-				systemAvailable = append(systemAvailable, fmt.Sprintf("yum (%s)", version))
+				versionStr := formatVersionWithUpdate("yum", version)
+				systemAvailable = append(systemAvailable, fmt.Sprintf("yum (%s)", versionStr))
 			} else {
 				systemAvailable = append(systemAvailable, "yum")
 			}
@@ -1256,7 +1275,8 @@ func printPackageManagers() {
 		if exists("pacman") {
 			version := getPackageManagerVersion("pacman")
 			if version != "" {
-				systemAvailable = append(systemAvailable, fmt.Sprintf("pacman (%s)", version))
+				versionStr := formatVersionWithUpdate("pacman", version)
+				systemAvailable = append(systemAvailable, fmt.Sprintf("pacman (%s)", versionStr))
 			} else {
 				systemAvailable = append(systemAvailable, "pacman")
 			}
@@ -1265,7 +1285,8 @@ func printPackageManagers() {
 		if exists("brew") {
 			version := getPackageManagerVersion("brew")
 			if version != "" {
-				systemAvailable = append(systemAvailable, fmt.Sprintf("homebrew (%s)", version))
+				versionStr := formatVersionWithUpdate("brew", version)
+				systemAvailable = append(systemAvailable, fmt.Sprintf("homebrew (%s)", versionStr))
 			} else {
 				systemAvailable = append(systemAvailable, "homebrew")
 			}
@@ -1274,7 +1295,8 @@ func printPackageManagers() {
 		if exists("choco") {
 			version := getPackageManagerVersion("choco")
 			if version != "" {
-				systemAvailable = append(systemAvailable, fmt.Sprintf("chocolatey (%s)", version))
+				versionStr := formatVersionWithUpdate("choco", version)
+				systemAvailable = append(systemAvailable, fmt.Sprintf("chocolatey (%s)", versionStr))
 			} else {
 				systemAvailable = append(systemAvailable, "chocolatey")
 			}
@@ -1282,7 +1304,8 @@ func printPackageManagers() {
 		if exists("winget") {
 			version := getPackageManagerVersion("winget")
 			if version != "" {
-				systemAvailable = append(systemAvailable, fmt.Sprintf("winget (%s)", version))
+				versionStr := formatVersionWithUpdate("winget", version)
+				systemAvailable = append(systemAvailable, fmt.Sprintf("winget (%s)", versionStr))
 			} else {
 				systemAvailable = append(systemAvailable, "winget")
 			}
@@ -1293,7 +1316,8 @@ func printPackageManagers() {
 	if checkNvmInstalled() {
 		version := getVersionManagerVersion("nvm")
 		if version != "" {
-			languageAvailable = append(languageAvailable, fmt.Sprintf("nvm (%s)", version))
+			versionStr := formatVersionWithUpdate("nvm", version)
+			languageAvailable = append(languageAvailable, fmt.Sprintf("nvm (%s)", versionStr))
 		} else {
 			languageAvailable = append(languageAvailable, "nvm")
 		}
@@ -1301,7 +1325,8 @@ func printPackageManagers() {
 	if exists("pyenv") {
 		version := getVersionManagerVersion("pyenv")
 		if version != "" {
-			languageAvailable = append(languageAvailable, fmt.Sprintf("pyenv (%s)", version))
+			versionStr := formatVersionWithUpdate("pyenv", version)
+			languageAvailable = append(languageAvailable, fmt.Sprintf("pyenv (%s)", versionStr))
 		} else {
 			languageAvailable = append(languageAvailable, "pyenv")
 		}
@@ -1309,7 +1334,8 @@ func printPackageManagers() {
 	if exists("rbenv") {
 		version := getVersionManagerVersion("rbenv")
 		if version != "" {
-			languageAvailable = append(languageAvailable, fmt.Sprintf("rbenv (%s)", version))
+			versionStr := formatVersionWithUpdate("rbenv", version)
+			languageAvailable = append(languageAvailable, fmt.Sprintf("rbenv (%s)", versionStr))
 		} else {
 			languageAvailable = append(languageAvailable, "rbenv")
 		}
@@ -1317,7 +1343,8 @@ func printPackageManagers() {
 	if exists("jenv") {
 		version := getVersionManagerVersion("jenv")
 		if version != "" {
-			languageAvailable = append(languageAvailable, fmt.Sprintf("jenv (%s)", version))
+			versionStr := formatVersionWithUpdate("jenv", version)
+			languageAvailable = append(languageAvailable, fmt.Sprintf("jenv (%s)", versionStr))
 		} else {
 			languageAvailable = append(languageAvailable, "jenv")
 		}
@@ -1325,7 +1352,8 @@ func printPackageManagers() {
 	if exists("rustup") {
 		version := getVersionManagerVersion("rustup")
 		if version != "" {
-			languageAvailable = append(languageAvailable, fmt.Sprintf("rustup (%s)", version))
+			versionStr := formatVersionWithUpdate("rustup", version)
+			languageAvailable = append(languageAvailable, fmt.Sprintf("rustup (%s)", versionStr))
 		} else {
 			languageAvailable = append(languageAvailable, "rustup")
 		}
@@ -1333,7 +1361,8 @@ func printPackageManagers() {
 	if exists("asdf") {
 		version := getVersionManagerVersion("asdf")
 		if version != "" {
-			languageAvailable = append(languageAvailable, fmt.Sprintf("asdf (%s)", version))
+			versionStr := formatVersionWithUpdate("asdf", version)
+			languageAvailable = append(languageAvailable, fmt.Sprintf("asdf (%s)", versionStr))
 		} else {
 			languageAvailable = append(languageAvailable, "asdf")
 		}
@@ -1345,7 +1374,8 @@ func printPackageManagers() {
 		if _, err := os.Stat(sdkmanInit); err == nil {
 			version := getVersionManagerVersion("sdkman")
 			if version != "" {
-				languageAvailable = append(languageAvailable, fmt.Sprintf("sdkman (%s)", version))
+				versionStr := formatVersionWithUpdate("sdkman", version)
+				languageAvailable = append(languageAvailable, fmt.Sprintf("sdkman (%s)", versionStr))
 			} else {
 				languageAvailable = append(languageAvailable, "sdkman")
 			}
@@ -1356,7 +1386,8 @@ func printPackageManagers() {
 	if exists("npm") {
 		version := getPackageManagerVersion("npm")
 		if version != "" {
-			runtimeAvailable = append(runtimeAvailable, fmt.Sprintf("npm (%s)", version))
+			versionStr := formatVersionWithUpdate("npm", version)
+			runtimeAvailable = append(runtimeAvailable, fmt.Sprintf("npm (%s)", versionStr))
 		} else {
 			runtimeAvailable = append(runtimeAvailable, "npm")
 		}
@@ -1364,7 +1395,8 @@ func printPackageManagers() {
 	if exists("pip") || exists("pip3") {
 		version := getPackageManagerVersion("pip")
 		if version != "" {
-			runtimeAvailable = append(runtimeAvailable, fmt.Sprintf("pip (%s)", version))
+			versionStr := formatVersionWithUpdate("pip", version)
+			runtimeAvailable = append(runtimeAvailable, fmt.Sprintf("pip (%s)", versionStr))
 		} else {
 			runtimeAvailable = append(runtimeAvailable, "pip")
 		}
@@ -1372,7 +1404,8 @@ func printPackageManagers() {
 	if exists("pipx") {
 		version := getPackageManagerVersion("pipx")
 		if version != "" {
-			runtimeAvailable = append(runtimeAvailable, fmt.Sprintf("pipx (%s)", version))
+			versionStr := formatVersionWithUpdate("pipx", version)
+			runtimeAvailable = append(runtimeAvailable, fmt.Sprintf("pipx (%s)", versionStr))
 		} else {
 			runtimeAvailable = append(runtimeAvailable, "pipx")
 		}
@@ -1380,7 +1413,8 @@ func printPackageManagers() {
 	if exists("gem") {
 		version := getPackageManagerVersion("gem")
 		if version != "" {
-			runtimeAvailable = append(runtimeAvailable, fmt.Sprintf("gem (%s)", version))
+			versionStr := formatVersionWithUpdate("gem", version)
+			runtimeAvailable = append(runtimeAvailable, fmt.Sprintf("gem (%s)", versionStr))
 		} else {
 			runtimeAvailable = append(runtimeAvailable, "gem")
 		}
@@ -1388,7 +1422,8 @@ func printPackageManagers() {
 	if exists("cargo") {
 		version := getPackageManagerVersion("cargo")
 		if version != "" {
-			runtimeAvailable = append(runtimeAvailable, fmt.Sprintf("cargo (%s)", version))
+			versionStr := formatVersionWithUpdate("cargo", version)
+			runtimeAvailable = append(runtimeAvailable, fmt.Sprintf("cargo (%s)", versionStr))
 		} else {
 			runtimeAvailable = append(runtimeAvailable, "cargo")
 		}
@@ -1396,7 +1431,8 @@ func printPackageManagers() {
 	if exists("go") {
 		version := getPackageManagerVersion("go")
 		if version != "" {
-			runtimeAvailable = append(runtimeAvailable, fmt.Sprintf("go (%s)", version))
+			versionStr := formatVersionWithUpdate("go", version)
+			runtimeAvailable = append(runtimeAvailable, fmt.Sprintf("go (%s)", versionStr))
 		} else {
 			runtimeAvailable = append(runtimeAvailable, "go")
 		}
@@ -1406,7 +1442,8 @@ func printPackageManagers() {
 	if exists("VBoxManage") {
 		version := getPackageManagerVersion("vboxmanage")
 		if version != "" {
-			infrastructureAvailable = append(infrastructureAvailable, fmt.Sprintf("VBoxManage (%s)", version))
+			versionStr := formatVersionWithUpdate("vboxmanage", version)
+			infrastructureAvailable = append(infrastructureAvailable, fmt.Sprintf("VBoxManage (%s)", versionStr))
 		} else {
 			infrastructureAvailable = append(infrastructureAvailable, "VBoxManage")
 		}
