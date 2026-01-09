@@ -143,7 +143,7 @@ func PrintPackageSummary() {
 	// Launch goroutines to check updates in parallel
 	for _, m := range managers {
 		go func(manager string) {
-			updateCount, _ := checkPackageUpdates(manager)
+			updateCount, _ := checkPackageUpdates(manager) //nolint:errcheck
 			updateChan <- updateResult{manager: manager, count: updateCount}
 		}(m)
 	}
@@ -421,8 +421,6 @@ func runCmd(command string) string {
 }
 
 func getRecentPackages(manager string) string {
-	const maxRecent = 5
-
 	switch manager {
 	case "apt", "dpkg":
 		// Read dpkg logs to find recent installations

@@ -335,7 +335,7 @@ func getWiFiDetails(ifaceName string) *WiFiInfo {
 
 			// Determine quality
 			signal := 0
-			fmt.Sscanf(signalDBm, "%d", &signal)
+			_, _ = fmt.Sscanf(signalDBm, "%d", &signal) //nolint:errcheck
 			if signal >= -50 {
 				info.Quality = "Excellent"
 			} else if signal >= -60 {
@@ -366,7 +366,7 @@ func getWiFiDetails(ifaceName string) *WiFiInfo {
 	// Determine WiFi standard from frequency
 	if info.Frequency != "" {
 		freq := 0.0
-		fmt.Sscanf(info.Frequency, "%f", &freq)
+		_, _ = fmt.Sscanf(info.Frequency, "%f", &freq) //nolint:errcheck
 		if freq >= 5.0 {
 			info.Standard = "802.11ac/ax"
 		} else if freq >= 2.4 {

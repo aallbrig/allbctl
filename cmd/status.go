@@ -1001,47 +1001,6 @@ func getRouterIP() string {
 	return "Unknown"
 }
 
-// getInternetType tries to determine the type of internet connection
-func getInternetType() string {
-	if runtime.GOOS == "linux" {
-		// Try nmcli first
-		cmd := exec.Command("sh", "-c", "nmcli -t -f TYPE,DEVICE,STATE,CONNECTION dev | grep ':connected' | grep '^wifi:'")
-		out, err := cmd.Output()
-		if err == nil && len(out) > 0 {
-			// Get WiFi device name
-			fields := strings.SplitN(strings.TrimSpace(string(out)), ":", 4)
-			if len(fields) >= 2 {
-				iface := fields[1]
-				// Try iw to get protocol
-				cmd2 := exec.Command("iw", "dev", iface, "link")
-				out2, err2 := cmd2.Output()
-				if err2 == nil {
-					for _, line := range strings.Split(string(out2), "\n") {
-						if strings.Contains(line, "802.11") {
-							proto := strings.TrimSpace(line)
-							if strings.Contains(proto, "802.11ax") {
-								return "WiFi 6/6E (802.11ax)"
-							} else if strings.Contains(proto, "802.11ac") {
-								return "WiFi 5 (802.11ac)"
-							} else if strings.Contains(proto, "802.11n") {
-								return "WiFi 4 (802.11n)"
-							}
-						}
-					}
-				}
-			}
-			return "WiFi (unknown standard)"
-		}
-		// Check for Ethernet
-		cmd = exec.Command("sh", "-c", "nmcli -t -f TYPE,STATE dev | grep '^ethernet:connected'")
-		out, err = cmd.Output()
-		if err == nil && len(out) > 0 {
-			return "Ethernet"
-		}
-	}
-	return "Unknown"
-}
-
 // AIAgent represents an AI coding assistant
 type AIAgent struct {
 	Name    string
