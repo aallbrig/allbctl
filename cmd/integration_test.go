@@ -211,9 +211,8 @@ func TestStatusCommandSections(t *testing.T) {
 
 	// Verify documented sections exist
 	expectedSections := []string{
-		"Host:",
 		"Network:",
-		"Computer Setup:",
+		"Ports:",
 		"Package Managers:",
 		"Packages:",
 	}

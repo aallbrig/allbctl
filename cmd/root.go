@@ -26,6 +26,12 @@ $ allbctl status runtimes              # Show detected programming runtimes
 $ allbctl status projects              # Show git repositories in ~/src
 $ allbctl status list-packages         # Show package counts from all package managers
 $ allbctl status db                    # Show detected databases and their status
+$ allbctl status network               # Show network interface information
+$ allbctl status containers            # Show container/virtualization info
+$ allbctl status security              # Show SSH keys, GPG keys, and keyring
+$ allbctl status systemctl             # Show systemd service counts
+$ allbctl status git                   # Show git global configuration
+$ allbctl status ports                 # Show listening ports
 `,
 	Version: Version,
 	Run: func(cmd *cobra.Command, args []string) {
@@ -52,6 +58,11 @@ func init() {
 	StatusCmd.AddCommand(ProjectsCmd)
 	StatusCmd.AddCommand(DbCmd)
 	StatusCmd.AddCommand(NetworkCmd)
+	StatusCmd.AddCommand(ContainersCmd)
+	StatusCmd.AddCommand(SecurityCmd)
+	StatusCmd.AddCommand(SystemctlCmd)
+	StatusCmd.AddCommand(GitConfigCmd)
+	StatusCmd.AddCommand(PortsCmd)
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.allbctl.yaml)")
 

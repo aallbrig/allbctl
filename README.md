@@ -28,7 +28,9 @@ allbctl cs status                  # Same as above (alias)
                                    # - OS, kernel, uptime, host/virtualization info
                                    # - Package counts (dpkg, rpm, flatpak, snap, brew, etc.)
                                    # - Shell, terminal, detailed CPU and GPU info, memory
+                                   # - Disks (count and total space)
                                    # - Network interfaces and connection type
+                                   # - Ports (listening TCP/UDP ports count)
                                    # - Installed browsers (Chrome, Firefox, Edge, Safari, Brave, etc.)
                                    # - Computer setup status (dotfiles, directories, tools)
 
@@ -56,6 +58,19 @@ allbctl status list-packages vagrant # List only vagrant VMs (shows command for 
 allbctl status network             # Enhanced network information with VPN detection
                                     # Shows primary interface, WiFi details, VPN status, DNS, 
                                     # connectivity check, and public IP
+
+allbctl status db                  # Shows detected database systems (SQLite, MySQL, PostgreSQL, etc.)
+allbctl status db postgres --detail # Show detailed PostgreSQL info with files and env vars
+
+allbctl status containers          # Shows container runtime info (Docker, Podman) and virtualization status
+
+allbctl status security            # Shows SSH keys, GPG keys, and kernel keyring info
+
+allbctl status systemctl           # Shows systemd service counts (running, failed)
+
+allbctl status git                 # Shows git global configuration (user.name, user.email, core.editor)
+
+allbctl status ports               # Shows listening TCP/UDP ports with details
 
 # Computer setup (bootstrap development environment)
 allbctl computer-setup status      # Check what's set up and what's missing
