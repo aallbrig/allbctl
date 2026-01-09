@@ -23,6 +23,7 @@ All Go code must:
   - Run `go test` to execute tests
   - Run `go mod tidy` to manage dependencies
   - Follow Go conventions and idioms
+  - **BEFORE COMMITTING**: Run `make lint` to catch issues early and prevent CI/CD failures
   - Final checks should be made on built allbctl (Makefile builds to `bin/allbctl`)
 
 ## Documentation

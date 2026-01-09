@@ -536,11 +536,11 @@ func compareVersions(v1, v2 string) int {
 		var v1Part, v2Part int
 
 		if i < len(v1Parts) {
-			v1Part, _ = strconv.Atoi(strings.TrimSpace(v1Parts[i]))
+			v1Part, _ = strconv.Atoi(strings.TrimSpace(v1Parts[i])) //nolint:errcheck
 		}
 
 		if i < len(v2Parts) {
-			v2Part, _ = strconv.Atoi(strings.TrimSpace(v2Parts[i]))
+			v2Part, _ = strconv.Atoi(strings.TrimSpace(v2Parts[i])) //nolint:errcheck
 		}
 
 		if v1Part > v2Part {
@@ -636,30 +636,4 @@ func checkMacOSUpdates() (int, error) {
 	}
 
 	return count, nil
-}
-
-// checkGPUDriverUpdates checks for GPU driver updates
-func checkGPUDriverUpdates() string {
-	// Check for NVIDIA GPU driver updates
-	if exists("nvidia-smi") {
-		return checkNvidiaDriverUpdate()
-	}
-
-	// Could add AMD/Intel checks here in the future
-	return ""
-}
-
-func checkNvidiaDriverUpdate() string {
-	// Get current driver version
-	cmd := exec.Command("nvidia-smi", "--query-gpu=driver_version", "--format=csv,noheader")
-	output, err := cmd.Output()
-	if err != nil {
-		return ""
-	}
-
-	currentDriver := strings.TrimSpace(string(output))
-
-	// This is a simplified check - in reality, we'd query NVIDIA's API
-	// or check the package manager for nvidia-driver updates
-	return fmt.Sprintf("Current: %s", currentDriver)
 }
