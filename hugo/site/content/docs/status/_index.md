@@ -16,6 +16,10 @@ allbctl status
 
 ## Output Sections
 
+### Header
+- Username@Hostname
+- allbctl version and commit hash
+
 ### System Information
 - Operating system and version
 - Hostname
