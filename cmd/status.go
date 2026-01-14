@@ -363,9 +363,10 @@ func printSystemInfo() {
 		hostname = "Unknown"
 	}
 
-	// Print header
+	// Print header with version
 	header := fmt.Sprintf("%s@%s", user, hostname)
 	fmt.Println(header)
+	fmt.Printf("allbctl %s (commit %s)\n", Version, Commit)
 	fmt.Println()
 
 	// Host Info using gopsutil

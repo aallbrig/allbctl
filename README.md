@@ -101,6 +101,7 @@ allbctl cs install                 # Short alias for install
 
 #### System Status
 The `status` and `cs status` commands provide a neofetch-inspired view of your system:
+- **Version Header**: Shows allbctl version and commit hash at the top
 - **User@Hostname Header**: Shows current user and machine name with separator line
 - **OS Information**: Platform, version, architecture, kernel version
 - **System Details**: Host/virtualization info, uptime
