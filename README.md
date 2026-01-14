@@ -104,6 +104,9 @@ The `status` and `cs status` commands provide a neofetch-inspired view of your s
 - **User@Hostname Header**: Shows current user and machine name with separator line
 - **OS Information**: Platform, version, architecture, kernel version
 - **System Details**: Host/virtualization info, uptime
+- **Shell & Terminal**: Detects your shell and terminal emulator
+  - **Windows**: Windows Terminal, PowerShell Core, PowerShell, Command Prompt (cmd.exe), Git Bash, ConEmu
+  - **Unix-like**: tmux, iTerm2, kitty, alacritty, konsole, gnome-terminal, and more
 - **Package Counts**: Inline display of packages from detected package managers (dpkg, rpm, pacman, snap, flatpak, brew, choco, winget)
 - **CPU Information**: Detailed CPU details including:
   - Model name and architecture (x86_64, arm64, etc.)
@@ -149,7 +152,8 @@ The `status` and `cs status` commands provide a neofetch-inspired view of your s
   - Shows package counts and available updates (e.g., "apt: 1969 packages (34 want updates)")
   - Supported package managers: apt, flatpak, snap, dnf, yum, pacman, brew, choco, winget, npm, pip, pipx
   - Only displays update counts when updates are available
-  - **NEW**: Parallelized update checks for faster performance
+  - **NEW**: Parallelized package detection - results stream in as they're counted for a snappier experience
+  - **NEW**: Package counts and update checks run concurrently for faster performance
 - **Projects**: Git repositories in ~/src shown as `X total (Y dirty)` with:
   - Last 5 recently touched repos in a table format
   - Three aligned columns: path (with `*` for dirty), remote origin (user/repo), and last modified date/time

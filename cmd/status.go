@@ -348,6 +348,9 @@ func printBrowsers(browsers []BrowserInfo) {
 
 // printSystemInfo collects and prints system information in a structured format
 func printSystemInfo() {
+	// Start package detection early (runs in background)
+	packagesFuture := StartPackageSummary()
+
 	// Get current user for header
 	user := os.Getenv("USER")
 	if user == "" {
@@ -463,9 +466,13 @@ func printSystemInfo() {
 	printPackageManagers()
 	fmt.Println()
 
-	// Packages section
+	// Packages section - wait for background detection to complete
 	fmt.Println("Packages:")
-	PrintPackageSummary()
+	if packagesFuture != nil {
+		packagesFuture.PrintResults()
+	} else {
+		fmt.Println("  No package managers detected")
+	}
 	fmt.Println()
 
 	// Projects section
@@ -939,14 +946,69 @@ func printCPUInfo(details CPUDetails) {
 
 // detectTerminal tries to determine the terminal emulator in use
 func detectTerminal() string {
-	term := os.Getenv("TERM_PROGRAM")
-	if term != "" {
+	osType := runtime.GOOS
+
+	// Windows-specific terminal detection
+	if osType == "windows" {
+		// Check for Windows Terminal
+		if os.Getenv("WT_SESSION") != "" {
+			return "Windows Terminal"
+		}
+
+		// Check for PowerShell (look for PSModulePath which is PowerShell-specific)
+		if os.Getenv("PSModulePath") != "" {
+			// Distinguish between PowerShell Core and Windows PowerShell
+			if os.Getenv("POWERSHELL_DISTRIBUTION_CHANNEL") != "" {
+				return "PowerShell Core"
+			}
+			return "PowerShell"
+		}
+
+		// Check for Git Bash (MSYSTEM is set by Git Bash)
+		if msys := os.Getenv("MSYSTEM"); msys != "" {
+			return "Git Bash"
+		}
+
+		// Check ConEmu
+		if os.Getenv("ConEmuPID") != "" {
+			return "ConEmu"
+		}
+
+		// Check for cmd.exe by examining COMSPEC
+		if comspec := os.Getenv("COMSPEC"); comspec != "" && strings.Contains(strings.ToLower(comspec), "cmd.exe") {
+			// If none of the above matched, we're likely in cmd.exe
+			return "Command Prompt (cmd.exe)"
+		}
+
+		// Fallback for Windows
+		return "Unknown Windows Terminal"
+	}
+
+	// Unix-like systems (Linux, macOS, etc.)
+	// Try TERM_PROGRAM first (set by many modern terminals)
+	if term := os.Getenv("TERM_PROGRAM"); term != "" {
 		return term
 	}
-	term = os.Getenv("TERM")
-	if term != "" {
+
+	// Check for specific terminal indicators
+	if os.Getenv("KITTY_WINDOW_ID") != "" {
+		return "kitty"
+	}
+	if os.Getenv("ALACRITTY_SOCKET") != "" || os.Getenv("ALACRITTY_LOG") != "" {
+		return "alacritty"
+	}
+	if os.Getenv("KONSOLE_VERSION") != "" {
+		return "konsole"
+	}
+	if os.Getenv("GNOME_TERMINAL_SERVICE") != "" {
+		return "gnome-terminal"
+	}
+
+	// Check TERM variable as fallback
+	if term := os.Getenv("TERM"); term != "" {
 		return term
 	}
+
 	return "Unknown"
 }
 
