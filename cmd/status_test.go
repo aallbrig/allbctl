@@ -3,6 +3,7 @@ package cmd
 import (
 	"io"
 	"os"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -486,5 +487,163 @@ func Test_ExtractPackageManagerVersion_VBoxManage(t *testing.T) {
 				t.Errorf("extractPackageManagerVersion('vboxmanage', %q) = %q, want %q", tt.output, got, tt.want)
 			}
 		})
+	}
+}
+
+func Test_DetectTerminal(t *testing.T) {
+	// Save original environment
+	originalEnv := make(map[string]string)
+	envVars := []string{
+		"TERM_PROGRAM", "TERM", "WT_SESSION", "PSModulePath",
+		"POWERSHELL_DISTRIBUTION_CHANNEL", "MSYSTEM", "ConEmuPID",
+		"COMSPEC", "KITTY_WINDOW_ID", "ALACRITTY_SOCKET",
+		"KONSOLE_VERSION", "GNOME_TERMINAL_SERVICE",
+	}
+	for _, v := range envVars {
+		originalEnv[v] = os.Getenv(v)
+	}
+
+	// Cleanup function to restore environment
+	defer func() {
+		for k, v := range originalEnv {
+			if v == "" {
+				os.Unsetenv(k)
+			} else {
+				os.Setenv(k, v)
+			}
+		}
+	}()
+
+	tests := []struct {
+		name     string
+		setEnv   map[string]string
+		wantTerm string
+		skipOS   string // Skip this test on specified OS
+	}{
+		{
+			name: "Windows Terminal",
+			setEnv: map[string]string{
+				"WT_SESSION": "some-guid",
+			},
+			wantTerm: "Windows Terminal",
+			skipOS:   "linux", // Windows-specific detection
+		},
+		{
+			name: "PowerShell Core",
+			setEnv: map[string]string{
+				"PSModulePath":                    "C:\\Program Files\\PowerShell\\Modules",
+				"POWERSHELL_DISTRIBUTION_CHANNEL": "MSI:Windows 10",
+			},
+			wantTerm: "PowerShell Core",
+			skipOS:   "linux",
+		},
+		{
+			name: "PowerShell (Windows PowerShell)",
+			setEnv: map[string]string{
+				"PSModulePath": "C:\\Windows\\system32\\WindowsPowerShell\\v1.0\\Modules",
+			},
+			wantTerm: "PowerShell",
+			skipOS:   "linux",
+		},
+		{
+			name: "Git Bash",
+			setEnv: map[string]string{
+				"MSYSTEM": "MINGW64",
+			},
+			wantTerm: "Git Bash",
+			skipOS:   "linux",
+		},
+		{
+			name: "ConEmu",
+			setEnv: map[string]string{
+				"ConEmuPID": "1234",
+			},
+			wantTerm: "ConEmu",
+			skipOS:   "linux",
+		},
+		{
+			name: "Command Prompt",
+			setEnv: map[string]string{
+				"COMSPEC": "C:\\WINDOWS\\system32\\cmd.exe",
+			},
+			wantTerm: "Command Prompt (cmd.exe)",
+			skipOS:   "linux",
+		},
+		{
+			name: "iTerm2 (TERM_PROGRAM)",
+			setEnv: map[string]string{
+				"TERM_PROGRAM": "iTerm.app",
+			},
+			wantTerm: "iTerm.app",
+		},
+		{
+			name: "tmux (TERM variable)",
+			setEnv: map[string]string{
+				"TERM": "tmux-256color",
+			},
+			wantTerm: "tmux-256color",
+		},
+		{
+			name: "kitty",
+			setEnv: map[string]string{
+				"KITTY_WINDOW_ID": "1",
+			},
+			wantTerm: "kitty",
+		},
+		{
+			name: "alacritty",
+			setEnv: map[string]string{
+				"ALACRITTY_SOCKET": "/tmp/alacritty.sock",
+			},
+			wantTerm: "alacritty",
+		},
+		{
+			name: "konsole",
+			setEnv: map[string]string{
+				"KONSOLE_VERSION": "210801",
+			},
+			wantTerm: "konsole",
+		},
+		{
+			name: "gnome-terminal",
+			setEnv: map[string]string{
+				"GNOME_TERMINAL_SERVICE": ":1.234",
+			},
+			wantTerm: "gnome-terminal",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Skip tests for other OS if specified
+			if tt.skipOS != "" && runtime.GOOS == tt.skipOS {
+				t.Skipf("Skipping Windows-specific test on %s", runtime.GOOS)
+			}
+
+			// Clear all terminal-related env vars first
+			for _, v := range envVars {
+				os.Unsetenv(v)
+			}
+
+			// Set test-specific environment
+			for k, v := range tt.setEnv {
+				os.Setenv(k, v)
+			}
+
+			got := detectTerminal()
+			if got != tt.wantTerm {
+				t.Errorf("detectTerminal() = %q, want %q (env: %v)", got, tt.wantTerm, tt.setEnv)
+			}
+		})
+	}
+}
+
+func Test_DetectTerminal_CurrentEnvironment(t *testing.T) {
+	// Test in the actual current environment (informational)
+	terminal := detectTerminal()
+	t.Logf("Current terminal detected as: %s", terminal)
+
+	if terminal == "" {
+		t.Error("detectTerminal() should not return empty string")
 	}
 }

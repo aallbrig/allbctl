@@ -123,65 +123,104 @@ func getDetectedPackageManagers() []string {
 	return managers
 }
 
-// PrintPackageSummary prints package counts for all detected package managers (for status command)
-func PrintPackageSummary() {
+// PackageResult holds package count results for a single package manager
+type PackageResult struct {
+	Manager     string
+	Count       int
+	UpdateCount int
+	Index       int
+}
+
+// PackageSummaryFuture represents an ongoing package detection operation
+type PackageSummaryFuture struct {
+	resultChan chan PackageResult
+	managers   []string
+}
+
+// StartPackageSummary initiates package detection in the background
+// Returns a future that can be used to retrieve results later
+func StartPackageSummary() *PackageSummaryFuture {
 	managers := getDetectedPackageManagers()
 
 	if len(managers) == 0 {
+		return nil
+	}
+
+	resultChan := make(chan PackageResult, len(managers))
+
+	// Launch goroutines to count packages in parallel
+	for i, m := range managers {
+		go func(manager string, idx int) {
+			pkgs := getPackages(manager)
+			var count, updateCount int
+			if pkgs != "" {
+				count = countPackages(manager, pkgs)
+				updateCount, _ = checkPackageUpdates(manager) //nolint:errcheck
+			}
+			resultChan <- PackageResult{
+				Manager:     manager,
+				Count:       count,
+				UpdateCount: updateCount,
+				Index:       idx,
+			}
+		}(m, i)
+	}
+
+	return &PackageSummaryFuture{
+		resultChan: resultChan,
+		managers:   managers,
+	}
+}
+
+// PrintResults waits for all package detection to complete and prints the results
+func (f *PackageSummaryFuture) PrintResults() {
+	if f == nil {
 		fmt.Println("  No package managers detected")
 		return
 	}
 
-	// Parallelize update checks using goroutines and channels
-	type updateResult struct {
-		manager string
-		count   int
+	// Collect all results
+	resultMap := make(map[string]PackageResult)
+	for i := 0; i < len(f.managers); i++ {
+		result := <-f.resultChan
+		resultMap[result.Manager] = result
 	}
+	close(f.resultChan)
 
-	updateChan := make(chan updateResult, len(managers))
-
-	// Launch goroutines to check updates in parallel
-	for _, m := range managers {
-		go func(manager string) {
-			updateCount, _ := checkPackageUpdates(manager) //nolint:errcheck
-			updateChan <- updateResult{manager: manager, count: updateCount}
-		}(m)
-	}
-
-	// Collect results
-	updateMap := make(map[string]int)
-	for i := 0; i < len(managers); i++ {
-		result := <-updateChan
-		updateMap[result.manager] = result.count
-	}
-	close(updateChan)
-
-	// Summary mode: just count packages with indentation for status output
-	for _, m := range managers {
-		pkgs := getPackages(m)
-		if pkgs != "" {
-			count := countPackages(m, pkgs)
-			updateCount := updateMap[m]
-
+	// Print in original order with results
+	for _, m := range f.managers {
+		result := resultMap[m]
+		if result.Count > 0 {
 			var output string
 			if m == "ollama" {
-				if updateCount > 0 {
-					output = fmt.Sprintf("  %-15s %d models (%d want updates)\n", m+":", count, updateCount)
+				if result.UpdateCount > 0 {
+					output = fmt.Sprintf("  %-15s %d models (%d want updates)\n", m+":", result.Count, result.UpdateCount)
 				} else {
-					output = fmt.Sprintf("  %-15s %d models\n", m+":", count)
+					output = fmt.Sprintf("  %-15s %d models\n", m+":", result.Count)
 				}
 			} else if m == "vagrant" || m == "vboxmanage" {
-				output = fmt.Sprintf("  %-15s %d VMs\n", m+":", count)
+				output = fmt.Sprintf("  %-15s %d VMs\n", m+":", result.Count)
 			} else {
-				if updateCount > 0 {
-					output = fmt.Sprintf("  %-15s %d packages (%d want updates)\n", m+":", count, updateCount)
+				if result.UpdateCount > 0 {
+					output = fmt.Sprintf("  %-15s %d packages (%d want updates)\n", m+":", result.Count, result.UpdateCount)
 				} else {
-					output = fmt.Sprintf("  %-15s %d packages\n", m+":", count)
+					output = fmt.Sprintf("  %-15s %d packages\n", m+":", result.Count)
 				}
 			}
 			fmt.Print(output)
 		}
 	}
+}
+
+// PrintPackageSummary prints package counts for all detected package managers (for status command)
+// This is the synchronous version for backward compatibility
+func PrintPackageSummary() {
+	future := StartPackageSummary()
+	if future == nil {
+		fmt.Println("  No package managers detected")
+		return
+	}
+	future.PrintResults()
 }
 
 func listInstalledPackages(args []string) {

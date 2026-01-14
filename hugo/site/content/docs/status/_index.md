@@ -19,8 +19,10 @@ allbctl status
 ### System Information
 - Operating system and version
 - Hostname
-- Shell
-- Terminal
+- Shell (e.g., `/usr/bin/zsh`, `C:\WINDOWS\system32\cmd.exe`)
+- Terminal emulator with enhanced detection:
+  - **Windows**: Windows Terminal, PowerShell Core, PowerShell, Command Prompt (cmd.exe), Git Bash, ConEmu
+  - **Unix-like**: tmux, iTerm2, kitty, alacritty, konsole, gnome-terminal, and more
 - CPU details (model, cores, architecture)
 - GPU information
 - Memory usage
@@ -31,6 +33,8 @@ allbctl status
 - **Databases**: Detected database systems and their status
 - **Package Managers**: System and programming package managers
 - **Packages**: Package counts from all detected managers
+  - **Performance**: Parallelized package detection streams results as they're counted
+  - Package counts and update checks run concurrently for faster output
 - **Projects**: Git repositories in ~/src directory
 
 ### Network Information
