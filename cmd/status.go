@@ -423,10 +423,23 @@ func printSystemInfo() {
 	printGPUInfo(gpuDetails)
 	fmt.Printf("Memory:    %s\n", memStr)
 
-	// Disks
-	diskInfo := getDiskInfo()
-	if diskInfo != "" {
-		fmt.Printf("Disks:     %s\n", diskInfo)
+	// Disks - detailed view
+	disks := getDetailedDiskInfo()
+	totalDiskSpace := uint64(0)
+	for _, d := range disks {
+		totalDiskSpace += d.Total
+	}
+	if len(disks) > 0 {
+		fmt.Printf("Disks:     %d total (%.1f GB)\n", len(disks), float64(totalDiskSpace)/1e9)
+		printDiskInfo(disks)
+	} else {
+		// Fallback to old summary if detailed view fails
+		diskInfo := getDiskInfo()
+		if diskInfo != "" {
+			fmt.Printf("Disks:     %s\n", diskInfo)
+		} else {
+			fmt.Printf("Disks:     No disks detected\n")
+		}
 	}
 
 	fmt.Printf("Hardware:  %s\n", hwStr)
@@ -1770,7 +1783,114 @@ func extractVersionManagerVersion(manager, output string) string {
 	return firstLine
 }
 
-// getDiskInfo gets disk information
+// DiskInfo holds detailed disk information
+type DiskInfo struct {
+	Device      string
+	Mountpoint  string
+	Filesystem  string
+	Total       uint64
+	Used        uint64
+	Free        uint64
+	UsedPercent float64
+}
+
+// getDetailedDiskInfo returns detailed information about all disks/partitions
+func getDetailedDiskInfo() []DiskInfo {
+	var disks []DiskInfo
+
+	partitions, err := disk.Partitions(false)
+	if err != nil {
+		return disks
+	}
+
+	// Track unique devices to avoid duplicates
+	seen := make(map[string]bool)
+
+	for _, partition := range partitions {
+		// Skip if we've already seen this device
+		if seen[partition.Device] {
+			continue
+		}
+
+		// Skip special filesystems on Unix-like systems
+		if runtime.GOOS != "windows" {
+			// Skip virtual/special filesystems by mountpoint
+			if strings.HasPrefix(partition.Mountpoint, "/dev") ||
+				strings.HasPrefix(partition.Mountpoint, "/sys") ||
+				strings.HasPrefix(partition.Mountpoint, "/proc") ||
+				strings.HasPrefix(partition.Mountpoint, "/run") {
+				continue
+			}
+			// Skip loop and snap devices
+			if strings.Contains(partition.Device, "/loop") ||
+				strings.Contains(partition.Device, "/snap") ||
+				partition.Fstype == "squashfs" {
+				continue
+			}
+		}
+
+		// Get usage stats
+		usage, err := disk.Usage(partition.Mountpoint)
+		if err != nil {
+			continue
+		}
+
+		// Skip very small filesystems (< 50MB) - likely virtual
+		if usage.Total < 50*1024*1024 {
+			continue
+		}
+
+		seen[partition.Device] = true
+		disks = append(disks, DiskInfo{
+			Device:      partition.Device,
+			Mountpoint:  partition.Mountpoint,
+			Filesystem:  partition.Fstype,
+			Total:       usage.Total,
+			Used:        usage.Used,
+			Free:        usage.Free,
+			UsedPercent: usage.UsedPercent,
+		})
+	}
+
+	return disks
+}
+
+// printDiskInfo prints detailed disk information
+func printDiskInfo(disks []DiskInfo) {
+	if len(disks) == 0 {
+		fmt.Printf("  No disks detected\n")
+		return
+	}
+
+	for i, disk := range disks {
+		if i > 0 {
+			fmt.Println()
+		}
+
+		// Format sizes
+		totalGB := float64(disk.Total) / 1e9
+		usedGB := float64(disk.Used) / 1e9
+		freeGB := float64(disk.Free) / 1e9
+
+		// Mountpoint (or drive letter on Windows)
+		fmt.Printf("  Mount:     %s\n", disk.Mountpoint)
+
+		// Device name
+		fmt.Printf("  Device:    %s\n", disk.Device)
+
+		// Filesystem type
+		if disk.Filesystem != "" {
+			fmt.Printf("  Type:      %s\n", disk.Filesystem)
+		}
+
+		// Size information
+		fmt.Printf("  Size:      %.1f GB total\n", totalGB)
+		fmt.Printf("  Used:      %.1f GB (%.1f%%)\n", usedGB, disk.UsedPercent)
+		fmt.Printf("  Free:      %.1f GB\n", freeGB)
+	}
+}
+
+// getDiskInfo returns a summary string for inline display (backward compatible)
 func getDiskInfo() string {
 	partitions, err := disk.Partitions(false)
 	if err != nil {
