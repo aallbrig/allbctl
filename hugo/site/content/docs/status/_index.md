@@ -40,6 +40,7 @@ allbctl status
   - **Performance**: Parallelized package detection streams results as they're counted
   - Package counts and update checks run concurrently for faster output
 - **Projects**: Git repositories in ~/src directory
+- **Cloud Native**: Cloud CLI tools (AWS CLI, gcloud, Azure CLI, kubectl) with profile counts
 
 ### Network Information
 - Network interfaces
@@ -59,3 +60,4 @@ All status subcommands show specific sections of the main status output:
 - [Projects](projects)
 - [Packages](packages)
 - [Databases](databases)
+- [Cloud Native](cloud-native)

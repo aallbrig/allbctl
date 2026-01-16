@@ -489,6 +489,9 @@ func printSystemInfo() {
 	}
 	fmt.Println()
 
+	// Cloud Native section
+	printCloudNativeForStatus()
+
 	// Projects section
 	printProjectsInline()
 }

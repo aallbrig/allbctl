@@ -32,6 +32,8 @@ $ allbctl status security              # Show SSH keys, GPG keys, and keyring
 $ allbctl status systemctl             # Show systemd service counts
 $ allbctl status git                   # Show git global configuration
 $ allbctl status ports                 # Show listening ports
+$ allbctl status cloud-native          # Show cloud CLI versions and profiles
+$ allbctl status cloud-native aws      # Show detailed AWS resources by region
 `,
 	Version: Version,
 	Run: func(cmd *cobra.Command, args []string) {
@@ -63,6 +65,7 @@ func init() {
 	StatusCmd.AddCommand(SystemctlCmd)
 	StatusCmd.AddCommand(GitConfigCmd)
 	StatusCmd.AddCommand(PortsCmd)
+	StatusCmd.AddCommand(CloudNativeCmd)
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.allbctl.yaml)")
 
