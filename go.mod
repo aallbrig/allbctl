@@ -3,6 +3,10 @@ module github.com/aallbrig/allbctl
 go 1.24.0
 
 require (
+	github.com/aws/aws-sdk-go-v2 v1.41.1
+	github.com/aws/aws-sdk-go-v2/config v1.32.7
+	github.com/aws/aws-sdk-go-v2/service/ec2 v1.279.2
+	github.com/aws/aws-sdk-go-v2/service/resourcegroupstaggingapi v1.31.6
 	github.com/fatih/color v1.18.0
 	github.com/go-git/go-git/v5 v5.4.2
 	github.com/google/go-github v17.0.0+incompatible
@@ -19,6 +23,18 @@ require (
 	github.com/Microsoft/go-winio v0.5.2 // indirect
 	github.com/ProtonMail/go-crypto v0.0.0-20220113124808-70ae35bab23f // indirect
 	github.com/acomagu/bufpipe v1.0.3 // indirect
+	github.com/aws/aws-sdk-go-v2/credentials v1.19.7 // indirect
+	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.17 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.17 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.17 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/ini v1.8.4 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.4 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.13.17 // indirect
+	github.com/aws/aws-sdk-go-v2/service/signin v1.0.5 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sso v1.30.9 // indirect
+	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.35.13 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sts v1.41.6 // indirect
+	github.com/aws/smithy-go v1.24.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/ebitengine/purego v0.9.1 // indirect
 	github.com/emirpasic/gods v1.12.0 // indirect

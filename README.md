@@ -72,6 +72,21 @@ allbctl status git                 # Shows git global configuration (user.name, 
 
 allbctl status ports               # Shows listening TCP/UDP ports with details
 
+allbctl status cloud-native        # Shows cloud CLI versions and configured profiles
+allbctl status cn                  # Short alias for cloud-native
+allbctl status cloud-native aws    # Show AWS resources across all regions (only regions with resources shown)
+allbctl status cn aws --region us-east-1  # AWS resources in specific region (all profiles)
+allbctl status cn aws --profile production  # AWS resources for specific profile (all regions)
+allbctl status cn aws --profile prod --region us-west-2  # Specific profile and region
+allbctl status cloud-native gcp    # Google Cloud detailed view (implementation pending)
+allbctl status cloud-native azure  # Azure detailed view (implementation pending)
+allbctl status cloud-native k8s    # Kubernetes detailed view (implementation pending)
+                                   # Detects: AWS CLI, gcloud, Azure CLI (az), kubectl
+                                   # Shows: CLI version, profile/account counts, connectivity status
+                                   # kubectl shows: version, kustomize version, contexts (not profiles), connectivity
+                                   # AWS detailed: Uses AWS Resource Groups Tagging API to discover all resources
+                                   # Only regions with resources (>=1) are displayed
+
 # Computer setup (bootstrap development environment)
 allbctl computer-setup status      # Check what's set up and what's missing
 allbctl computer-setup install     # Install/configure dev environment automatically
