@@ -16,8 +16,31 @@ install-local: build
 	mkdir -p $(HOME)/go/bin
 	cp bin/allbctl $(HOME)/go/bin/allbctl
 
-build-docker:
-	docker build --tag aallbrig/allbctl .
+# Docker targets
+# ---------------------------------------------------------------------------
+# docker-build: build the allbctl container image with version info baked in.
+docker-build:
+	docker build \
+		--build-arg VERSION=$$(git describe --tags --always --dirty 2>/dev/null || echo "dev") \
+		--build-arg COMMIT=$$(git rev-parse --short HEAD 2>/dev/null || echo "unknown") \
+		-t allbctl:latest \
+		-t allbctl:$$(git describe --tags --always --dirty 2>/dev/null || echo "dev") \
+		.
+
+# docker-run: run allbctl with host namespaces and read-only mounts so that
+# `allbctl status` inspects the real host (not the container).
+# Pass ARGS to forward arguments, e.g.: make docker-run ARGS="status projects"
+ARGS ?= status
+docker-run: docker-build
+	docker run --rm \
+		--pid=host \
+		--net=host \
+		-v /proc:/proc:ro \
+		-v /sys:/sys:ro \
+		-v /etc:/etc:ro \
+		-v $(HOME):$(HOME):ro \
+		-e HOME=$(HOME) \
+		allbctl:latest $(ARGS)
 
 build-mac:
 	gox -osarch="darwin/amd64" -osarch="darwin/arm64"

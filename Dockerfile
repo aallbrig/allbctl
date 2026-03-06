@@ -1,22 +1,41 @@
-FROM golang:1.14 AS build
+# ── Build stage ───────────────────────────────────────────────────────────────
+FROM golang:1.24 AS build
 
-WORKDIR /usr/src/app
-RUN mkdir -p /usr/local/bin/allbctl
+WORKDIR /src
 
-# pre-copy/cache go.mod for pre-downloading dependencies and only redownloading them in subsequent builds if they change
 COPY go.mod go.sum ./
 RUN go mod download && go mod verify
 
 COPY . .
-RUN go build -v -o /allbctl
 
-FROM gcr.io/distroless/base-debian10
+# Embed version/commit info (works for `docker build`, not `go install`)
+ARG VERSION=dev
+ARG COMMIT=unknown
+RUN go build \
+    -ldflags="-X 'github.com/aallbrig/allbctl/cmd.Version=${VERSION}' \
+              -X 'github.com/aallbrig/allbctl/cmd.Commit=${COMMIT}'" \
+    -o /allbctl .
 
-WORKDIR /
+# ── Runtime stage ──────────────────────────────────────────────────────────────
+# Use debian:bookworm-slim (not distroless) because allbctl calls external
+# binaries: git, systemctl, lsblk, ip, ss, docker, kubectl, aws, gcloud, etc.
+FROM debian:bookworm-slim
 
-COPY --from=build /allbctl /allbctl
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    git \
+    curl \
+ && rm -rf /var/lib/apt/lists/*
 
-USER nonroot:nonroot
+COPY --from=build /allbctl /usr/local/bin/allbctl
 
-ENTRYPOINT ["/allbctl"]
+# NOTE: For `allbctl status` to see real host info, run with host namespaces:
+#   docker run --pid=host --net=host \
+#     -v /proc:/proc:ro -v /sys:/sys:ro -v /etc:/etc:ro \
+#     -v $HOME:$HOME:ro \
+#     allbctl status
+#
+# See `make docker-run` for a ready-made wrapper.
+
+ENTRYPOINT ["/usr/local/bin/allbctl"]
 CMD ["help"]
