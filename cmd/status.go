@@ -493,7 +493,7 @@ func printSystemInfo() {
 	printCloudNativeForStatus()
 
 	// Projects section
-	printProjectsInline()
+	printProjectsInline(5)
 }
 
 // GPUInfo holds detailed GPU information

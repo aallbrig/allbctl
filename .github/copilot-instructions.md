@@ -25,6 +25,7 @@ All Go code must:
   - Follow Go conventions and idioms
   - **BEFORE COMMITTING**: Run `make lint` to catch issues early and prevent CI/CD failures
   - Final checks should be made on built allbctl (Makefile builds to `bin/allbctl`)
+  - **AFTER MAKING CHANGES**: Run `make install` to install the latest binary (with version/commit info) to `$GOPATH/bin/allbctl` so it is immediately available to run
 
 ## Documentation
 

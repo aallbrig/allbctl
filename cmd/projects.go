@@ -16,6 +16,7 @@ var (
 	allFlag   bool
 	dirtyFlag bool
 	cleanFlag bool
+	limitFlag int
 )
 
 // ProjectsCmd represents the projects command
@@ -36,8 +37,8 @@ Examples:
 		if allFlag || dirtyFlag || cleanFlag {
 			printProjectsSummary()
 		} else {
-			// Default: use the same output as status command
-			printProjectsInline()
+			// Default: show all projects (no limit), unless --limit is specified
+			printProjectsInline(limitFlag)
 		}
 	},
 }
@@ -46,6 +47,7 @@ func init() {
 	ProjectsCmd.Flags().BoolVar(&allFlag, "all", false, "Show all detected git repos")
 	ProjectsCmd.Flags().BoolVar(&dirtyFlag, "dirty", false, "Show only dirty repos")
 	ProjectsCmd.Flags().BoolVar(&cleanFlag, "clean", false, "Show only clean repos")
+	ProjectsCmd.Flags().IntVar(&limitFlag, "limit", 0, "Limit the number of projects shown (0 = no limit, show all)")
 }
 
 // RepoInfo contains information about a git repository
@@ -122,8 +124,9 @@ func printProjectsSummary() {
 	}
 }
 
-// printProjectsInline prints a one-line summary for status command
-func printProjectsInline() {
+// printProjectsInline prints a summary for the status command.
+// limit controls how many recently-touched projects to show; 0 means no limit (show all).
+func printProjectsInline(limit int) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return
@@ -154,12 +157,16 @@ func printProjectsInline() {
 		fmt.Printf("Projects: %d total\n", len(repos))
 	}
 
-	// Show last 5 recently touched
-	count := 5
-	if len(repoInfos) < count {
-		count = len(repoInfos)
+	// Show recently touched projects; limit=0 means show all
+	count := len(repoInfos)
+	if limit > 0 && limit < count {
+		count = limit
 	}
-	fmt.Printf("  Last %d recently touched:\n", count)
+	if limit > 0 {
+		fmt.Printf("  Last %d recently touched:\n", count)
+	} else {
+		fmt.Printf("  Recently touched (%d):\n", count)
+	}
 	printRepoTable(repoInfos[:count], "    ")
 }
 
