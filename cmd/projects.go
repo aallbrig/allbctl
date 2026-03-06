@@ -241,6 +241,9 @@ func formatRepoPath(path string, dirty bool) string {
 		path = strings.Replace(path, home, "~", 1)
 	}
 
+	// Normalize to forward slashes for consistent cross-platform display
+	path = filepath.ToSlash(path)
+
 	if dirty {
 		return path + "*"
 	}
