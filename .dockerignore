@@ -7,3 +7,7 @@ LICENSE
 bin
 .DS_Store
 .idea
+hugo/
+Vagrantfile
+*.exe
+*.md
