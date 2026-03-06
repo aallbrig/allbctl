@@ -518,6 +518,7 @@ func Test_DetectTerminal(t *testing.T) {
 		name     string
 		setEnv   map[string]string
 		wantTerm string
+		onlyOS   string // Only run this test on specified OS
 		skipOS   string // Skip this test on specified OS
 	}{
 		{
@@ -526,7 +527,7 @@ func Test_DetectTerminal(t *testing.T) {
 				"WT_SESSION": "some-guid",
 			},
 			wantTerm: "Windows Terminal",
-			skipOS:   "linux", // Windows-specific detection
+			onlyOS:   "windows",
 		},
 		{
 			name: "PowerShell Core",
@@ -535,7 +536,7 @@ func Test_DetectTerminal(t *testing.T) {
 				"POWERSHELL_DISTRIBUTION_CHANNEL": "MSI:Windows 10",
 			},
 			wantTerm: "PowerShell Core",
-			skipOS:   "linux",
+			onlyOS:   "windows",
 		},
 		{
 			name: "PowerShell (Windows PowerShell)",
@@ -543,7 +544,7 @@ func Test_DetectTerminal(t *testing.T) {
 				"PSModulePath": "C:\\Windows\\system32\\WindowsPowerShell\\v1.0\\Modules",
 			},
 			wantTerm: "PowerShell",
-			skipOS:   "linux",
+			onlyOS:   "windows",
 		},
 		{
 			name: "Git Bash",
@@ -551,7 +552,7 @@ func Test_DetectTerminal(t *testing.T) {
 				"MSYSTEM": "MINGW64",
 			},
 			wantTerm: "Git Bash",
-			skipOS:   "linux",
+			onlyOS:   "windows",
 		},
 		{
 			name: "ConEmu",
@@ -559,7 +560,7 @@ func Test_DetectTerminal(t *testing.T) {
 				"ConEmuPID": "1234",
 			},
 			wantTerm: "ConEmu",
-			skipOS:   "linux",
+			onlyOS:   "windows",
 		},
 		{
 			name: "Command Prompt",
@@ -567,7 +568,7 @@ func Test_DetectTerminal(t *testing.T) {
 				"COMSPEC": "C:\\WINDOWS\\system32\\cmd.exe",
 			},
 			wantTerm: "Command Prompt (cmd.exe)",
-			skipOS:   "linux",
+			onlyOS:   "windows",
 		},
 		{
 			name: "iTerm2 (TERM_PROGRAM)",
@@ -575,6 +576,7 @@ func Test_DetectTerminal(t *testing.T) {
 				"TERM_PROGRAM": "iTerm.app",
 			},
 			wantTerm: "iTerm.app",
+			skipOS:   "windows",
 		},
 		{
 			name: "tmux (TERM variable)",
@@ -582,6 +584,7 @@ func Test_DetectTerminal(t *testing.T) {
 				"TERM": "tmux-256color",
 			},
 			wantTerm: "tmux-256color",
+			skipOS:   "windows",
 		},
 		{
 			name: "kitty",
@@ -589,6 +592,7 @@ func Test_DetectTerminal(t *testing.T) {
 				"KITTY_WINDOW_ID": "1",
 			},
 			wantTerm: "kitty",
+			skipOS:   "windows",
 		},
 		{
 			name: "alacritty",
@@ -596,6 +600,7 @@ func Test_DetectTerminal(t *testing.T) {
 				"ALACRITTY_SOCKET": "/tmp/alacritty.sock",
 			},
 			wantTerm: "alacritty",
+			skipOS:   "windows",
 		},
 		{
 			name: "konsole",
@@ -603,6 +608,7 @@ func Test_DetectTerminal(t *testing.T) {
 				"KONSOLE_VERSION": "210801",
 			},
 			wantTerm: "konsole",
+			skipOS:   "windows",
 		},
 		{
 			name: "gnome-terminal",
@@ -610,14 +616,17 @@ func Test_DetectTerminal(t *testing.T) {
 				"GNOME_TERMINAL_SERVICE": ":1.234",
 			},
 			wantTerm: "gnome-terminal",
+			skipOS:   "windows",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Skip tests for other OS if specified
+			if tt.onlyOS != "" && runtime.GOOS != tt.onlyOS {
+				t.Skipf("Skipping %s-specific test on %s", tt.onlyOS, runtime.GOOS)
+			}
 			if tt.skipOS != "" && runtime.GOOS == tt.skipOS {
-				t.Skipf("Skipping Windows-specific test on %s", runtime.GOOS)
+				t.Skipf("Skipping test on %s", runtime.GOOS)
 			}
 
 			// Clear all terminal-related env vars first
