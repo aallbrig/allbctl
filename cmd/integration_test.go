@@ -4,6 +4,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -50,18 +51,22 @@ func TestCLICommandsExist(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Build the binary if it doesn't exist
-			binary := "../bin/allbctl"
+			binaryName := "../bin/allbctl"
+			if runtime.GOOS == "windows" {
+				binaryName = "../bin/allbctl.exe"
+			}
+			binary := binaryName
 			if _, err := os.Stat(binary); err != nil {
 				// Try from current directory (when running tests from project root)
-				binary = "./bin/allbctl"
+				binary = "." + binaryName[2:] // ./bin/allbctl[.exe]
 				if _, err := os.Stat(binary); err != nil {
 					// Build the binary
 					t.Log("Building binary for integration tests...")
-					buildCmd := exec.Command("go", "build", "-o", "../bin/allbctl", "../main.go")
+					buildCmd := exec.Command("go", "build", "-o", binaryName, "../main.go")
 					if err := buildCmd.Run(); err != nil {
 						t.Skipf("Failed to build binary, skipping integration test: %v", err)
 					}
-					binary = "../bin/allbctl"
+					binary = binaryName
 				}
 			}
 
