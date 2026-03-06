@@ -76,7 +76,7 @@ func checkFlatpakUpdates() (int, error) {
 	cmd := exec.Command("flatpak", "remote-ls", "--updates", "--app")
 	output, err := cmd.Output()
 	if err != nil {
-		return 0, err
+		return 0, nil // Silently fail if flatpak not installed
 	}
 
 	lines := strings.Split(strings.TrimSpace(string(output)), "\n")

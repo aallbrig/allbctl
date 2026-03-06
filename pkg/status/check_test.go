@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -95,7 +96,11 @@ func Test_PackageManagerPresent(t *testing.T) {
 
 	for _, testCase := range testCases {
 		stringBuf := bytes.NewBufferString("")
-		err = os.WriteFile(filepath.Join(tempDir, testCase.command), []byte(""), 0777)
+		filename := testCase.command
+		if runtime.GOOS == "windows" {
+			filename = testCase.command + ".exe"
+		}
+		err = os.WriteFile(filepath.Join(tempDir, filename), []byte(""), 0777)
 		if err != nil {
 			t.Error("[Testing] Error creating file")
 		}
