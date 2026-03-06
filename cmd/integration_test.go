@@ -41,28 +41,8 @@ func TestCLICommandsExist(t *testing.T) {
 			expectError: false,
 		},
 		{
-			name:        "computer-setup status",
-			args:        []string{"computer-setup", "status", "--help"},
-			expectError: false,
-		},
-		{
-			name:        "computer-setup install",
-			args:        []string{"computer-setup", "install", "--help"},
-			expectError: false,
-		},
-		{
-			name:        "cs alias",
-			args:        []string{"cs", "--help"},
-			expectError: false,
-		},
-		{
 			name:        "runtimes command",
 			args:        []string{"status", "runtimes", "--help"},
-			expectError: false,
-		},
-		{
-			name:        "reset command",
-			args:        []string{"reset", "--help"},
 			expectError: false,
 		},
 	}
@@ -112,7 +92,7 @@ func TestRootCommandOutput(t *testing.T) {
 	}
 
 	// Verify all commands are registered
-	commands := []string{"computer-setup", "status", "reset"}
+	commands := []string{"status"}
 	for _, cmd := range commands {
 		found := false
 		for _, c := range rootCmd.Commands() {

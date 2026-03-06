@@ -178,3 +178,14 @@ func TestFilterRepos(t *testing.T) {
 		t.Errorf("Expected 3 total repos, got %d", len(all))
 	}
 }
+
+func TestProjectsCmdLimitFlag(t *testing.T) {
+	// Verify --limit flag exists on ProjectsCmd
+	flag := ProjectsCmd.Flags().Lookup("limit")
+	if flag == nil {
+		t.Fatal("Expected --limit flag to exist on ProjectsCmd")
+	}
+	if flag.DefValue != "0" {
+		t.Errorf("Expected --limit default value to be 0, got %s", flag.DefValue)
+	}
+}
