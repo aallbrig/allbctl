@@ -17,8 +17,28 @@ func TestCheckPackageUpdates(t *testing.T) {
 		{"unknown manager", "unknown-manager", false},
 	}
 
+	// Map of manager name to required binary; skip if not installed.
+	requiredBinary := map[string][]string{
+		"apt":     {"apt"},
+		"flatpak": {"flatpak"},
+		"npm":     {"npm"},
+		"pip":     {"pip", "pip3"},
+	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			if bins, ok := requiredBinary[tt.manager]; ok {
+				found := false
+				for _, bin := range bins {
+					if exists(bin) {
+						found = true
+						break
+					}
+				}
+				if !found {
+					t.Skipf("%s not available on this system", tt.manager)
+				}
+			}
 			count, err := checkPackageUpdates(tt.manager)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("checkPackageUpdates() error = %v, wantErr %v", err, tt.wantErr)

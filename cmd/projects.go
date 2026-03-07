@@ -44,7 +44,7 @@ Examples:
 }
 
 func init() {
-	ProjectsCmd.Flags().BoolVar(&allFlag, "all", false, "Show all detected git repos")
+	ProjectsCmd.Flags().BoolVar(&allFlag, "all", false, "Explicitly show all detected git repos (same as default, useful for clarity in scripts)")
 	ProjectsCmd.Flags().BoolVar(&dirtyFlag, "dirty", false, "Show only dirty repos")
 	ProjectsCmd.Flags().BoolVar(&cleanFlag, "clean", false, "Show only clean repos")
 	ProjectsCmd.Flags().IntVar(&limitFlag, "limit", 0, "Limit the number of projects shown (0 = no limit, show all)")
