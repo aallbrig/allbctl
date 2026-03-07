@@ -2,12 +2,14 @@ package cmd
 
 import (
 	"fmt"
+	"net"
 	"os/exec"
 	"regexp"
 	"runtime"
 	"strings"
+	"time"
 
-	"github.com/shirou/gopsutil/v4/net"
+	psnet "github.com/shirou/gopsutil/v4/net"
 	"github.com/spf13/cobra"
 )
 
@@ -166,7 +168,7 @@ func gatherNetworkDetails() *NetworkDetails {
 	}
 
 	// Get interfaces
-	netIfaces, err := net.Interfaces()
+	netIfaces, err := psnet.Interfaces()
 	if err == nil {
 		for _, iface := range netIfaces {
 			info := InterfaceInfo{
@@ -475,11 +477,15 @@ func getDNSServers() ([]string, []string) {
 	return systemDNS, vpnDNS
 }
 
-// checkInternetConnectivity checks if internet is accessible
+// checkInternetConnectivity checks if internet is accessible by dialing
+// Google's DNS over TCP. Pure Go — no subprocess, no OS-specific flags.
 func checkInternetConnectivity() bool {
-	cmd := exec.Command("ping", "-c", "1", "-W", "2", "8.8.8.8")
-	err := cmd.Run()
-	return err == nil
+	conn, err := net.DialTimeout("tcp", "8.8.8.8:53", 2*time.Second)
+	if err != nil {
+		return false
+	}
+	conn.Close()
+	return true
 }
 
 // getPublicIP gets the public IP address
