@@ -29,7 +29,7 @@ allbctl status db sqlite3 --detail
 Shows detected databases with status and version:
 
 ```
-sqlite3:     installed sqlite3 3.37.2, 3 .db files
+sqlite3:     installed  3.45.1 2024-01-30 16:01:20 e876e51a0ed5c5b3126f52e5320443..., 8 .db files
 postgres:    running PostgreSQL 14.5
 mysql:       installed mysql Ver 8.0.36
 redis:       running Redis server v=6.0.16
@@ -167,7 +167,7 @@ Collects variables with known prefixes:
 ### Development Machine
 ```bash
 $ allbctl status db
-sqlite3:     installed sqlite3 3.37.2, 5 .db files
+sqlite3:     installed  3.45.1 2024-01-30 16:01:20 e876e51a0ed5c5b3126f52e5320443..., 8 .db files
 postgres:    running PostgreSQL 14.5
 redis:       running Redis server v=6.0.16
 ```

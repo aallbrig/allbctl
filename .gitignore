@@ -5,6 +5,16 @@ vendor
 bin
 allbctl*
 
+# Go test / profiling outputs
+coverage.out
+*.prof
+*.test
+
+# Local environment secrets
+.env
+.env.local
+.env.*.local
+
 # General
 .DS_Store
 .AppleDouble

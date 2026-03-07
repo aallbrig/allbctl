@@ -10,10 +10,13 @@ Display git repositories found in the `~/src` directory.
 ## Usage
 
 ```bash
-# Show summary (default)
+# Show all repositories (default)
 allbctl status projects
 
-# Show all repositories
+# Limit the number of repositories shown
+allbctl status projects --limit 5
+
+# Show all repositories explicitly
 allbctl status projects --all
 
 # Show only dirty repos (with uncommitted changes)
@@ -23,50 +26,66 @@ allbctl status projects --dirty
 allbctl status projects --clean
 ```
 
+## Flags
+
+| Flag | Description |
+|------|-------------|
+| `--limit int` | Limit the number of projects shown (0 = no limit, show all) |
+| `--all` | Show all detected git repos |
+| `--dirty` | Show only repos with uncommitted changes |
+| `--clean` | Show only repos with no uncommitted changes |
+
 ## Output
 
-### Summary Mode (Default)
-Shows total count and last 5 recently modified repositories:
+### Default Mode
+Shows all repositories sorted by most recently modified:
 
 ```
-Projects: 5 total (2 dirty)
-  Last 5 recently touched:
-    ~/src/allbctl*             aallbrig/allbctl             2026-01-02 13:11 EST
-    ~/src/stock-market-words*  aallbrig/stock-market-words  2026-01-01 12:40 EST
-    ~/src/dice-gnome-redux     aallbrig/dice-gnome-redux    2025-12-21 11:50 EST
-    ~/src/godot-mcp            Coding-Solo/godot-mcp        2025-12-20 11:19 EST
-    ~/src/dotfiles             aallbrig/dotfiles            2025-12-16 21:18 EST
+Projects: 12 total (7 dirty)
+  Recently touched (12):
+    ~/src/allbctl*                  aallbrig/allbctl                   2026-03-07 16:19 EST
+    ~/src/stock-market-words        aallbrig/stock-market-words        2026-03-07 11:40 EST
+    ~/src/dice-gnome-redux          aallbrig/dice-gnome-redux          2025-12-21 11:50 EST
+    ~/src/godot-mcp                 Coding-Solo/godot-mcp              2025-12-20 11:19 EST
+    ~/src/dotfiles                  aallbrig/dotfiles                  2025-12-16 21:18 EST
+    ...
 ```
 
 Repositories with uncommitted changes are marked with an asterisk (*).
 
-### Detailed Modes
+### With `--limit N`
+Shows at most N repositories:
 
-**All repositories** (`--all`):
+```bash
+allbctl status projects --limit 5
 ```
-Total repos: 5
 
-  ~/src/allbctl*             aallbrig/allbctl             2026-01-02 13:11 EST
-  ~/src/stock-market-words*  aallbrig/stock-market-words  2026-01-01 12:40 EST
-  ~/src/dice-gnome-redux     aallbrig/dice-gnome-redux    2025-12-21 11:50 EST
+```
+Projects: 12 total (7 dirty)
+  Recently touched (5):
+    ~/src/allbctl*                  aallbrig/allbctl                   2026-03-07 16:19 EST
+    ~/src/stock-market-words        aallbrig/stock-market-words        2026-03-07 11:40 EST
+    ~/src/dice-gnome-redux          aallbrig/dice-gnome-redux          2025-12-21 11:50 EST
+    ~/src/godot-mcp                 Coding-Solo/godot-mcp              2025-12-20 11:19 EST
+    ~/src/dotfiles                  aallbrig/dotfiles                  2025-12-16 21:18 EST
+```
+
+### Dirty only (`--dirty`)
+```
+Projects: 7 total (7 dirty)
+
+  ~/src/allbctl*             aallbrig/allbctl             2026-03-07 16:19 EST
+  ~/src/dotfiles*            aallbrig/dotfiles            2025-12-16 21:18 EST
   ...
 ```
 
-**Dirty only** (`--dirty`):
+### Clean only (`--clean`)
 ```
-Total repos: 2
+Projects: 5 total
 
-  ~/src/allbctl*             aallbrig/allbctl             2026-01-02 13:11 EST
-  ~/src/stock-market-words*  aallbrig/stock-market-words  2026-01-01 12:40 EST
-```
-
-**Clean only** (`--clean`):
-```
-Total repos: 3
-
-  ~/src/dice-gnome-redux     aallbrig/dice-gnome-redux    2025-12-21 11:50 EST
+  ~/src/stock-market-words   aallbrig/stock-market-words  2026-03-07 11:40 EST
   ~/src/godot-mcp            Coding-Solo/godot-mcp        2025-12-20 11:19 EST
-  ~/src/dotfiles             aallbrig/dotfiles            2025-12-16 21:18 EST
+  ...
 ```
 
 ## Features
@@ -79,4 +98,13 @@ Total repos: 3
 
 ## Integration
 
-The summary output is shown in the "Projects:" section of the main `allbctl status` command.
+The `allbctl status` command includes a projects section limited to 5 repos:
+
+```
+Projects: 12 total (7 dirty)
+  Recently touched (5):
+    ~/src/allbctl*  ...
+    ...
+```
+
+To see all repositories without the limit, run `allbctl status projects` directly.
