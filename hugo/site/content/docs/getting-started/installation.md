@@ -90,13 +90,13 @@ export PATH=$PATH:$(pwd)/bin
 make build
 
 # Windows
-GOOS=windows GOARCH=amd64 go build -o allbctl.exe main.go
+GOOS=windows GOARCH=amd64 go build -o allbctl.exe .
 
-# macOS
-GOOS=darwin GOARCH=amd64 go build -o allbctl main.go
+# macOS (Intel)
+GOOS=darwin GOARCH=amd64 go build -o allbctl .
 
 # macOS Apple Silicon
-GOOS=darwin GOARCH=arm64 go build -o allbctl main.go
+GOOS=darwin GOARCH=arm64 go build -o allbctl .
 ```
 
 ## Verify Installation
