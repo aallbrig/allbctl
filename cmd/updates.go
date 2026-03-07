@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -57,7 +58,9 @@ func checkPackageUpdates(manager string) (int, error) {
 func checkAptUpdates() (int, error) {
 	// Don't run apt-get update as it requires sudo
 	// Instead, check the existing cache
-	cmd := exec.Command("apt", "list", "--upgradable")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "apt", "list", "--upgradable")
 	output, err := cmd.Output()
 	if err != nil {
 		return 0, nil // Silently fail if can't check
@@ -73,7 +76,9 @@ func checkAptUpdates() (int, error) {
 }
 
 func checkFlatpakUpdates() (int, error) {
-	cmd := exec.Command("flatpak", "remote-ls", "--updates", "--app")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "flatpak", "remote-ls", "--updates", "--app")
 	output, err := cmd.Output()
 	if err != nil {
 		return 0, nil // Silently fail if flatpak not installed
@@ -87,7 +92,9 @@ func checkFlatpakUpdates() (int, error) {
 }
 
 func checkSnapUpdates() (int, error) {
-	cmd := exec.Command("snap", "refresh", "--list")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "snap", "refresh", "--list")
 	output, err := cmd.Output()
 	if err != nil {
 		return 0, err
@@ -186,7 +193,9 @@ func checkWingetUpdates() (int, error) {
 }
 
 func checkNpmUpdates() (int, error) {
-	cmd := exec.Command("npm", "outdated", "-g", "--json")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "npm", "outdated", "-g", "--json")
 	output, err := cmd.Output()
 	if err != nil && len(output) == 0 {
 		return 0, err
@@ -206,7 +215,9 @@ func checkPipUpdates() (int, error) {
 		pipCmd = "pip"
 	}
 
-	cmd := exec.Command(pipCmd, "list", "--outdated", "--format=json")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, pipCmd, "list", "--outdated", "--format=json")
 	output, err := cmd.Output()
 	if err != nil {
 		return 0, err
