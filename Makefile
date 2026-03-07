@@ -1,3 +1,5 @@
+LDFLAGS=-ldflags="-X 'github.com/aallbrig/allbctl/cmd.Version=$$(git describe --tags --always --dirty 2>/dev/null || echo "dev")' -X 'github.com/aallbrig/allbctl/cmd.Commit=$$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")'"
+
 install-dependencies:
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 	go install github.com/mitchellh/gox@latest
@@ -7,10 +9,10 @@ install-dependencies:
 	go mod vendor
 
 install:
-	go install -ldflags="-X 'github.com/aallbrig/allbctl/cmd.Version=$$(git describe --tags --always --dirty 2>/dev/null || echo "dev")' -X 'github.com/aallbrig/allbctl/cmd.Commit=$$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")'"
+	go install $(LDFLAGS)
 
 build:
-	go build -ldflags="-X 'github.com/aallbrig/allbctl/cmd.Version=$$(git describe --tags --always --dirty 2>/dev/null || echo "dev")' -X 'github.com/aallbrig/allbctl/cmd.Commit=$$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")'" -o bin/allbctl main.go
+	go build $(LDFLAGS) -o bin/allbctl main.go
 
 install-local: build
 	mkdir -p $(HOME)/go/bin
@@ -42,18 +44,27 @@ docker-run: docker-build
 		-e HOME=$(HOME) \
 		allbctl:latest $(ARGS)
 
+# Cross-platform builds — embed version/commit, no gox required
 build-mac:
-	gox -osarch="darwin/amd64" -osarch="darwin/arm64"
+	GOOS=darwin  GOARCH=amd64 go build $(LDFLAGS) -o allbctl_darwin_amd64  main.go
+	GOOS=darwin  GOARCH=arm64 go build $(LDFLAGS) -o allbctl_darwin_arm64  main.go
 
 build-windows:
-	gox -osarch="windows/amd64" -osarch="windows/arm64"
+	GOOS=windows GOARCH=amd64 go build $(LDFLAGS) -o allbctl_windows_amd64.exe main.go
+	GOOS=windows GOARCH=arm64 go build $(LDFLAGS) -o allbctl_windows_arm64.exe main.go
 
 build-linux:
-	gox -osarch="linux/amd64" -osarch="linux/arm64"
+	GOOS=linux   GOARCH=amd64 go build $(LDFLAGS) -o allbctl_linux_amd64   main.go
+	GOOS=linux   GOARCH=arm64 go build $(LDFLAGS) -o allbctl_linux_arm64   main.go
 
-build-all:
-	gox -osarch="linux/amd64" -osarch="linux/arm64" -osarch="windows/amd64" -osarch="windows/arm64" -osarch="darwin/amd64" -osarch="darwin/arm64"
-	chmod +x allbctl_*
+build-all: build-linux build-mac build-windows
+	chmod +x allbctl_linux_* allbctl_darwin_*
+
+# vagrant: boot Windows10 VM and run the allbctl smoke-test suite
+# Requires: make build-windows first
+vagrant-test-windows: build-windows
+	vagrant up windows10
+	vagrant provision windows10 --provision-with smoke-test
 
 test:
 	go test -v ./...

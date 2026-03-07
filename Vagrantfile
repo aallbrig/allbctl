@@ -96,69 +96,88 @@ Vagrant.configure("2") do |config|
     SHELL
   end
 
-  # Windows 10 Development Environment for allbctl testing
+  # Windows 10 Development/Test Environment for allbctl
+  # Prerequisites: run `make build-windows` first to produce allbctl_windows_amd64.exe
+  # Boot:  vagrant up windows10
+  # Test:  vagrant powershell windows10 -c "C:\\allbctl-test\\allbctl.exe version"
+  # Shell: vagrant powershell windows10
   config.vm.define "windows10" do |win|
-    # Use Windows 10 box
     win.vm.box = "gusztavvargadr/windows-10"
     win.vm.hostname = "allbctl-win10-test"
-    
-    # VM provider settings
+
     win.vm.provider "virtualbox" do |vb|
       vb.name = "allbctl-windows10-test"
-      vb.gui = true
+      vb.gui = false   # headless; set VAGRANT_GUI=1 to enable desktop
       vb.memory = "4096"
       vb.cpus = 2
-      # Enable clipboard sharing
-      vb.customize ["modifyvm", :id, "--clipboard-mode", "bidirectional"]
-      vb.customize ["modifyvm", :id, "--draganddrop", "bidirectional"]
     end
-    
-    # Network configuration
-    win.vm.network "private_network", type: "dhcp"
-    
-    # Sync the built binary to the VM
-    # Build with: make build-windows before running vagrant
+
+    # Sync the project root into the VM so the binary is available at C:\vagrant
     win.vm.synced_folder ".", "/vagrant", disabled: false
-    
-    # Provision script to setup test environment
-    win.vm.provision "shell", privileged: false, inline: <<-SHELL
-      Write-Host "Setting up Windows test environment for allbctl..."
-      
-      # Create a test directory
+
+    # Setup: copy binary + add to machine PATH, create a fake ~/src/allbctl git repo
+    # for testing `allbctl status projects`
+    win.vm.provision "shell", privileged: true, inline: <<-SHELL
       $testDir = "C:\\allbctl-test"
-      if (-not (Test-Path $testDir)) {
-        New-Item -ItemType Directory -Path $testDir | Out-Null
-        Write-Host "Created test directory: $testDir"
-      }
-      
-      # Copy allbctl binary to test directory
+      if (-not (Test-Path $testDir)) { New-Item -ItemType Directory -Path $testDir | Out-Null }
+
       $binarySource = "C:\\vagrant\\allbctl_windows_amd64.exe"
       if (Test-Path $binarySource) {
         Copy-Item $binarySource "$testDir\\allbctl.exe" -Force
-        Write-Host "Copied allbctl binary to $testDir"
+        Write-Host "OK: copied allbctl.exe to $testDir"
       } else {
-        Write-Host "Warning: allbctl binary not found at $binarySource"
-        Write-Host "Build with 'make build-windows' before running vagrant up"
+        Write-Error "MISSING: $binarySource — run 'make build-windows' on the host first"
+        exit 1
       }
-      
-      # Add test directory to PATH for current session
-      $env:Path += ";$testDir"
-      
+
+      # Add to machine-wide PATH so all future sessions have it
+      $machinePath = [System.Environment]::GetEnvironmentVariable("Path", "Machine")
+      if ($machinePath -notlike "*$testDir*") {
+        [System.Environment]::SetEnvironmentVariable("Path", "$machinePath;$testDir", "Machine")
+        Write-Host "OK: added $testDir to machine PATH"
+      }
+
+      # Create a fake src/allbctl git repo so status projects has something to scan
+      $srcDir = "C:\\Users\\vagrant\\src\\allbctl"
+      if (-not (Test-Path $srcDir)) {
+        New-Item -ItemType Directory -Path $srcDir | Out-Null
+        & git init $srcDir
+        Write-Host "OK: created test git repo at $srcDir"
+      }
+    SHELL
+
+    # Smoke-test provision: runs allbctl commands and prints results
+    win.vm.provision "shell", run: "never", name: "smoke-test", privileged: false, inline: <<-SHELL
+      $allbctl = "C:\\allbctl-test\\allbctl.exe"
+      $pass = 0; $fail = 0
+
+      function Run-Test($label, $args) {
+        Write-Host ""
+        Write-Host "=== $label ===" -ForegroundColor Cyan
+        $output = & $allbctl @args 2>&1
+        $code = $LASTEXITCODE
+        Write-Host $output
+        if ($code -ne 0) {
+          Write-Host "FAIL (exit $code)" -ForegroundColor Red
+          $script:fail++
+        } else {
+          Write-Host "PASS" -ForegroundColor Green
+          $script:pass++
+        }
+      }
+
+      Run-Test "version"          @("version")
+      Run-Test "help"             @("--help")
+      Run-Test "status (full)"    @("status")
+      Run-Test "status projects"  @("status", "projects")
+      Run-Test "status runtimes"  @("status", "runtimes")
+      Run-Test "bootstrap status" @("bootstrap", "status")
+
       Write-Host ""
       Write-Host "========================================"
-      Write-Host "Windows Test Environment Ready!"
-      Write-Host "========================================"
-      Write-Host ""
-      Write-Host "To test allbctl:"
-      Write-Host "1. Open PowerShell"
-      Write-Host "2. cd C:\\allbctl-test"
-      Write-Host "3. .\\allbctl.exe bootstrap status"
-      Write-Host "4. .\\allbctl.exe bootstrap install"
-      Write-Host "5. .\\allbctl.exe bootstrap status"
-      Write-Host ""
-      Write-Host "The binary is at: C:\\allbctl-test\\allbctl.exe"
-      Write-Host "Source code is at: C:\\vagrant"
-      Write-Host ""
+      Write-Host "Results: $pass passed, $fail failed"
+      if ($fail -gt 0) { Write-Host "OVERALL: FAIL" -ForegroundColor Red; exit 1 }
+      else             { Write-Host "OVERALL: PASS" -ForegroundColor Green }
     SHELL
   end
 end
