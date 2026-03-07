@@ -3,7 +3,7 @@ weight: 3
 title: "Packages"
 ---
 
-# Status List-Packages
+# Status Packages
 
 Show package counts from all detected package managers on the system.
 
