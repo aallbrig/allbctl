@@ -112,8 +112,10 @@ func Test_PackageDetectionPerformance(t *testing.T) {
 
 	t.Logf("Package detection completed in %v", duration)
 
-	// Package detection should be reasonably fast (5 seconds threshold)
-	threshold := 5 * time.Second
+	// Package detection threshold: 30 seconds is generous to account for
+	// package managers that hit their 10s context timeout (pip, apt, etc).
+	// On CI without those tools installed, it should be much faster.
+	threshold := 30 * time.Second
 	if duration > threshold {
 		t.Logf("⚠️  Package detection took %v (threshold: %v)", duration, threshold)
 	}
