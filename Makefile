@@ -66,6 +66,12 @@ vagrant-test-windows: build-windows
 	vagrant up windows10
 	vagrant provision windows10 --provision-with smoke-test
 
+gen-docs:
+	go run main.go gen-docs
+
+check-docs:
+	go run main.go gen-docs && git diff --exit-code hugo/site/content/docs/reference/
+
 test:
 	go test -v ./...
 
