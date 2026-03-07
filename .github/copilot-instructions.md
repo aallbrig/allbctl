@@ -14,7 +14,7 @@ All code development follows Test-Driven Development (TDD):
 All Go code must:
 
 - Have corresponding tests
-- Be formatted using the Go CLI (`go fmt`, `go version go1.23.5 linux/amd64`)
+- Be formatted using the Go CLI (`go fmt`, `go version go1.26.1 linux/amd64`)
 - Follow standard Go practices:
   - Ensure `Makefile` is up to date
   - Run `go run main.go` as the starting point to allbctl CLI while developing
@@ -24,6 +24,7 @@ All Go code must:
   - Run `go mod tidy` to manage dependencies
   - Follow Go conventions and idioms
   - **BEFORE COMMITTING**: Run `make lint` to catch issues early and prevent CI/CD failures
+  - **BEFORE COMMITTING**: Run `govulncheck ./...` to check for known vulnerabilities — CI enforces this and will fail if vulns are present
   - Final checks should be made on built allbctl (Makefile builds to `bin/allbctl`)
   - **AFTER MAKING CHANGES**: Run `make install` to install the latest binary (with version/commit info) to `$GOPATH/bin/allbctl` so it is immediately available to run
 
@@ -81,4 +82,41 @@ hugo server --buildDrafts
 - Or manually trigger: Go to Actions → "Deploy Hugo Site to GitHub Pages" → Run workflow
 - Verify at: https://aallbrig.github.io/allbctl/
 
+### CLI Reference Auto-generation
 
+The `hugo/site/content/docs/reference/` directory is **auto-generated** from the Cobra command tree — do not edit those files manually.
+
+```bash
+# Regenerate after adding/changing commands or flags
+make gen-docs
+
+# CI will fail if generated docs are out of sync with code
+make check-docs
+```
+
+## Windows Cross-Platform Validation
+
+A Vagrant-managed Windows 10 VM is available for smoke testing Windows compatibility.
+
+**VM name**: `windows10` (defined in `Vagrantfile`)
+
+**When to use**: Before cutting a release, or when changing OS-specific code (network detection, ping, paths, shell detection, etc.)
+
+```bash
+# Start the VM and run the smoke test
+vagrant up windows10
+vagrant provision windows10 --provision-with smoke-test
+
+# If binary on the VM is stale, force-copy the new one first
+make build-windows  # produces allbctl_windows_amd64.exe in project root
+vagrant winrm windows10 -s powershell -c \
+  "Copy-Item 'C:\vagrant\allbctl_windows_amd64.exe' 'C:\allbctl-test\allbctl.exe'"
+vagrant provision windows10 --provision-with smoke-test
+
+# Halt when done
+vagrant halt windows10
+```
+
+**Expected result**: `Results: 6 passed, 0 failed` with `Internet: ✓ Connected` in the status output.
+
+**Note on internet check**: Uses `net.DialTimeout("tcp", "8.8.8.8:53", 2s)` — pure Go, no `ping` binary required. This was intentional to avoid cross-OS exec differences.
