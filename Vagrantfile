@@ -104,6 +104,7 @@ Vagrant.configure("2") do |config|
   config.vm.define "windows10" do |win|
     win.vm.box = "gusztavvargadr/windows-10"
     win.vm.hostname = "allbctl-win10-test"
+    win.vm.boot_timeout = 600  # Windows is slow to boot; default 300s is not enough
 
     win.vm.provider "virtualbox" do |vb|
       vb.name = "allbctl-windows10-test"
@@ -115,69 +116,13 @@ Vagrant.configure("2") do |config|
     # Sync the project root into the VM so the binary is available at C:\vagrant
     win.vm.synced_folder ".", "/vagrant", disabled: false
 
-    # Setup: copy binary + add to machine PATH, create a fake ~/src/allbctl git repo
+    # Setup: copy binary + add to machine PATH, create a test git repo
     # for testing `allbctl status projects`
-    win.vm.provision "shell", privileged: true, inline: <<-SHELL
-      $testDir = "C:\\allbctl-test"
-      if (-not (Test-Path $testDir)) { New-Item -ItemType Directory -Path $testDir | Out-Null }
-
-      $binarySource = "C:\\vagrant\\allbctl_windows_amd64.exe"
-      if (Test-Path $binarySource) {
-        Copy-Item $binarySource "$testDir\\allbctl.exe" -Force
-        Write-Host "OK: copied allbctl.exe to $testDir"
-      } else {
-        Write-Error "MISSING: $binarySource — run 'make build-windows' on the host first"
-        exit 1
-      }
-
-      # Add to machine-wide PATH so all future sessions have it
-      $machinePath = [System.Environment]::GetEnvironmentVariable("Path", "Machine")
-      if ($machinePath -notlike "*$testDir*") {
-        [System.Environment]::SetEnvironmentVariable("Path", "$machinePath;$testDir", "Machine")
-        Write-Host "OK: added $testDir to machine PATH"
-      }
-
-      # Create a fake src/allbctl git repo so status projects has something to scan
-      $srcDir = "C:\\Users\\vagrant\\src\\allbctl"
-      if (-not (Test-Path $srcDir)) {
-        New-Item -ItemType Directory -Path $srcDir | Out-Null
-        & git init $srcDir
-        Write-Host "OK: created test git repo at $srcDir"
-      }
-    SHELL
+    win.vm.provision "shell", privileged: true,
+      path: "scripts/vagrant-windows-setup.ps1"
 
     # Smoke-test provision: runs allbctl commands and prints results
-    win.vm.provision "shell", run: "never", name: "smoke-test", privileged: false, inline: <<-SHELL
-      $allbctl = "C:\\allbctl-test\\allbctl.exe"
-      $pass = 0; $fail = 0
-
-      function Run-Test($label, $args) {
-        Write-Host ""
-        Write-Host "=== $label ===" -ForegroundColor Cyan
-        $output = & $allbctl @args 2>&1
-        $code = $LASTEXITCODE
-        Write-Host $output
-        if ($code -ne 0) {
-          Write-Host "FAIL (exit $code)" -ForegroundColor Red
-          $script:fail++
-        } else {
-          Write-Host "PASS" -ForegroundColor Green
-          $script:pass++
-        }
-      }
-
-      Run-Test "version"          @("version")
-      Run-Test "help"             @("--help")
-      Run-Test "status (full)"    @("status")
-      Run-Test "status projects"  @("status", "projects")
-      Run-Test "status runtimes"  @("status", "runtimes")
-      Run-Test "bootstrap status" @("bootstrap", "status")
-
-      Write-Host ""
-      Write-Host "========================================"
-      Write-Host "Results: $pass passed, $fail failed"
-      if ($fail -gt 0) { Write-Host "OVERALL: FAIL" -ForegroundColor Red; exit 1 }
-      else             { Write-Host "OVERALL: PASS" -ForegroundColor Green }
-    SHELL
+    win.vm.provision "shell", run: "never", name: "smoke-test", privileged: false,
+      path: "scripts/vagrant-windows-smoke-test.ps1"
   end
 end
