@@ -6,7 +6,13 @@
 
 ### Quick Start
 
-Download the latest release for your platform:
+**macOS / Linux via Homebrew:**
+```bash
+brew tap aallbrig/tap
+brew install allbctl
+```
+
+Or download the latest release for your platform:
 - **Linux**: [allbctl-linux-amd64](https://github.com/aallbrig/allbctl/releases/latest/download/allbctl-linux-amd64)
 - **macOS**: [allbctl-darwin-amd64](https://github.com/aallbrig/allbctl/releases/latest/download/allbctl-darwin-amd64) | [allbctl-darwin-arm64](https://github.com/aallbrig/allbctl/releases/latest/download/allbctl-darwin-arm64)
 - **Windows**: [allbctl-windows-amd64.exe](https://github.com/aallbrig/allbctl/releases/latest/download/allbctl-windows-amd64.exe)

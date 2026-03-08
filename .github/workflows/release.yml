@@ -103,3 +103,44 @@ jobs:
           generateReleaseNotes: true
           draft: false
           prerelease: false
+
+  update-homebrew:
+    name: Update Homebrew Formula
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout allbctl (for updater script)
+        uses: actions/checkout@v4
+        with:
+          path: allbctl
+      - name: Download release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-binaries
+          path: artifacts
+      - name: Checkout homebrew-tap
+        uses: actions/checkout@v4
+        with:
+          repository: aallbrig/homebrew-tap
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: homebrew-tap
+      - name: Update formula
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          TAG="${GITHUB_REF#refs/tags/}"
+          BASE_URL="https://github.com/aallbrig/allbctl/releases/download/${TAG}"
+          D_AMD64=$(grep "allbctl-darwin-amd64.tar.gz" artifacts/SHA256SUMS | awk '{print $1}')
+          D_ARM64=$(grep "allbctl-darwin-arm64.tar.gz" artifacts/SHA256SUMS | awk '{print $1}')
+          L_AMD64=$(grep "allbctl-linux-amd64.tar.gz"  artifacts/SHA256SUMS | awk '{print $1}')
+          L_ARM64=$(grep "allbctl-linux-arm64.tar.gz"  artifacts/SHA256SUMS | awk '{print $1}')
+          python3 allbctl/scripts/update-homebrew-formula.py \
+            "$VERSION" "$BASE_URL" "$D_AMD64" "$D_ARM64" "$L_AMD64" "$L_ARM64"
+      - name: Commit and push
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          cd homebrew-tap
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/allbctl.rb
+          git diff --cached --quiet || git commit -m "chore: update allbctl formula to v${VERSION}"
+          git push
