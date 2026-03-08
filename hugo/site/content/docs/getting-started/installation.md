@@ -5,6 +5,27 @@ title: "Installation"
 
 # Installation
 
+## Homebrew (macOS and Linux)
+
+The easiest way to install allbctl on macOS or Linux:
+
+```bash
+brew tap aallbrig/tap
+brew install allbctl
+```
+
+Or in one step:
+
+```bash
+brew install aallbrig/tap/allbctl
+```
+
+To update:
+
+```bash
+brew upgrade allbctl
+```
+
 ## Download Latest Release
 
 The easiest way to install allbctl is to download a pre-built binary from the releases page.
