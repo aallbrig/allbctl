@@ -387,12 +387,12 @@ func TestProjectsCmdLimitFlag(t *testing.T) {
 }
 
 func TestShowFilesFlag(t *testing.T) {
-	flag := ProjectsCmd.Flags().Lookup("show-files")
+	flag := ProjectsCmd.Flags().Lookup("verbose")
 	if flag == nil {
-		t.Fatal("Expected --show-files flag to exist on ProjectsCmd")
+		t.Fatal("Expected --verbose flag to exist on ProjectsCmd")
 	}
 	if flag.DefValue != "false" {
-		t.Errorf("Expected --show-files default value to be false, got %s", flag.DefValue)
+		t.Errorf("Expected --verbose default value to be false, got %s", flag.DefValue)
 	}
 }
 

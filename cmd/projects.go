@@ -14,11 +14,11 @@ import (
 )
 
 var (
-	allFlag       bool
-	dirtyFlag     bool
-	cleanFlag     bool
-	limitFlag     int
-	showFilesFlag bool
+	allFlag     bool
+	dirtyFlag   bool
+	cleanFlag   bool
+	limitFlag   int
+	verboseFlag bool
 )
 
 // DirtyReason is a bitmask describing why a repo is considered dirty
@@ -74,9 +74,9 @@ Examples:
   allbctl status projects --all                  # Show all repos
   allbctl status projects --dirty                # Show only dirty repos
   allbctl status projects --clean                # Show only clean repos
-  allbctl status projects --dirty --show-files   # Show dirty repos with their changed files`,
+  allbctl status projects --dirty -v          # Show dirty repos with their changed files`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if allFlag || dirtyFlag || cleanFlag || showFilesFlag {
+		if allFlag || dirtyFlag || cleanFlag || verboseFlag {
 			printProjectsSummary()
 		} else {
 			// Default: show all projects (no limit), unless --limit is specified
@@ -90,7 +90,7 @@ func init() {
 	ProjectsCmd.Flags().BoolVar(&dirtyFlag, "dirty", false, "Show only dirty repos")
 	ProjectsCmd.Flags().BoolVar(&cleanFlag, "clean", false, "Show only clean repos")
 	ProjectsCmd.Flags().IntVar(&limitFlag, "limit", 0, "Limit the number of projects shown (0 = no limit, show all)")
-	ProjectsCmd.Flags().BoolVar(&showFilesFlag, "show-files", false, "Show changed files (tracked and untracked) under each dirty repo")
+	ProjectsCmd.Flags().BoolVarP(&verboseFlag, "verbose", "v", false, "Show changed files (tracked and untracked) under each dirty repo")
 }
 
 // RepoInfo contains information about a git repository
@@ -100,7 +100,7 @@ type RepoInfo struct {
 	Dirty            bool
 	DirtyReasons     DirtyReason
 	RemoteRepo       string // e.g., "aallbrig/allbctl" or "godotengine/godot"
-	StatusOutput     string // populated when --show-files is set; full `git status --untracked-files=all` output
+	StatusOutput     string // populated when -v/--verbose is set; full `git status --untracked-files=all` output
 	UncommittedFiles int    // staged + unstaged file count (excludes untracked)
 	UntrackedFiles   int    // untracked file count
 	UnpushedCommits  int    // number of commits ahead of upstream
@@ -155,7 +155,7 @@ func printProjectsSummary() {
 		}
 
 		// Format: "Total repos: 4 (2 dirty)" or "Total repos: 4 (2 dirty, 7 files)"
-		if showFilesFlag && dirtyCount > 0 {
+		if verboseFlag && dirtyCount > 0 {
 			totalFiles := countTotalStatusFiles(repoInfos)
 			fmt.Printf("Total repos: %d (%d dirty, %d files)\n", len(repos), dirtyCount, totalFiles)
 		} else if dirtyCount > 0 {
@@ -169,11 +169,11 @@ func printProjectsSummary() {
 			count = len(filtered)
 		}
 		fmt.Printf("\nLast %d recently touched:\n", count)
-		printRepoTable(filtered[:count], "  ", showFilesFlag, true)
+		printRepoTable(filtered[:count], "  ", verboseFlag, true)
 	} else {
 		fmt.Println(buildSummaryLine(filtered))
 		fmt.Println()
-		printRepoTable(filtered, "  ", showFilesFlag, dirtyFlag || allFlag)
+		printRepoTable(filtered, "  ", verboseFlag, dirtyFlag || allFlag)
 	}
 }
 
@@ -506,7 +506,7 @@ func getReposByModTime(repos []string) []RepoInfo {
 				if reasons&DirtyUnpushedCommits != 0 {
 					repoInfo.UnpushedCommits = countUnpushedCommits(repo)
 				}
-				if showFilesFlag {
+				if verboseFlag {
 					repoInfo.StatusOutput = getGitStatusOutput(repo)
 				}
 			}
