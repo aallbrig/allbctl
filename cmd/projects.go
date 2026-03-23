@@ -179,13 +179,13 @@ func printProjectsSummary() {
 		fmt.Printf("\nLast %d recently touched:\n", count)
 		printRepoTable(filtered[:count], "  ", verboseFlag, true)
 	} else {
-		fmt.Println(buildSummaryLine(filtered))
+		fmt.Println(buildSummaryLine(filtered, displayMode))
 		fmt.Println()
 		printRepoTable(filtered, "  ", verboseFlag, dirtyFlag || allFlag)
 	}
 }
 
-func buildSummaryLine(repos []RepoInfo) string {
+func buildSummaryLine(repos []RepoInfo, displayMode string) string {
 	dirtyCount := 0
 	unpushedCommits := 0
 	uncommittedFiles := 0
@@ -207,27 +207,39 @@ func buildSummaryLine(repos []RepoInfo) string {
 		}
 	}
 	cleanCount := len(repos) - dirtyCount
-	parts := []string{fmt.Sprintf("Total projects: %d", len(repos))}
-	if dirtyCount > 0 {
-		parts = append(parts, fmt.Sprintf("Total dirty: %d", dirtyCount))
+
+	var parts []string
+	switch displayMode {
+	case "dirty":
+		parts = []string{fmt.Sprintf("Total dirty: %d", len(repos))}
+	case "clean":
+		parts = []string{fmt.Sprintf("Total clean: %d", len(repos))}
+	default: // "all"
+		parts = []string{fmt.Sprintf("Total projects: %d", len(repos))}
+		if dirtyCount > 0 {
+			parts = append(parts, fmt.Sprintf("Total dirty: %d", dirtyCount))
+		}
+		if cleanCount > 0 {
+			parts = append(parts, fmt.Sprintf("Total clean: %d", cleanCount))
+		}
 	}
-	if cleanCount > 0 {
-		parts = append(parts, fmt.Sprintf("Total clean: %d", cleanCount))
-	}
-	if unpushedCommits > 0 {
-		parts = append(parts, fmt.Sprintf("Total unpushed commits: %d", unpushedCommits))
-	}
-	if uncommittedFiles > 0 {
-		parts = append(parts, fmt.Sprintf("Total modified files: %d", uncommittedFiles))
-	}
-	if untrackedFiles > 0 {
-		parts = append(parts, fmt.Sprintf("Total untracked files: %d", untrackedFiles))
-	}
-	if ciFailed > 0 {
-		parts = append(parts, fmt.Sprintf("Total CI failed: %d", ciFailed))
-	}
-	if ciPending > 0 {
-		parts = append(parts, fmt.Sprintf("Total CI pending: %d", ciPending))
+
+	if displayMode != "clean" {
+		if unpushedCommits > 0 {
+			parts = append(parts, fmt.Sprintf("Total unpushed commits: %d", unpushedCommits))
+		}
+		if uncommittedFiles > 0 {
+			parts = append(parts, fmt.Sprintf("Total modified files: %d", uncommittedFiles))
+		}
+		if untrackedFiles > 0 {
+			parts = append(parts, fmt.Sprintf("Total untracked files: %d", untrackedFiles))
+		}
+		if ciFailed > 0 {
+			parts = append(parts, fmt.Sprintf("Total CI failed: %d", ciFailed))
+		}
+		if ciPending > 0 {
+			parts = append(parts, fmt.Sprintf("Total CI pending: %d", ciPending))
+		}
 	}
 	return strings.Join(parts, "  ")
 }
