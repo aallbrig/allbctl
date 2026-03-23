@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -99,12 +100,19 @@ type RepoInfo struct {
 	ModTime          time.Time
 	Dirty            bool
 	DirtyReasons     DirtyReason
-	RemoteRepo       string // e.g., "aallbrig/allbctl" or "godotengine/godot"
-	StatusOutput     string // populated when -v/--verbose is set; full `git status --untracked-files=all` output
-	UncommittedFiles int    // staged + unstaged file count (excludes untracked)
-	UntrackedFiles   int    // untracked file count
-	UnpushedCommits  int    // number of commits ahead of upstream
-	CIStatus         string // "success", "failure", "pending", or "" (no CI detected)
+	RemoteRepo       string    // e.g., "aallbrig/allbctl" or "godotengine/godot"
+	StatusOutput     string    // populated when -v/--verbose is set; full `git status --untracked-files=all` output
+	UncommittedFiles int       // staged + unstaged file count (excludes untracked)
+	UntrackedFiles   int       // untracked file count
+	UnpushedCommits  int       // number of commits ahead of upstream
+	CIStatus         string    // "success", "failure", "pending", or "" (no CI detected)
+	CIChecks         []CICheck // populated when -v/--verbose is set
+}
+
+// CICheck represents a single GitHub check run with its name and conclusion.
+type CICheck struct {
+	Name       string `json:"name"`
+	Conclusion string `json:"conclusion"`
 }
 
 // printProjectsSummary prints a summary of git repositories
@@ -178,12 +186,16 @@ func printProjectsSummary() {
 }
 
 func buildSummaryLine(repos []RepoInfo) string {
+	dirtyCount := 0
 	unpushedCommits := 0
 	uncommittedFiles := 0
 	untrackedFiles := 0
 	ciFailed := 0
 	ciPending := 0
 	for _, repo := range repos {
+		if repo.Dirty {
+			dirtyCount++
+		}
 		unpushedCommits += repo.UnpushedCommits
 		uncommittedFiles += repo.UncommittedFiles
 		untrackedFiles += repo.UntrackedFiles
@@ -194,7 +206,14 @@ func buildSummaryLine(repos []RepoInfo) string {
 			ciPending++
 		}
 	}
+	cleanCount := len(repos) - dirtyCount
 	parts := []string{fmt.Sprintf("Total projects: %d", len(repos))}
+	if dirtyCount > 0 {
+		parts = append(parts, fmt.Sprintf("Total dirty: %d", dirtyCount))
+	}
+	if cleanCount > 0 {
+		parts = append(parts, fmt.Sprintf("Total clean: %d", cleanCount))
+	}
 	if unpushedCommits > 0 {
 		parts = append(parts, fmt.Sprintf("Total unpushed commits: %d", unpushedCommits))
 	}
@@ -356,38 +375,35 @@ func parseCICheckRuns(conclusions []string) string {
 }
 
 // getRemoteCIStatus queries GitHub check-runs for the repo's current branch HEAD.
-// Returns "success", "failure", "pending", or "" (no CI / gh unavailable).
-func getRemoteCIStatus(repoPath, remoteRepo string) string {
+// Returns aggregate status ("success", "failure", "pending", or "") and individual checks.
+func getRemoteCIStatus(repoPath, remoteRepo string) (string, []CICheck) {
 	if remoteRepo == "" {
-		return ""
+		return "", nil
 	}
 	branch, err := exec.Command("git", "-C", repoPath, "branch", "--show-current").Output()
 	if err != nil || strings.TrimSpace(string(branch)) == "" {
-		return ""
+		return "", nil
 	}
 	ref := strings.TrimSpace(string(branch))
 
 	out, err := exec.Command("gh", "api",
 		fmt.Sprintf("repos/%s/commits/%s/check-runs", remoteRepo, ref),
-		"--jq", "[.check_runs[] | select(.conclusion != \"skipped\") | .conclusion // \"\"]",
+		"--jq", "[.check_runs[] | select(.conclusion != \"skipped\") | {name: .name, conclusion: (.conclusion // \"\")}]",
 	).Output()
 	if err != nil {
-		return ""
+		return "", nil
 	}
 
-	// Parse JSON array of conclusion strings
-	raw := strings.TrimSpace(string(out))
-	raw = strings.Trim(raw, "[]")
-	if strings.TrimSpace(raw) == "" {
-		return ""
+	var checks []CICheck
+	if err := json.Unmarshal(out, &checks); err != nil || len(checks) == 0 {
+		return "", nil
 	}
-	var conclusions []string
-	for _, part := range strings.Split(raw, ",") {
-		part = strings.TrimSpace(part)
-		part = strings.Trim(part, `"`)
-		conclusions = append(conclusions, part)
+
+	conclusions := make([]string, len(checks))
+	for i, c := range checks {
+		conclusions[i] = c.Conclusion
 	}
-	return parseCICheckRuns(conclusions)
+	return parseCICheckRuns(conclusions), checks
 }
 
 // isGitRepoDirty returns true if the repo has any dirty reasons
@@ -510,8 +526,11 @@ func getReposByModTime(repos []string) []RepoInfo {
 					repoInfo.StatusOutput = getGitStatusOutput(repo)
 				}
 			}
-			ciStatus := getRemoteCIStatus(repo, repoInfo.RemoteRepo)
+			ciStatus, ciChecks := getRemoteCIStatus(repo, repoInfo.RemoteRepo)
 			repoInfo.CIStatus = ciStatus
+			if verboseFlag {
+				repoInfo.CIChecks = ciChecks
+			}
 			switch ciStatus {
 			case "failure":
 				repoInfo.DirtyReasons |= DirtyCIFailed
@@ -699,10 +718,25 @@ func printRepoTable(repos []RepoInfo, indent string, showFiles bool, showReasons
 		}
 		fmt.Println(line)
 
-		if showFiles && repo.StatusOutput != "" {
-			lines := filterStatusLines(strings.Split(repo.StatusOutput, "\n"))
-			for _, l := range lines {
-				fmt.Printf("%s  %s\n", indent, l)
+		hasVerboseOutput := showFiles && (repo.StatusOutput != "" || len(repo.CIChecks) > 0)
+		if hasVerboseOutput {
+			if len(repo.CIChecks) > 0 {
+				for _, check := range repo.CIChecks {
+					icon := "✓"
+					switch check.Conclusion {
+					case "failure", "timed_out", "cancelled":
+						icon = "✗"
+					case "":
+						icon = "…"
+					}
+					fmt.Printf("%s    %s %s\n", indent, icon, check.Name)
+				}
+			}
+			if repo.StatusOutput != "" {
+				lines := filterStatusLines(strings.Split(repo.StatusOutput, "\n"))
+				for _, l := range lines {
+					fmt.Printf("%s  %s\n", indent, l)
+				}
 			}
 			fmt.Println()
 		}

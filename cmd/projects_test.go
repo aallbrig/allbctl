@@ -570,49 +570,49 @@ func TestBuildSummaryLine(t *testing.T) {
 		expected string
 	}{
 		{
-			"no dirty data shows only total",
+			"all clean shows clean count",
 			[]RepoInfo{{}, {}},
-			"Total projects: 2",
+			"Total projects: 2  Total clean: 2",
 		},
 		{
 			"unpushed commits included when non-zero",
-			[]RepoInfo{{UnpushedCommits: 3}, {UnpushedCommits: 2}},
-			"Total projects: 2  Total unpushed commits: 5",
+			[]RepoInfo{{Dirty: true, UnpushedCommits: 3}, {Dirty: true, UnpushedCommits: 2}},
+			"Total projects: 2  Total dirty: 2  Total unpushed commits: 5",
 		},
 		{
 			"modified files included when non-zero",
-			[]RepoInfo{{UncommittedFiles: 4}, {}},
-			"Total projects: 2  Total modified files: 4",
+			[]RepoInfo{{Dirty: true, UncommittedFiles: 4}, {}},
+			"Total projects: 2  Total dirty: 1  Total clean: 1  Total modified files: 4",
 		},
 		{
 			"untracked files included when non-zero",
-			[]RepoInfo{{UntrackedFiles: 1}, {}},
-			"Total projects: 2  Total untracked files: 1",
+			[]RepoInfo{{Dirty: true, UntrackedFiles: 1}, {}},
+			"Total projects: 2  Total dirty: 1  Total clean: 1  Total untracked files: 1",
 		},
 		{
 			"all sections shown when non-zero",
-			[]RepoInfo{{UnpushedCommits: 1, UncommittedFiles: 2, UntrackedFiles: 3}},
-			"Total projects: 1  Total unpushed commits: 1  Total modified files: 2  Total untracked files: 3",
+			[]RepoInfo{{Dirty: true, UnpushedCommits: 1, UncommittedFiles: 2, UntrackedFiles: 3}},
+			"Total projects: 1  Total dirty: 1  Total unpushed commits: 1  Total modified files: 2  Total untracked files: 3",
 		},
 		{
 			"zero values omitted",
 			[]RepoInfo{{UnpushedCommits: 0, UncommittedFiles: 0, UntrackedFiles: 0}},
-			"Total projects: 1",
+			"Total projects: 1  Total clean: 1",
 		},
 		{
 			"ci failed included when non-zero",
-			[]RepoInfo{{DirtyReasons: DirtyCIFailed}, {DirtyReasons: DirtyCIFailed}},
-			"Total projects: 2  Total CI failed: 2",
+			[]RepoInfo{{Dirty: true, DirtyReasons: DirtyCIFailed}, {Dirty: true, DirtyReasons: DirtyCIFailed}},
+			"Total projects: 2  Total dirty: 2  Total CI failed: 2",
 		},
 		{
 			"ci pending included when non-zero",
-			[]RepoInfo{{DirtyReasons: DirtyCIPending}, {}},
-			"Total projects: 2  Total CI pending: 1",
+			[]RepoInfo{{Dirty: true, DirtyReasons: DirtyCIPending}, {}},
+			"Total projects: 2  Total dirty: 1  Total clean: 1  Total CI pending: 1",
 		},
 		{
 			"ci success not counted",
 			[]RepoInfo{{CIStatus: "success"}, {}},
-			"Total projects: 2",
+			"Total projects: 2  Total clean: 2",
 		},
 	}
 
@@ -621,6 +621,33 @@ func TestBuildSummaryLine(t *testing.T) {
 			got := buildSummaryLine(tc.repos)
 			if got != tc.expected {
 				t.Errorf("got %q, want %q", got, tc.expected)
+			}
+		})
+	}
+}
+
+func TestCICheckVerboseIconMapping(t *testing.T) {
+	cases := []struct {
+		conclusion string
+		wantIcon   string
+	}{
+		{"success", "✓"},
+		{"failure", "✗"},
+		{"timed_out", "✗"},
+		{"cancelled", "✗"},
+		{"", "…"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.conclusion, func(t *testing.T) {
+			icon := "✓"
+			switch tc.conclusion {
+			case "failure", "timed_out", "cancelled":
+				icon = "✗"
+			case "":
+				icon = "…"
+			}
+			if icon != tc.wantIcon {
+				t.Errorf("conclusion %q: got icon %q, want %q", tc.conclusion, icon, tc.wantIcon)
 			}
 		})
 	}
