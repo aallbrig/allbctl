@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -39,19 +40,140 @@ func TestFindGitRepos(t *testing.T) {
 }
 
 func TestIsGitRepoDirty(t *testing.T) {
-	// This test checks that the function doesn't panic
-	// Actual behavior depends on git being available and having a repo
 	tmpDir, err := os.MkdirTemp("", "allbctl-test-")
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
 	defer os.RemoveAll(tmpDir)
 
-	// Test with non-git directory
 	dirty := isGitRepoDirty(tmpDir)
 	if dirty {
 		t.Error("Non-git directory should not be dirty")
 	}
+}
+
+func TestDirtyReasonString(t *testing.T) {
+	cases := []struct {
+		reason   DirtyReason
+		expected string
+	}{
+		{0, ""},
+		{DirtyUncommittedChanges, "[uncommitted changes]"},
+		{DirtyUnpushedCommits, "[unpushed commits]"},
+		{DirtyNoUpstream, "[no upstream]"},
+		{DirtyUncommittedChanges | DirtyUnpushedCommits, "[uncommitted changes, unpushed commits]"},
+		{DirtyUncommittedChanges | DirtyNoUpstream, "[uncommitted changes, no upstream]"},
+		{DirtyUncommittedChanges | DirtyUnpushedCommits | DirtyNoUpstream, "[uncommitted changes, unpushed commits, no upstream]"},
+	}
+
+	for _, tc := range cases {
+		got := tc.reason.String()
+		if got != tc.expected {
+			t.Errorf("DirtyReason(%d).String() = %q, want %q", tc.reason, got, tc.expected)
+		}
+	}
+}
+
+func TestGetDirtyReasons(t *testing.T) {
+	t.Run("non-git directory has no reasons", func(t *testing.T) {
+		tmpDir, err := os.MkdirTemp("", "allbctl-test-")
+		if err != nil {
+			t.Fatalf("Failed to create temp dir: %v", err)
+		}
+		defer os.RemoveAll(tmpDir)
+
+		reasons := getDirtyReasons(tmpDir)
+		if reasons != 0 {
+			t.Errorf("Expected no dirty reasons for non-git dir, got %s", reasons)
+		}
+	})
+
+	t.Run("uncommitted changes detected", func(t *testing.T) {
+		tmpDir, err := os.MkdirTemp("", "allbctl-test-")
+		if err != nil {
+			t.Fatalf("Failed to create temp dir: %v", err)
+		}
+		defer os.RemoveAll(tmpDir)
+
+		if err := exec.Command("git", "-C", tmpDir, "init").Run(); err != nil {
+			t.Skip("git not available")
+		}
+		if err := os.WriteFile(filepath.Join(tmpDir, "test.txt"), []byte("test"), 0644); err != nil {
+			t.Fatalf("Failed to create test file: %v", err)
+		}
+
+		reasons := getDirtyReasons(tmpDir)
+		if reasons&DirtyUncommittedChanges == 0 {
+			t.Errorf("Expected DirtyUncommittedChanges, got %s", reasons)
+		}
+	})
+
+	t.Run("no upstream detected after first commit", func(t *testing.T) {
+		tmpDir, err := os.MkdirTemp("", "allbctl-test-")
+		if err != nil {
+			t.Fatalf("Failed to create temp dir: %v", err)
+		}
+		defer os.RemoveAll(tmpDir)
+
+		if err := exec.Command("git", "-C", tmpDir, "init").Run(); err != nil {
+			t.Skip("git not available")
+		}
+		if err := os.WriteFile(filepath.Join(tmpDir, "readme.txt"), []byte("hi"), 0644); err != nil {
+			t.Fatalf("Failed to create file: %v", err)
+		}
+		_ = exec.Command("git", "-C", tmpDir, "add", ".").Run()                                      //nolint:errcheck
+		_ = exec.Command("git", "-C", tmpDir, "commit", "--allow-empty-message", "-m", "init").Run() //nolint:errcheck
+
+		reasons := getDirtyReasons(tmpDir)
+		if reasons&DirtyNoUpstream == 0 {
+			t.Errorf("Expected DirtyNoUpstream for local-only repo, got %s", reasons)
+		}
+	})
+
+	t.Run("unpushed commits detected", func(t *testing.T) {
+		// Set up a bare "remote" and a local clone, then make a local commit
+		remoteDir, err := os.MkdirTemp("", "allbctl-remote-")
+		if err != nil {
+			t.Fatalf("Failed to create remote dir: %v", err)
+		}
+		defer os.RemoveAll(remoteDir)
+
+		localDir, err := os.MkdirTemp("", "allbctl-local-")
+		if err != nil {
+			t.Fatalf("Failed to create local dir: %v", err)
+		}
+		defer os.RemoveAll(localDir)
+
+		if err := exec.Command("git", "init", "--bare", remoteDir).Run(); err != nil {
+			t.Skip("git not available")
+		}
+		if err := exec.Command("git", "clone", remoteDir, localDir).Run(); err != nil {
+			t.Skipf("git clone failed: %v", err)
+		}
+
+		// Make an initial commit on the remote so the clone has an upstream
+		if err := os.WriteFile(filepath.Join(localDir, "file.txt"), []byte("hello"), 0644); err != nil {
+			t.Fatalf("Failed to create file: %v", err)
+		}
+		_ = exec.Command("git", "-C", localDir, "add", ".").Run() //nolint:errcheck
+		cfg := []string{"-C", localDir, "-c", "user.email=test@test.com", "-c", "user.name=Test"}
+		_ = exec.Command("git", "-C", localDir, "push", "-u", "origin", "HEAD").Run() //nolint:errcheck
+
+		// Now make a local commit that isn't pushed
+		if err := os.WriteFile(filepath.Join(localDir, "file.txt"), []byte("world"), 0644); err != nil {
+			t.Fatalf("Failed to update file: %v", err)
+		}
+		_ = exec.Command("git", "-C", localDir, "add", ".").Run()                 //nolint:errcheck
+		_ = exec.Command("git", append(cfg, "commit", "-m", "unpushed")...).Run() //nolint:errcheck
+
+		reasons := getDirtyReasons(localDir)
+		if reasons&DirtyUnpushedCommits == 0 {
+			t.Errorf("Expected DirtyUnpushedCommits, got %s", reasons)
+		}
+		if reasons&DirtyNoUpstream != 0 {
+			t.Errorf("Should not have DirtyNoUpstream when upstream exists, got %s", reasons)
+		}
+	})
 }
 
 func TestGetReposByModTime(t *testing.T) {
@@ -82,6 +204,80 @@ func TestGetReposByModTime(t *testing.T) {
 	// Most recently touched should be first
 	if sorted[0].Path != repo3 {
 		t.Errorf("Expected repo3 first (most recent), got %s", sorted[0].Path)
+	}
+}
+
+func TestFilterStatusLines(t *testing.T) {
+	cases := []struct {
+		name     string
+		input    []string
+		expected []string
+	}{
+		{
+			"removes nothing to commit line",
+			[]string{"On branch main", "", "nothing to commit, working tree clean"},
+			[]string{"On branch main"},
+		},
+		{
+			"strips trailing blank lines",
+			[]string{"On branch main", "Your branch is ahead by 1 commit.", ""},
+			[]string{"On branch main", "Your branch is ahead by 1 commit."},
+		},
+		{
+			"removes nothing to commit and trailing blank",
+			[]string{"On branch main", "", "nothing to commit, working tree clean", ""},
+			[]string{"On branch main"},
+		},
+		{
+			"removes git push hint line",
+			[]string{"On branch main", `  (use "git push" to publish your local commits)`, ""},
+			[]string{"On branch main"},
+		},
+		{
+			"removes git add hint line",
+			[]string{"Changes not staged for commit:", `  (use "git add <file>..." to update what will be committed)`, "\tmodified:   foo.go"},
+			[]string{"Changes not staged for commit:", "\tmodified:   foo.go"},
+		},
+		{
+			"removes git restore hint line",
+			[]string{"Changes not staged for commit:", `  (use "git restore <file>..." to discard changes in working directory)`, "\tmodified:   foo.go"},
+			[]string{"Changes not staged for commit:", "\tmodified:   foo.go"},
+		},
+		{
+			"removes no changes added to commit line",
+			[]string{"On branch main", "", "no changes added to commit (use \"git add\" and/or \"git commit -a\")"},
+			[]string{"On branch main"},
+		},
+		{
+			"removes blank line before Changes not staged for commit",
+			[]string{"On branch main", "Your branch is up to date with 'origin/main'.", "", "Changes not staged for commit:", "\tmodified:   foo.go"},
+			[]string{"On branch main", "Your branch is up to date with 'origin/main'.", "Changes not staged for commit:", "\tmodified:   foo.go"},
+		},
+		{
+			"preserves non-blank non-noise lines",
+			[]string{"On branch main", "\tmodified:   foo.go"},
+			[]string{"On branch main", "\tmodified:   foo.go"},
+		},
+		{
+			"empty input",
+			[]string{},
+			nil,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := filterStatusLines(tc.input)
+			if len(got) != len(tc.expected) {
+				t.Errorf("len=%d, want %d; got %v", len(got), len(tc.expected), got)
+				return
+			}
+			for i := range got {
+				if got[i] != tc.expected[i] {
+					t.Errorf("line[%d] = %q, want %q", i, got[i], tc.expected[i])
+				}
+			}
+		})
 	}
 }
 
@@ -187,5 +383,230 @@ func TestProjectsCmdLimitFlag(t *testing.T) {
 	}
 	if flag.DefValue != "0" {
 		t.Errorf("Expected --limit default value to be 0, got %s", flag.DefValue)
+	}
+}
+
+func TestShowFilesFlag(t *testing.T) {
+	flag := ProjectsCmd.Flags().Lookup("show-files")
+	if flag == nil {
+		t.Fatal("Expected --show-files flag to exist on ProjectsCmd")
+	}
+	if flag.DefValue != "false" {
+		t.Errorf("Expected --show-files default value to be false, got %s", flag.DefValue)
+	}
+}
+
+func TestGetGitStatusOutput(t *testing.T) {
+	t.Run("non-git directory returns empty string", func(t *testing.T) {
+		tmpDir, err := os.MkdirTemp("", "allbctl-test-")
+		if err != nil {
+			t.Fatalf("Failed to create temp dir: %v", err)
+		}
+		defer os.RemoveAll(tmpDir)
+
+		out := getGitStatusOutput(tmpDir)
+		if out != "" {
+			t.Errorf("Expected empty string for non-git directory, got %q", out)
+		}
+	})
+
+	t.Run("dirty repo returns non-empty status output", func(t *testing.T) {
+		tmpDir, err := os.MkdirTemp("", "allbctl-test-")
+		if err != nil {
+			t.Fatalf("Failed to create temp dir: %v", err)
+		}
+		defer os.RemoveAll(tmpDir)
+
+		if err := exec.Command("git", "-C", tmpDir, "init").Run(); err != nil {
+			t.Skip("git not available")
+		}
+
+		if err := os.WriteFile(filepath.Join(tmpDir, "test.txt"), []byte("test"), 0644); err != nil {
+			t.Fatalf("Failed to create test file: %v", err)
+		}
+
+		out := getGitStatusOutput(tmpDir)
+		if out == "" {
+			t.Error("Expected non-empty status output for dirty repo")
+		}
+		if !strings.Contains(out, "test.txt") {
+			t.Errorf("Expected test.txt in status output, got:\n%s", out)
+		}
+	})
+
+	t.Run("clean repo returns non-empty status output", func(t *testing.T) {
+		tmpDir, err := os.MkdirTemp("", "allbctl-test-")
+		if err != nil {
+			t.Fatalf("Failed to create temp dir: %v", err)
+		}
+		defer os.RemoveAll(tmpDir)
+
+		if err := exec.Command("git", "-C", tmpDir, "init").Run(); err != nil {
+			t.Skip("git not available")
+		}
+
+		// Clean repos still produce "nothing to commit" output
+		out := getGitStatusOutput(tmpDir)
+		if out == "" {
+			t.Error("Expected non-empty status output even for clean repo")
+		}
+	})
+}
+
+func TestCountStatusFiles(t *testing.T) {
+	cases := []struct {
+		name   string
+		input  string
+		expect int
+	}{
+		{"empty", "", 0},
+		{"no files", "On branch main\nnothing to commit", 0},
+		{"one modified file", "Changes not staged:\n\tmodified:   foo.go", 1},
+		{"multiple files", "Changes:\n\tmodified:   a.go\n\tmodified:   b.go\nUntracked:\n\tc.go\n\td.go", 4},
+		{"untracked with tab", "Untracked files:\n\tfoo.go\n\tbar.go", 2},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := countStatusFiles(tc.input)
+			if got != tc.expect {
+				t.Errorf("countStatusFiles() = %d, want %d", got, tc.expect)
+			}
+		})
+	}
+}
+
+func TestCountTotalStatusFiles(t *testing.T) {
+	repos := []RepoInfo{
+		{Path: "/path/1", Dirty: true, StatusOutput: "Changes:\n\ta.go\n\tb.go"},
+		{Path: "/path/2", Dirty: false, StatusOutput: ""},
+		{Path: "/path/3", Dirty: true, StatusOutput: "Changes:\n\tc.go"},
+	}
+
+	count := countTotalStatusFiles(repos)
+	if count != 3 {
+		t.Errorf("Expected 3 total status files, got %d", count)
+	}
+}
+
+func TestCountPorcelainFiles(t *testing.T) {
+	t.Run("non-git directory returns zeros", func(t *testing.T) {
+		tmpDir, err := os.MkdirTemp("", "allbctl-test-")
+		if err != nil {
+			t.Fatalf("Failed to create temp dir: %v", err)
+		}
+		defer os.RemoveAll(tmpDir)
+
+		uncommitted, untracked := countPorcelainFiles(tmpDir)
+		if uncommitted != 0 || untracked != 0 {
+			t.Errorf("Expected (0, 0), got (%d, %d)", uncommitted, untracked)
+		}
+	})
+
+	t.Run("staged file counted as uncommitted, untracked file counted separately", func(t *testing.T) {
+		tmpDir, err := os.MkdirTemp("", "allbctl-test-")
+		if err != nil {
+			t.Fatalf("Failed to create temp dir: %v", err)
+		}
+		defer os.RemoveAll(tmpDir)
+
+		if err := exec.Command("git", "-C", tmpDir, "init").Run(); err != nil {
+			t.Skip("git not available")
+		}
+
+		if err := os.WriteFile(filepath.Join(tmpDir, "staged.txt"), []byte("staged"), 0644); err != nil {
+			t.Fatalf("Failed to create staged file: %v", err)
+		}
+		_ = exec.Command("git", "-C", tmpDir, "add", "staged.txt").Run() //nolint:errcheck
+
+		if err := os.WriteFile(filepath.Join(tmpDir, "untracked.txt"), []byte("untracked"), 0644); err != nil {
+			t.Fatalf("Failed to create untracked file: %v", err)
+		}
+
+		uncommitted, untracked := countPorcelainFiles(tmpDir)
+		if uncommitted != 1 {
+			t.Errorf("Expected 1 uncommitted file, got %d", uncommitted)
+		}
+		if untracked != 1 {
+			t.Errorf("Expected 1 untracked file, got %d", untracked)
+		}
+	})
+}
+
+func TestCountUnpushedCommits(t *testing.T) {
+	t.Run("non-git directory returns zero", func(t *testing.T) {
+		tmpDir, err := os.MkdirTemp("", "allbctl-test-")
+		if err != nil {
+			t.Fatalf("Failed to create temp dir: %v", err)
+		}
+		defer os.RemoveAll(tmpDir)
+
+		if countUnpushedCommits(tmpDir) != 0 {
+			t.Error("Expected 0 for non-git dir")
+		}
+	})
+
+	t.Run("repo with no upstream returns zero", func(t *testing.T) {
+		tmpDir, err := os.MkdirTemp("", "allbctl-test-")
+		if err != nil {
+			t.Fatalf("Failed to create temp dir: %v", err)
+		}
+		defer os.RemoveAll(tmpDir)
+
+		if err := exec.Command("git", "-C", tmpDir, "init").Run(); err != nil {
+			t.Skip("git not available")
+		}
+
+		if countUnpushedCommits(tmpDir) != 0 {
+			t.Error("Expected 0 for repo with no upstream")
+		}
+	})
+}
+
+func TestBuildSummaryLine(t *testing.T) {
+	cases := []struct {
+		name     string
+		repos    []RepoInfo
+		expected string
+	}{
+		{
+			"no dirty data shows only total",
+			[]RepoInfo{{}, {}},
+			"Total projects: 2",
+		},
+		{
+			"unpushed commits included when non-zero",
+			[]RepoInfo{{UnpushedCommits: 3}, {UnpushedCommits: 2}},
+			"Total projects: 2  Total unpushed commits: 5",
+		},
+		{
+			"modified files included when non-zero",
+			[]RepoInfo{{UncommittedFiles: 4}, {}},
+			"Total projects: 2  Total modified files: 4",
+		},
+		{
+			"untracked files included when non-zero",
+			[]RepoInfo{{UntrackedFiles: 1}, {}},
+			"Total projects: 2  Total untracked files: 1",
+		},
+		{
+			"all sections shown when non-zero",
+			[]RepoInfo{{UnpushedCommits: 1, UncommittedFiles: 2, UntrackedFiles: 3}},
+			"Total projects: 1  Total unpushed commits: 1  Total modified files: 2  Total untracked files: 3",
+		},
+		{
+			"zero values omitted",
+			[]RepoInfo{{UnpushedCommits: 0, UncommittedFiles: 0, UntrackedFiles: 0}},
+			"Total projects: 1",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := buildSummaryLine(tc.repos)
+			if got != tc.expected {
+				t.Errorf("got %q, want %q", got, tc.expected)
+			}
+		})
 	}
 }

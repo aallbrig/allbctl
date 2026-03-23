@@ -13,11 +13,43 @@ import (
 )
 
 var (
-	allFlag   bool
-	dirtyFlag bool
-	cleanFlag bool
-	limitFlag int
+	allFlag       bool
+	dirtyFlag     bool
+	cleanFlag     bool
+	limitFlag     int
+	showFilesFlag bool
 )
+
+// DirtyReason is a bitmask describing why a repo is considered dirty
+type DirtyReason uint
+
+const (
+	DirtyUncommittedChanges DirtyReason = 1 << iota // has staged, unstaged, or untracked changes
+	DirtyUnpushedCommits                            // has commits not yet pushed to upstream
+	DirtyNoUpstream                                 // current branch has no remote tracking branch
+)
+
+func (r DirtyReason) Labels() []string {
+	var labels []string
+	if r&DirtyUncommittedChanges != 0 {
+		labels = append(labels, "uncommitted changes")
+	}
+	if r&DirtyUnpushedCommits != 0 {
+		labels = append(labels, "unpushed commits")
+	}
+	if r&DirtyNoUpstream != 0 {
+		labels = append(labels, "no upstream")
+	}
+	return labels
+}
+
+func (r DirtyReason) String() string {
+	labels := r.Labels()
+	if len(labels) == 0 {
+		return ""
+	}
+	return "[" + strings.Join(labels, ", ") + "]"
+}
 
 // ProjectsCmd represents the projects command
 var ProjectsCmd = &cobra.Command{
@@ -29,12 +61,13 @@ By default, shows the same summary as the 'Projects:' section in 'allbctl status
 Dirty repos are marked with an asterisk (*).
 
 Examples:
-  allbctl status projects           # Show summary (default, same as status)
-  allbctl status projects --all     # Show all repos
-  allbctl status projects --dirty   # Show only dirty repos
-  allbctl status projects --clean   # Show only clean repos`,
+  allbctl status projects                        # Show summary (default, same as status)
+  allbctl status projects --all                  # Show all repos
+  allbctl status projects --dirty                # Show only dirty repos
+  allbctl status projects --clean                # Show only clean repos
+  allbctl status projects --dirty --show-files   # Show dirty repos with their changed files`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if allFlag || dirtyFlag || cleanFlag {
+		if allFlag || dirtyFlag || cleanFlag || showFilesFlag {
 			printProjectsSummary()
 		} else {
 			// Default: show all projects (no limit), unless --limit is specified
@@ -48,14 +81,20 @@ func init() {
 	ProjectsCmd.Flags().BoolVar(&dirtyFlag, "dirty", false, "Show only dirty repos")
 	ProjectsCmd.Flags().BoolVar(&cleanFlag, "clean", false, "Show only clean repos")
 	ProjectsCmd.Flags().IntVar(&limitFlag, "limit", 0, "Limit the number of projects shown (0 = no limit, show all)")
+	ProjectsCmd.Flags().BoolVar(&showFilesFlag, "show-files", false, "Show changed files (tracked and untracked) under each dirty repo")
 }
 
 // RepoInfo contains information about a git repository
 type RepoInfo struct {
-	Path       string
-	ModTime    time.Time
-	Dirty      bool
-	RemoteRepo string // e.g., "aallbrig/allbctl" or "godotengine/godot"
+	Path             string
+	ModTime          time.Time
+	Dirty            bool
+	DirtyReasons     DirtyReason
+	RemoteRepo       string // e.g., "aallbrig/allbctl" or "godotengine/godot"
+	StatusOutput     string // populated when --show-files is set; full `git status --untracked-files=all` output
+	UncommittedFiles int    // staged + unstaged file count (excludes untracked)
+	UntrackedFiles   int    // untracked file count
+	UnpushedCommits  int    // number of commits ahead of upstream
 }
 
 // printProjectsSummary prints a summary of git repositories
@@ -105,8 +144,11 @@ func printProjectsSummary() {
 			}
 		}
 
-		// Format: "Total repos: 4 (2 dirty)"
-		if dirtyCount > 0 {
+		// Format: "Total repos: 4 (2 dirty)" or "Total repos: 4 (2 dirty, 7 files)"
+		if showFilesFlag && dirtyCount > 0 {
+			totalFiles := countTotalStatusFiles(repoInfos)
+			fmt.Printf("Total repos: %d (%d dirty, %d files)\n", len(repos), dirtyCount, totalFiles)
+		} else if dirtyCount > 0 {
 			fmt.Printf("Total repos: %d (%d dirty)\n", len(repos), dirtyCount)
 		} else {
 			fmt.Printf("Total repos: %d\n", len(repos))
@@ -117,11 +159,34 @@ func printProjectsSummary() {
 			count = len(filtered)
 		}
 		fmt.Printf("\nLast %d recently touched:\n", count)
-		printRepoTable(filtered[:count], "  ")
+		printRepoTable(filtered[:count], "  ", showFilesFlag, true)
 	} else {
-		fmt.Printf("Total repos: %d\n\n", len(filtered))
-		printRepoTable(filtered, "  ")
+		fmt.Println(buildSummaryLine(filtered))
+		fmt.Println()
+		printRepoTable(filtered, "  ", showFilesFlag, dirtyFlag || allFlag)
 	}
+}
+
+func buildSummaryLine(repos []RepoInfo) string {
+	unpushedCommits := 0
+	uncommittedFiles := 0
+	untrackedFiles := 0
+	for _, repo := range repos {
+		unpushedCommits += repo.UnpushedCommits
+		uncommittedFiles += repo.UncommittedFiles
+		untrackedFiles += repo.UntrackedFiles
+	}
+	parts := []string{fmt.Sprintf("Total projects: %d", len(repos))}
+	if unpushedCommits > 0 {
+		parts = append(parts, fmt.Sprintf("Total unpushed commits: %d", unpushedCommits))
+	}
+	if uncommittedFiles > 0 {
+		parts = append(parts, fmt.Sprintf("Total modified files: %d", uncommittedFiles))
+	}
+	if untrackedFiles > 0 {
+		parts = append(parts, fmt.Sprintf("Total untracked files: %d", untrackedFiles))
+	}
+	return strings.Join(parts, "  ")
 }
 
 // printProjectsInline prints a summary for the status command.
@@ -167,7 +232,7 @@ func printProjectsInline(limit int) {
 	} else {
 		fmt.Printf("  Recently touched (%d):\n", count)
 	}
-	printRepoTable(repoInfos[:count], "    ")
+	printRepoTable(repoInfos[:count], "    ", false, true)
 }
 
 // findGitRepos recursively finds all git repositories in the given directory
@@ -196,15 +261,139 @@ func findGitRepos(rootDir string) []string {
 	return repos
 }
 
-// isGitRepoDirty checks if a git repository has uncommitted changes
-func isGitRepoDirty(repoPath string) bool {
-	cmd := exec.Command("git", "-C", repoPath, "status", "--porcelain")
-	output, err := cmd.Output()
-	if err != nil {
-		return false
+// getDirtyReasons returns a bitmask describing why a repo is dirty
+func getDirtyReasons(repoPath string) DirtyReason {
+	var reasons DirtyReason
+
+	if output, err := exec.Command("git", "-C", repoPath, "status", "--porcelain").Output(); err == nil {
+		if len(strings.TrimSpace(string(output))) > 0 {
+			reasons |= DirtyUncommittedChanges
+		}
 	}
 
-	return len(strings.TrimSpace(string(output))) > 0
+	// If repo has no commits yet, upstream checks don't apply
+	if exec.Command("git", "-C", repoPath, "rev-parse", "HEAD").Run() != nil {
+		return reasons
+	}
+
+	// Check whether the current branch has an upstream tracking branch
+	if exec.Command("git", "-C", repoPath, "rev-parse", "--abbrev-ref", "@{u}").Run() != nil {
+		reasons |= DirtyNoUpstream
+		return reasons
+	}
+
+	// Has upstream — check for unpushed commits
+	if output, err := exec.Command("git", "-C", repoPath, "log", "@{u}..HEAD", "--oneline").Output(); err == nil {
+		if len(strings.TrimSpace(string(output))) > 0 {
+			reasons |= DirtyUnpushedCommits
+		}
+	}
+
+	return reasons
+}
+
+// countUnpushedCommits returns the number of commits ahead of upstream.
+func countUnpushedCommits(repoPath string) int {
+	output, err := exec.Command("git", "-C", repoPath, "log", "@{u}..HEAD", "--oneline").Output()
+	if err != nil {
+		return 0
+	}
+	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
+	count := 0
+	for _, l := range lines {
+		if strings.TrimSpace(l) != "" {
+			count++
+		}
+	}
+	return count
+}
+
+// isGitRepoDirty returns true if the repo has any dirty reasons
+func isGitRepoDirty(repoPath string) bool {
+	return getDirtyReasons(repoPath) != 0
+}
+
+// filterStatusLines removes noise from git status output for display:
+// strips hint/noise lines and any trailing blank lines.
+func filterStatusLines(lines []string) []string {
+	noisePatterns := []string{
+		"nothing to commit",
+		`(use "git push"`,
+		`(use "git add`,
+		`(use "git restore`,
+		"no changes added to commit",
+	}
+	var filtered []string
+	for _, line := range lines {
+		if strings.TrimSpace(line) == "" {
+			continue
+		}
+		noise := false
+		for _, pattern := range noisePatterns {
+			if strings.Contains(line, pattern) {
+				noise = true
+				break
+			}
+		}
+		if !noise {
+			filtered = append(filtered, line)
+		}
+	}
+	// Strip trailing blank lines
+	for len(filtered) > 0 && strings.TrimSpace(filtered[len(filtered)-1]) == "" {
+		filtered = filtered[:len(filtered)-1]
+	}
+	return filtered
+}
+
+func getGitStatusOutput(repoPath string) string {
+	cmd := exec.Command("git", "-C", repoPath, "status", "--untracked-files=all")
+	output, err := cmd.Output()
+	if err != nil {
+		return ""
+	}
+	return strings.TrimRight(string(output), "\n")
+}
+
+// countStatusFiles counts file entries in human-readable git status output.
+// File entries are tab-indented lines (e.g., "\tmodified:   foo.go" or "\tfoo.go").
+func countStatusFiles(statusOutput string) int {
+	count := 0
+	for _, line := range strings.Split(statusOutput, "\n") {
+		if strings.HasPrefix(line, "\t") {
+			count++
+		}
+	}
+	return count
+}
+
+// countTotalStatusFiles returns the total file count across all repos
+func countTotalStatusFiles(repos []RepoInfo) int {
+	total := 0
+	for _, repo := range repos {
+		total += countStatusFiles(repo.StatusOutput)
+	}
+	return total
+}
+
+// countPorcelainFiles parses `git status --porcelain` output and returns
+// the count of staged/unstaged files and the count of untracked files.
+func countPorcelainFiles(repoPath string) (uncommitted, untracked int) {
+	output, err := exec.Command("git", "-C", repoPath, "status", "--porcelain", "--untracked-files=all").Output()
+	if err != nil {
+		return
+	}
+	for _, line := range strings.Split(strings.TrimRight(string(output), "\n"), "\n") {
+		if len(line) < 2 {
+			continue
+		}
+		if strings.HasPrefix(line, "??") {
+			untracked++
+		} else {
+			uncommitted++
+		}
+	}
+	return
 }
 
 // getReposByModTime gets repository info sorted by modification time (most recent first)
@@ -217,11 +406,22 @@ func getReposByModTime(repos []string) []RepoInfo {
 			continue
 		}
 
+		reasons := getDirtyReasons(repo)
 		repoInfo := RepoInfo{
-			Path:       repo,
-			ModTime:    info.ModTime(),
-			Dirty:      isGitRepoDirty(repo),
-			RemoteRepo: getRemoteRepo(repo),
+			Path:         repo,
+			ModTime:      info.ModTime(),
+			Dirty:        reasons != 0,
+			DirtyReasons: reasons,
+			RemoteRepo:   getRemoteRepo(repo),
+		}
+		if reasons != 0 {
+			repoInfo.UncommittedFiles, repoInfo.UntrackedFiles = countPorcelainFiles(repo)
+			if reasons&DirtyUnpushedCommits != 0 {
+				repoInfo.UnpushedCommits = countUnpushedCommits(repo)
+			}
+			if showFilesFlag {
+				repoInfo.StatusOutput = getGitStatusOutput(repo)
+			}
 		}
 		repoInfos = append(repoInfos, repoInfo)
 	}
@@ -354,7 +554,7 @@ func formatRepoLine(repo RepoInfo) string {
 }
 
 // printRepoTable prints repositories in a table format with aligned columns
-func printRepoTable(repos []RepoInfo, indent string) {
+func printRepoTable(repos []RepoInfo, indent string, showFiles bool, showReasons bool) {
 	if len(repos) == 0 {
 		return
 	}
@@ -382,7 +582,18 @@ func printRepoTable(repos []RepoInfo, indent string) {
 		}
 		dateTime := repo.ModTime.Format("2006-01-02 15:04 MST -0700")
 
-		// Format with right-aligned columns
-		fmt.Printf("%s%-*s  %-*s  %s\n", indent, maxPathLen, path, maxRemoteLen, remote, dateTime)
+		line := fmt.Sprintf("%s%-*s  %-*s  %s", indent, maxPathLen, path, maxRemoteLen, remote, dateTime)
+		if showReasons && repo.Dirty {
+			line += "  " + repo.DirtyReasons.String()
+		}
+		fmt.Println(line)
+
+		if showFiles && repo.StatusOutput != "" {
+			lines := filterStatusLines(strings.Split(repo.StatusOutput, "\n"))
+			for _, l := range lines {
+				fmt.Printf("%s  %s\n", indent, l)
+			}
+			fmt.Println()
+		}
 	}
 }
