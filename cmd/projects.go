@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -479,50 +480,66 @@ func countPorcelainFiles(repoPath string) (uncommitted, untracked int) {
 
 // getReposByModTime gets repository info sorted by modification time (most recent first)
 func getReposByModTime(repos []string) []RepoInfo {
-	var repoInfos []RepoInfo
+	repoInfos := make([]RepoInfo, len(repos))
+	valid := make([]bool, len(repos))
 
-	for _, repo := range repos {
-		info, err := os.Stat(repo)
-		if err != nil {
-			continue
-		}
+	var wg sync.WaitGroup
+	for i, repo := range repos {
+		wg.Add(1)
+		go func(i int, repo string) {
+			defer wg.Done()
+			info, err := os.Stat(repo)
+			if err != nil {
+				return
+			}
 
-		reasons := getDirtyReasons(repo)
-		repoInfo := RepoInfo{
-			Path:         repo,
-			ModTime:      info.ModTime(),
-			Dirty:        reasons != 0,
-			DirtyReasons: reasons,
-			RemoteRepo:   getRemoteRepo(repo),
-		}
-		if reasons != 0 {
-			repoInfo.UncommittedFiles, repoInfo.UntrackedFiles = countPorcelainFiles(repo)
-			if reasons&DirtyUnpushedCommits != 0 {
-				repoInfo.UnpushedCommits = countUnpushedCommits(repo)
+			reasons := getDirtyReasons(repo)
+			repoInfo := RepoInfo{
+				Path:         repo,
+				ModTime:      info.ModTime(),
+				Dirty:        reasons != 0,
+				DirtyReasons: reasons,
+				RemoteRepo:   getRemoteRepo(repo),
 			}
-			if showFilesFlag {
-				repoInfo.StatusOutput = getGitStatusOutput(repo)
+			if reasons != 0 {
+				repoInfo.UncommittedFiles, repoInfo.UntrackedFiles = countPorcelainFiles(repo)
+				if reasons&DirtyUnpushedCommits != 0 {
+					repoInfo.UnpushedCommits = countUnpushedCommits(repo)
+				}
+				if showFilesFlag {
+					repoInfo.StatusOutput = getGitStatusOutput(repo)
+				}
 			}
+			ciStatus := getRemoteCIStatus(repo, repoInfo.RemoteRepo)
+			repoInfo.CIStatus = ciStatus
+			switch ciStatus {
+			case "failure":
+				repoInfo.DirtyReasons |= DirtyCIFailed
+				repoInfo.Dirty = true
+			case "pending":
+				repoInfo.DirtyReasons |= DirtyCIPending
+				repoInfo.Dirty = true
+			}
+			repoInfos[i] = repoInfo
+			valid[i] = true
+		}(i, repo)
+	}
+	wg.Wait()
+
+	// Collect valid entries (repos where os.Stat succeeded)
+	var result []RepoInfo
+	for i, ok := range valid {
+		if ok {
+			result = append(result, repoInfos[i])
 		}
-		ciStatus := getRemoteCIStatus(repo, repoInfo.RemoteRepo)
-		repoInfo.CIStatus = ciStatus
-		switch ciStatus {
-		case "failure":
-			repoInfo.DirtyReasons |= DirtyCIFailed
-			repoInfo.Dirty = true
-		case "pending":
-			repoInfo.DirtyReasons |= DirtyCIPending
-			repoInfo.Dirty = true
-		}
-		repoInfos = append(repoInfos, repoInfo)
 	}
 
 	// Sort by modification time (most recent first)
-	sort.Slice(repoInfos, func(i, j int) bool {
-		return repoInfos[i].ModTime.After(repoInfos[j].ModTime)
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].ModTime.After(result[j].ModTime)
 	})
 
-	return repoInfos
+	return result
 }
 
 // formatRepoPath formats a repository path for display
