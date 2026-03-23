@@ -27,6 +27,8 @@ const (
 	DirtyUncommittedChanges DirtyReason = 1 << iota // has staged, unstaged, or untracked changes
 	DirtyUnpushedCommits                            // has commits not yet pushed to upstream
 	DirtyNoUpstream                                 // current branch has no remote tracking branch
+	DirtyCIFailed                                   // remote CI has a failed check on this branch
+	DirtyCIPending                                  // remote CI has an in-progress check on this branch
 )
 
 func (r DirtyReason) Labels() []string {
@@ -39,6 +41,12 @@ func (r DirtyReason) Labels() []string {
 	}
 	if r&DirtyNoUpstream != 0 {
 		labels = append(labels, "no upstream")
+	}
+	if r&DirtyCIFailed != 0 {
+		labels = append(labels, "ci failed")
+	}
+	if r&DirtyCIPending != 0 {
+		labels = append(labels, "ci pending")
 	}
 	return labels
 }
@@ -95,6 +103,7 @@ type RepoInfo struct {
 	UncommittedFiles int    // staged + unstaged file count (excludes untracked)
 	UntrackedFiles   int    // untracked file count
 	UnpushedCommits  int    // number of commits ahead of upstream
+	CIStatus         string // "success", "failure", "pending", or "" (no CI detected)
 }
 
 // printProjectsSummary prints a summary of git repositories
@@ -171,10 +180,18 @@ func buildSummaryLine(repos []RepoInfo) string {
 	unpushedCommits := 0
 	uncommittedFiles := 0
 	untrackedFiles := 0
+	ciFailed := 0
+	ciPending := 0
 	for _, repo := range repos {
 		unpushedCommits += repo.UnpushedCommits
 		uncommittedFiles += repo.UncommittedFiles
 		untrackedFiles += repo.UntrackedFiles
+		if repo.DirtyReasons&DirtyCIFailed != 0 {
+			ciFailed++
+		}
+		if repo.DirtyReasons&DirtyCIPending != 0 {
+			ciPending++
+		}
 	}
 	parts := []string{fmt.Sprintf("Total projects: %d", len(repos))}
 	if unpushedCommits > 0 {
@@ -185,6 +202,12 @@ func buildSummaryLine(repos []RepoInfo) string {
 	}
 	if untrackedFiles > 0 {
 		parts = append(parts, fmt.Sprintf("Total untracked files: %d", untrackedFiles))
+	}
+	if ciFailed > 0 {
+		parts = append(parts, fmt.Sprintf("Total CI failed: %d", ciFailed))
+	}
+	if ciPending > 0 {
+		parts = append(parts, fmt.Sprintf("Total CI pending: %d", ciPending))
 	}
 	return strings.Join(parts, "  ")
 }
@@ -308,6 +331,64 @@ func countUnpushedCommits(repoPath string) int {
 	return count
 }
 
+// parseCICheckRuns derives a CI status string from a slice of check-run conclusions.
+// conclusions should contain the conclusion field value for each non-skipped check run,
+// with nil/empty string representing an in-progress or queued run.
+// Returns "failure", "pending", "success", or "" (no runs).
+func parseCICheckRuns(conclusions []string) string {
+	if len(conclusions) == 0 {
+		return ""
+	}
+	hasPending := false
+	for _, c := range conclusions {
+		switch c {
+		case "failure", "timed_out", "cancelled":
+			return "failure"
+		case "", "in_progress", "queued", "waiting", "action_required":
+			hasPending = true
+		}
+	}
+	if hasPending {
+		return "pending"
+	}
+	return "success"
+}
+
+// getRemoteCIStatus queries GitHub check-runs for the repo's current branch HEAD.
+// Returns "success", "failure", "pending", or "" (no CI / gh unavailable).
+func getRemoteCIStatus(repoPath, remoteRepo string) string {
+	if remoteRepo == "" {
+		return ""
+	}
+	branch, err := exec.Command("git", "-C", repoPath, "branch", "--show-current").Output()
+	if err != nil || strings.TrimSpace(string(branch)) == "" {
+		return ""
+	}
+	ref := strings.TrimSpace(string(branch))
+
+	out, err := exec.Command("gh", "api",
+		fmt.Sprintf("repos/%s/commits/%s/check-runs", remoteRepo, ref),
+		"--jq", "[.check_runs[] | select(.conclusion != \"skipped\") | .conclusion // \"\"]",
+	).Output()
+	if err != nil {
+		return ""
+	}
+
+	// Parse JSON array of conclusion strings
+	raw := strings.TrimSpace(string(out))
+	raw = strings.Trim(raw, "[]")
+	if strings.TrimSpace(raw) == "" {
+		return ""
+	}
+	var conclusions []string
+	for _, part := range strings.Split(raw, ",") {
+		part = strings.TrimSpace(part)
+		part = strings.Trim(part, `"`)
+		conclusions = append(conclusions, part)
+	}
+	return parseCICheckRuns(conclusions)
+}
+
 // isGitRepoDirty returns true if the repo has any dirty reasons
 func isGitRepoDirty(repoPath string) bool {
 	return getDirtyReasons(repoPath) != 0
@@ -422,6 +503,16 @@ func getReposByModTime(repos []string) []RepoInfo {
 			if showFilesFlag {
 				repoInfo.StatusOutput = getGitStatusOutput(repo)
 			}
+		}
+		ciStatus := getRemoteCIStatus(repo, repoInfo.RemoteRepo)
+		repoInfo.CIStatus = ciStatus
+		switch ciStatus {
+		case "failure":
+			repoInfo.DirtyReasons |= DirtyCIFailed
+			repoInfo.Dirty = true
+		case "pending":
+			repoInfo.DirtyReasons |= DirtyCIPending
+			repoInfo.Dirty = true
 		}
 		repoInfos = append(repoInfos, repoInfo)
 	}
@@ -585,6 +676,9 @@ func printRepoTable(repos []RepoInfo, indent string, showFiles bool, showReasons
 		line := fmt.Sprintf("%s%-*s  %-*s  %s", indent, maxPathLen, path, maxRemoteLen, remote, dateTime)
 		if showReasons && repo.Dirty {
 			line += "  " + repo.DirtyReasons.String()
+		}
+		if repo.CIStatus == "success" {
+			line += "  ✓"
 		}
 		fmt.Println(line)
 
