@@ -599,11 +599,51 @@ func TestBuildSummaryLine(t *testing.T) {
 			[]RepoInfo{{UnpushedCommits: 0, UncommittedFiles: 0, UntrackedFiles: 0}},
 			"Total projects: 1",
 		},
+		{
+			"ci failed included when non-zero",
+			[]RepoInfo{{DirtyReasons: DirtyCIFailed}, {DirtyReasons: DirtyCIFailed}},
+			"Total projects: 2  Total CI failed: 2",
+		},
+		{
+			"ci pending included when non-zero",
+			[]RepoInfo{{DirtyReasons: DirtyCIPending}, {}},
+			"Total projects: 2  Total CI pending: 1",
+		},
+		{
+			"ci success not counted",
+			[]RepoInfo{{CIStatus: "success"}, {}},
+			"Total projects: 2",
+		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			got := buildSummaryLine(tc.repos)
+			if got != tc.expected {
+				t.Errorf("got %q, want %q", got, tc.expected)
+			}
+		})
+	}
+}
+
+func TestParseCICheckRuns(t *testing.T) {
+	cases := []struct {
+		name        string
+		conclusions []string
+		expected    string
+	}{
+		{"empty returns empty", []string{}, ""},
+		{"all success returns success", []string{"success", "success"}, "success"},
+		{"one failure returns failure", []string{"success", "failure"}, "failure"},
+		{"timed_out counts as failure", []string{"timed_out"}, "failure"},
+		{"cancelled counts as failure", []string{"cancelled"}, "failure"},
+		{"in_progress returns pending", []string{"success", ""}, "pending"},
+		{"failure beats pending", []string{"", "failure"}, "failure"},
+		{"queued returns pending", []string{"queued"}, "pending"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := parseCICheckRuns(tc.conclusions)
 			if got != tc.expected {
 				t.Errorf("got %q, want %q", got, tc.expected)
 			}
