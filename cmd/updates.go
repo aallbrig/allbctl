@@ -220,7 +220,7 @@ func checkPipUpdates() (int, error) {
 	cmd := exec.CommandContext(ctx, pipCmd, "list", "--outdated", "--format=json")
 	output, err := cmd.Output()
 	if err != nil {
-		return 0, err
+		return 0, nil // Silently fail if pip times out or is unavailable
 	}
 
 	var outdated []interface{}
