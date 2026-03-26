@@ -121,7 +121,7 @@ func TestGetDirtyReasons(t *testing.T) {
 		if err := os.WriteFile(filepath.Join(tmpDir, "readme.txt"), []byte("hi"), 0644); err != nil {
 			t.Fatalf("Failed to create file: %v", err)
 		}
-		_ = exec.Command("git", "-C", tmpDir, "add", ".").Run()                                                                          //nolint:errcheck
+		_ = exec.Command("git", "-C", tmpDir, "add", ".").Run()                                                                       //nolint:errcheck
 		_ = exec.Command("git", "-C", tmpDir, "-c", "user.email=test@test.com", "-c", "user.name=Test", "commit", "-m", "init").Run() //nolint:errcheck
 
 		reasons := getDirtyReasons(tmpDir)
@@ -155,15 +155,15 @@ func TestGetDirtyReasons(t *testing.T) {
 		if err := os.WriteFile(filepath.Join(localDir, "file.txt"), []byte("hello"), 0644); err != nil {
 			t.Fatalf("Failed to create file: %v", err)
 		}
-		_ = exec.Command("git", "-C", localDir, "add", ".").Run()                                                                                     //nolint:errcheck
+		_ = exec.Command("git", "-C", localDir, "add", ".").Run()                                                                          //nolint:errcheck
 		_ = exec.Command("git", "-C", localDir, "-c", "user.email=test@test.com", "-c", "user.name=Test", "commit", "-m", "initial").Run() //nolint:errcheck
-		_ = exec.Command("git", "-C", localDir, "push", "-u", "origin", "HEAD").Run()                                                                 //nolint:errcheck
+		_ = exec.Command("git", "-C", localDir, "push", "-u", "origin", "HEAD").Run()                                                      //nolint:errcheck
 
 		// Now make a local commit that isn't pushed
 		if err := os.WriteFile(filepath.Join(localDir, "file.txt"), []byte("world"), 0644); err != nil {
 			t.Fatalf("Failed to update file: %v", err)
 		}
-		_ = exec.Command("git", "-C", localDir, "add", ".").Run()                                                                                    //nolint:errcheck
+		_ = exec.Command("git", "-C", localDir, "add", ".").Run()                                                                           //nolint:errcheck
 		_ = exec.Command("git", "-C", localDir, "-c", "user.email=test@test.com", "-c", "user.name=Test", "commit", "-m", "unpushed").Run() //nolint:errcheck
 
 		reasons := getDirtyReasons(localDir)
