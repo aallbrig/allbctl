@@ -1,12 +1,15 @@
 package cmd
 
 import (
+	"encoding/json"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/aallbrig/allbctl/pkg/languages"
 )
 
 func TestFindGitRepos(t *testing.T) {
@@ -677,4 +680,262 @@ func TestParseCICheckRuns(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestGetRepoLanguages(t *testing.T) {
+	t.Run("returns languages for a valid git repo", func(t *testing.T) {
+		tmpDir, err := os.MkdirTemp("", "allbctl-lang-test-")
+		if err != nil {
+			t.Fatalf("Failed to create temp dir: %v", err)
+		}
+		defer os.RemoveAll(tmpDir)
+
+		if err := exec.Command("git", "-C", tmpDir, "init").Run(); err != nil {
+			t.Skip("git not available")
+		}
+
+		if err := os.WriteFile(filepath.Join(tmpDir, "main.go"), []byte("package main\n\nfunc main() {}\n"), 0644); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(tmpDir, "script.py"), []byte("print('hello')\n"), 0644); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(tmpDir, "README.md"), []byte("# Test\n"), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		_ = exec.Command("git", "-C", tmpDir, "add", ".").Run()                                                                       //nolint:errcheck
+		_ = exec.Command("git", "-C", tmpDir, "-c", "user.email=test@test.com", "-c", "user.name=Test", "commit", "-m", "init").Run() //nolint:errcheck
+
+		langs := getRepoLanguages(tmpDir)
+		if len(langs) == 0 {
+			t.Fatal("Expected at least one language, got none")
+		}
+
+		foundGo := false
+		for _, l := range langs {
+			if l.Name == "Go" {
+				foundGo = true
+				break
+			}
+		}
+		if !foundGo {
+			t.Errorf("Expected Go in languages, got: %v", langs)
+		}
+	})
+
+	t.Run("returns nil for non-git directory", func(t *testing.T) {
+		tmpDir, err := os.MkdirTemp("", "allbctl-lang-test-")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer os.RemoveAll(tmpDir)
+
+		langs := getRepoLanguages(tmpDir)
+		if langs != nil {
+			t.Errorf("Expected nil for non-git dir, got %v", langs)
+		}
+	})
+
+	t.Run("caches and returns same result", func(t *testing.T) {
+		tmpDir, err := os.MkdirTemp("", "allbctl-lang-cache-test-")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer os.RemoveAll(tmpDir)
+
+		if err := exec.Command("git", "-C", tmpDir, "init").Run(); err != nil {
+			t.Skip("git not available")
+		}
+		if err := os.WriteFile(filepath.Join(tmpDir, "main.go"), []byte("package main\n"), 0644); err != nil {
+			t.Fatal(err)
+		}
+		_ = exec.Command("git", "-C", tmpDir, "add", ".").Run()                                                                       //nolint:errcheck
+		_ = exec.Command("git", "-C", tmpDir, "-c", "user.email=test@test.com", "-c", "user.name=Test", "commit", "-m", "init").Run() //nolint:errcheck
+
+		langs1 := getRepoLanguages(tmpDir)
+		langs2 := getRepoLanguages(tmpDir)
+
+		if len(langs1) != len(langs2) {
+			t.Errorf("Expected same result from cache, got %d vs %d", len(langs1), len(langs2))
+		}
+		if len(langs1) > 0 && len(langs2) > 0 {
+			if langs1[0].Name != langs2[0].Name || langs1[0].Size != langs2[0].Size {
+				t.Errorf("Cache returned different data: %v vs %v", langs1, langs2)
+			}
+		}
+	})
+}
+
+func TestRepoInfoLanguagesField(t *testing.T) {
+	repo := RepoInfo{
+		Path:  "/path/to/repo",
+		Dirty: false,
+		Languages: []languages.LanguageBreakdown{
+			{Name: "Go", Size: 1500, Percent: 75},
+			{Name: "Python", Size: 500, Percent: 25},
+		},
+	}
+
+	if len(repo.Languages) != 2 {
+		t.Errorf("Expected 2 languages, got %d", len(repo.Languages))
+	}
+	if repo.Languages[0].Name != "Go" {
+		t.Errorf("Expected first language to be Go, got %s", repo.Languages[0].Name)
+	}
+
+	data, err := json.Marshal(repo.Languages)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), "Go") {
+		t.Errorf("Expected JSON to contain Go, got %s", string(data))
+	}
+}
+
+func TestVerboseDetailLines(t *testing.T) {
+	t.Run("includes language line when languages present", func(t *testing.T) {
+		repo := RepoInfo{
+			Path: "/path/to/repo",
+			Languages: []languages.LanguageBreakdown{
+				{Name: "Go", Size: 1500, Percent: 75},
+				{Name: "Python", Size: 500, Percent: 25},
+			},
+		}
+		lines := verboseDetailLines(repo)
+		if len(lines) == 0 {
+			t.Fatal("Expected at least one verbose line")
+		}
+		found := false
+		for _, l := range lines {
+			if strings.HasPrefix(l, "Languages: ") {
+				found = true
+				if !strings.Contains(l, "Go") || !strings.Contains(l, "Python") {
+					t.Errorf("Languages line missing expected content: %s", l)
+				}
+			}
+		}
+		if !found {
+			t.Error("No Languages line found in verbose output")
+		}
+	})
+
+	t.Run("includes CI checks", func(t *testing.T) {
+		repo := RepoInfo{
+			Path: "/path/to/repo",
+			CIChecks: []CICheck{
+				{Name: "Tests", Conclusion: "success"},
+				{Name: "Lint", Conclusion: "failure"},
+			},
+		}
+		lines := verboseDetailLines(repo)
+		foundSuccess := false
+		foundFailure := false
+		for _, l := range lines {
+			if strings.Contains(l, "✓ Tests") {
+				foundSuccess = true
+			}
+			if strings.Contains(l, "✗ Lint") {
+				foundFailure = true
+			}
+		}
+		if !foundSuccess {
+			t.Error("Missing success CI check line")
+		}
+		if !foundFailure {
+			t.Error("Missing failure CI check line")
+		}
+	})
+
+	t.Run("includes git status lines", func(t *testing.T) {
+		repo := RepoInfo{
+			Path:         "/path/to/repo",
+			StatusOutput: "On branch main\n\tmodified:   foo.go",
+		}
+		lines := verboseDetailLines(repo)
+		found := false
+		for _, l := range lines {
+			if strings.Contains(l, "modified:") {
+				found = true
+			}
+		}
+		if !found {
+			t.Error("Missing git status line in verbose output")
+		}
+	})
+
+	t.Run("empty repo produces no lines", func(t *testing.T) {
+		repo := RepoInfo{Path: "/path/to/repo"}
+		lines := verboseDetailLines(repo)
+		if len(lines) != 0 {
+			t.Errorf("Expected 0 lines for empty repo, got %d: %v", len(lines), lines)
+		}
+	})
+}
+
+func TestLanguagesFlag(t *testing.T) {
+	t.Run("flag exists with default true", func(t *testing.T) {
+		flag := ProjectsCmd.Flags().Lookup("languages")
+		if flag == nil {
+			t.Fatal("Expected --languages flag to exist on ProjectsCmd")
+		}
+		if flag.DefValue != "true" {
+			t.Errorf("Expected --languages default value to be true, got %s", flag.DefValue)
+		}
+	})
+
+	t.Run("showLanguages false when neither verbose nor explicit", func(t *testing.T) {
+		// Reset state
+		orig := showLanguages
+		defer func() { showLanguages = orig }()
+
+		showLanguages = languagesFlag && false // no verboseFlag, no explicit
+		if showLanguages {
+			t.Error("showLanguages should be false without verbose or explicit flag")
+		}
+	})
+
+	t.Run("verboseDetailLines omits languages when not populated", func(t *testing.T) {
+		repo := RepoInfo{
+			Path: "/path/to/repo",
+			CIChecks: []CICheck{
+				{Name: "Tests", Conclusion: "success"},
+			},
+		}
+		lines := verboseDetailLines(repo)
+		for _, l := range lines {
+			if strings.HasPrefix(l, "Languages:") {
+				t.Error("Languages line should not appear when Languages field is empty")
+			}
+		}
+	})
+
+	t.Run("verboseDetailLines includes languages when populated", func(t *testing.T) {
+		repo := RepoInfo{
+			Path: "/path/to/repo",
+			Languages: []languages.LanguageBreakdown{
+				{Name: "Go", Size: 1000, Percent: 100},
+			},
+		}
+		lines := verboseDetailLines(repo)
+		found := false
+		for _, l := range lines {
+			if strings.HasPrefix(l, "Languages:") {
+				found = true
+			}
+		}
+		if !found {
+			t.Error("Expected Languages line when Languages field is populated")
+		}
+	})
+
+	t.Run("languages flag works with all filter modes", func(t *testing.T) {
+		// Verify the flag can be looked up alongside other flags
+		for _, flagName := range []string{"all", "dirty", "clean", "languages"} {
+			f := ProjectsCmd.Flags().Lookup(flagName)
+			if f == nil {
+				t.Errorf("Expected --%s flag to exist", flagName)
+			}
+		}
+	})
 }

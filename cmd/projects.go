@@ -11,15 +11,19 @@ import (
 	"sync"
 	"time"
 
+	"github.com/aallbrig/allbctl/pkg/cache"
+	"github.com/aallbrig/allbctl/pkg/languages"
 	"github.com/spf13/cobra"
 )
 
 var (
-	allFlag     bool
-	dirtyFlag   bool
-	cleanFlag   bool
-	limitFlag   int
-	verboseFlag bool
+	allFlag       bool
+	dirtyFlag     bool
+	cleanFlag     bool
+	limitFlag     int
+	verboseFlag   bool
+	languagesFlag bool
+	showLanguages bool // computed in Run; true when language data should be gathered/displayed
 )
 
 // DirtyReason is a bitmask describing why a repo is considered dirty
@@ -75,9 +79,14 @@ Examples:
   allbctl status projects --all                  # Show all repos
   allbctl status projects --dirty                # Show only dirty repos
   allbctl status projects --clean                # Show only clean repos
-  allbctl status projects --dirty -v          # Show dirty repos with their changed files`,
+  allbctl status projects --dirty -v             # Show dirty repos with their changed files
+  allbctl status projects --all --languages      # Show all repos with language breakdown
+  allbctl status projects -v --languages=false   # Verbose without language breakdown`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if allFlag || dirtyFlag || cleanFlag || verboseFlag {
+		langExplicit := cmd.Flags().Changed("languages")
+		showLanguages = languagesFlag && (verboseFlag || langExplicit)
+
+		if allFlag || dirtyFlag || cleanFlag || verboseFlag || (langExplicit && languagesFlag) {
 			printProjectsSummary()
 		} else {
 			// Default: show all projects (no limit), unless --limit is specified
@@ -92,6 +101,7 @@ func init() {
 	ProjectsCmd.Flags().BoolVar(&cleanFlag, "clean", false, "Show only clean repos")
 	ProjectsCmd.Flags().IntVar(&limitFlag, "limit", 0, "Limit the number of projects shown (0 = no limit, show all)")
 	ProjectsCmd.Flags().BoolVarP(&verboseFlag, "verbose", "v", false, "Show changed files (tracked and untracked) under each dirty repo")
+	ProjectsCmd.Flags().BoolVar(&languagesFlag, "languages", true, "Show language breakdown for each repo (use --languages=false to hide)")
 }
 
 // RepoInfo contains information about a git repository
@@ -100,13 +110,14 @@ type RepoInfo struct {
 	ModTime          time.Time
 	Dirty            bool
 	DirtyReasons     DirtyReason
-	RemoteRepo       string    // e.g., "aallbrig/allbctl" or "godotengine/godot"
-	StatusOutput     string    // populated when -v/--verbose is set; full `git status --untracked-files=all` output
-	UncommittedFiles int       // staged + unstaged file count (excludes untracked)
-	UntrackedFiles   int       // untracked file count
-	UnpushedCommits  int       // number of commits ahead of upstream
-	CIStatus         string    // "success", "failure", "pending", or "" (no CI detected)
-	CIChecks         []CICheck // populated when -v/--verbose is set
+	RemoteRepo       string                        // e.g., "aallbrig/allbctl" or "godotengine/godot"
+	StatusOutput     string                        // populated when -v/--verbose is set; full `git status --untracked-files=all` output
+	UncommittedFiles int                           // staged + unstaged file count (excludes untracked)
+	UntrackedFiles   int                           // untracked file count
+	UnpushedCommits  int                           // number of commits ahead of upstream
+	CIStatus         string                        // "success", "failure", "pending", or "" (no CI detected)
+	CIChecks         []CICheck                     // populated when -v/--verbose is set
+	Languages        []languages.LanguageBreakdown // populated when -v/--verbose is set
 }
 
 // CICheck represents a single GitHub check run with its name and conclusion.
@@ -177,11 +188,13 @@ func printProjectsSummary() {
 			count = len(filtered)
 		}
 		fmt.Printf("\nLast %d recently touched:\n", count)
-		printRepoTable(filtered[:count], "  ", verboseFlag, true)
+		showDetails := verboseFlag || showLanguages
+		printRepoTable(filtered[:count], "  ", showDetails, true)
 	} else {
 		fmt.Println(buildSummaryLine(filtered, displayMode))
 		fmt.Println()
-		printRepoTable(filtered, "  ", verboseFlag, dirtyFlag || allFlag)
+		showDetails := verboseFlag || showLanguages
+		printRepoTable(filtered, "  ", showDetails, dirtyFlag || allFlag)
 	}
 }
 
@@ -543,6 +556,9 @@ func getReposByModTime(repos []string) []RepoInfo {
 			if verboseFlag {
 				repoInfo.CIChecks = ciChecks
 			}
+			if showLanguages {
+				repoInfo.Languages = getRepoLanguages(repo)
+			}
 			switch ciStatus {
 			case "failure":
 				repoInfo.DirtyReasons |= DirtyCIFailed
@@ -730,27 +746,91 @@ func printRepoTable(repos []RepoInfo, indent string, showFiles bool, showReasons
 		}
 		fmt.Println(line)
 
-		hasVerboseOutput := showFiles && (repo.StatusOutput != "" || len(repo.CIChecks) > 0)
-		if hasVerboseOutput {
-			if len(repo.CIChecks) > 0 {
-				for _, check := range repo.CIChecks {
-					icon := "✓"
-					switch check.Conclusion {
-					case "failure", "timed_out", "cancelled":
-						icon = "✗"
-					case "":
-						icon = "…"
-					}
-					fmt.Printf("%s    %s %s\n", indent, icon, check.Name)
-				}
+		if showFiles {
+			details := verboseDetailLines(repo)
+			for _, d := range details {
+				fmt.Printf("%s    %s\n", indent, d)
 			}
-			if repo.StatusOutput != "" {
-				lines := filterStatusLines(strings.Split(repo.StatusOutput, "\n"))
-				for _, l := range lines {
-					fmt.Printf("%s  %s\n", indent, l)
-				}
+			if len(details) > 0 {
+				fmt.Println()
 			}
-			fmt.Println()
 		}
 	}
+}
+
+// verboseDetailLines builds the verbose sub-lines for a single repo.
+// The returned lines are raw content (no leading indent); the caller
+// controls indentation and output destination, making it easy to
+// rearrange or reformat presentation without touching data logic.
+func verboseDetailLines(repo RepoInfo) []string {
+	var lines []string
+
+	if len(repo.Languages) > 0 {
+		lines = append(lines, "Languages: "+languages.FormatBreakdown(repo.Languages))
+	}
+
+	for _, check := range repo.CIChecks {
+		icon := "✓"
+		switch check.Conclusion {
+		case "failure", "timed_out", "cancelled":
+			icon = "✗"
+		case "":
+			icon = "…"
+		}
+		lines = append(lines, icon+" "+check.Name)
+	}
+
+	if repo.StatusOutput != "" {
+		lines = append(lines, filterStatusLines(strings.Split(repo.StatusOutput, "\n"))...)
+	}
+
+	return lines
+}
+
+// langCache is lazily initialized for caching language detection results.
+var langCache *cache.FileCache
+var langCacheOnce sync.Once
+
+// getLangCache returns the shared language cache, initializing it on first use.
+func getLangCache() *cache.FileCache {
+	langCacheOnce.Do(func() {
+		c, err := cache.NewFileCache("allbctl", "languages")
+		if err == nil {
+			langCache = c
+		}
+	})
+	return langCache
+}
+
+// getRepoLanguages detects languages for a repository, using a file-based
+// cache keyed by the HEAD commit SHA to avoid redundant analysis.
+func getRepoLanguages(repoPath string) []languages.LanguageBreakdown {
+	commit, err := languages.GetHeadCommit(repoPath)
+	if err != nil {
+		return nil
+	}
+
+	// Try cache first
+	if c := getLangCache(); c != nil {
+		if raw, ok := c.Get(repoPath, commit); ok {
+			var cached []languages.LanguageBreakdown
+			if json.Unmarshal(raw, &cached) == nil {
+				return cached
+			}
+		}
+	}
+
+	// Cache miss — detect languages
+	breakdown, err := languages.DetectLanguages(repoPath)
+	if err != nil {
+		return nil
+	}
+
+	// Store in cache
+	if c := getLangCache(); c != nil {
+		//nolint:errcheck // best-effort cache write
+		c.Set(repoPath, commit, breakdown)
+	}
+
+	return breakdown
 }

@@ -34,6 +34,8 @@ allbctl status projects --clean
 | `--all` | Show all detected git repos |
 | `--dirty` | Show only repos with uncommitted changes |
 | `--clean` | Show only repos with no uncommitted changes |
+| `-v, --verbose` | Show detailed information including changed files, CI status, and language breakdown |
+| `--languages` | Show language breakdown for each repo (default `true`; use `--languages=false` to hide) |
 
 ## Output
 
@@ -52,6 +54,44 @@ Projects: 12 total (7 dirty)
 ```
 
 Repositories with uncommitted changes are marked with an asterisk (*).
+
+### Verbose Mode (`-v`)
+
+Shows language breakdown, CI check details, and changed files for each repo:
+
+```bash
+allbctl status projects -v
+```
+
+```
+  ~/src/allbctl*  aallbrig/allbctl  2026-03-29 11:09 EDT -0400  [uncommitted changes]  ✓
+      Languages: Go: 330.8 KB (74%) | Markdown: 83.7 KB (18%) | YAML: 8.4 KB (1%) | Shell: 7.8 KB (1%)
+      ✓ test (ubuntu-latest)
+      ✓ lint
+      On branch main
+      Changes not staged for commit:
+      	modified:   cmd/projects.go
+```
+
+### Languages (`--languages`)
+
+The `--languages` flag can be used standalone or combined with any filter flag
+to show language breakdown without the full verbose output:
+
+```bash
+# Languages for all repos
+allbctl status projects --all --languages
+
+# Languages for dirty repos only
+allbctl status projects --dirty --languages
+
+# Verbose output WITHOUT languages
+allbctl status projects -v --languages=false
+```
+
+Language detection analyzes tracked files in each repository (excluding vendored directories
+like `vendor/` and `node_modules/`). Results are cached per commit SHA in
+`~/.cache/allbctl/languages/` so repeated runs are fast.
 
 ### With `--limit N`
 Shows at most N repositories:
@@ -95,6 +135,9 @@ Projects: 5 total
 - Marks dirty repositories (uncommitted changes) with *
 - Sorts by modification time (most recent first)
 - Supports filtering by dirty/clean status
+- Verbose mode shows language breakdown, CI check status, and changed files
+- Language detection results are cached per-commit for fast subsequent runs
+- Cache stored in OS-appropriate location (`~/.cache/allbctl/` on Linux, `~/Library/Caches/allbctl/` on macOS, `%LOCALAPPDATA%\allbctl\` on Windows)
 
 ## Integration
 
