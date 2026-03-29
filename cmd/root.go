@@ -34,6 +34,9 @@ $ allbctl status git                   # Show git global configuration
 $ allbctl status ports                 # Show listening ports
 $ allbctl status cloud-native          # Show cloud CLI versions and profiles
 $ allbctl status cloud-native aws      # Show detailed AWS resources by region
+$ allbctl update                       # Update all detected package managers
+$ allbctl update --dry-run             # Preview updates without executing
+$ allbctl update --managers apt,npm    # Only update apt and npm
 `,
 	Version: Version,
 	Run: func(cmd *cobra.Command, args []string) {
@@ -53,6 +56,7 @@ func init() {
 	cobra.OnInitialize(initConfig)
 	rootCmd.AddCommand(BootstrapCmd)
 	rootCmd.AddCommand(StatusCmd)
+	rootCmd.AddCommand(UpdateCmd)
 
 	// Add subcommands to status
 	StatusCmd.AddCommand(RuntimesCmd)
