@@ -135,6 +135,62 @@ jobs:
           $nupkg = Get-ChildItem chocolatey/*.nupkg | Select-Object -First 1
           choco push $nupkg.FullName --source https://push.chocolatey.org/ --api-key $env:CHOCOLATEY_API_KEY
 
+  publish-apt:
+    name: Publish APT Package
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout allbctl (for scripts)
+        uses: actions/checkout@v4
+        with:
+          path: allbctl
+      - name: Download release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-binaries
+          path: artifacts
+      - name: Checkout apt-repo
+        uses: actions/checkout@v4
+        with:
+          repository: aallbrig/apt-repo
+          token: ${{ secrets.APT_REPO_TOKEN }}
+          path: apt-repo
+      - name: Install packaging tools
+        run: sudo apt-get update && sudo apt-get install -y dpkg-dev apt-utils
+      - name: Import GPG signing key
+        run: echo "${{ secrets.APT_SIGNING_KEY }}" | gpg --batch --import
+      - name: Build .deb packages
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          mkdir -p dist
+
+          # Extract and build amd64 .deb
+          tar -xzf artifacts/allbctl-linux-amd64.tar.gz
+          python3 allbctl/scripts/generate-deb-package.py \
+            "$VERSION" amd64 ./allbctl_linux_amd64 ./dist
+
+          # Extract and build arm64 .deb
+          tar -xzf artifacts/allbctl-linux-arm64.tar.gz
+          python3 allbctl/scripts/generate-deb-package.py \
+            "$VERSION" arm64 ./allbctl_linux_arm64 ./dist
+      - name: Update APT repository
+        env:
+          GPG_KEY_ID: D7A986DEAAA9EF93503AC7AC9AF6771417A17974
+        run: |
+          python3 allbctl/scripts/update-apt-repo.py \
+            apt-repo \
+            dist/allbctl_*_amd64.deb \
+            dist/allbctl_*_arm64.deb
+      - name: Commit and push
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          cd apt-repo
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet || git commit -m "chore: publish allbctl v${VERSION}"
+          git push
+
   update-homebrew:
     name: Update Homebrew Formula
     needs: release

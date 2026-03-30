@@ -12,6 +12,13 @@ brew tap aallbrig/tap
 brew install allbctl
 ```
 
+**Debian / Ubuntu via APT:**
+```bash
+curl -fsSL https://aallbrig.github.io/apt-repo/KEY.gpg | sudo gpg --dearmor -o /usr/share/keyrings/allbctl.gpg
+echo "deb [signed-by=/usr/share/keyrings/allbctl.gpg] https://aallbrig.github.io/apt-repo stable main" | sudo tee /etc/apt/sources.list.d/allbctl.list
+sudo apt update && sudo apt install allbctl
+```
+
 **Windows via Chocolatey:**
 ```powershell
 choco install allbctl

@@ -46,6 +46,34 @@ To uninstall:
 choco uninstall allbctl
 ```
 
+## APT (Debian / Ubuntu)
+
+Install allbctl from the official APT repository:
+
+```bash
+# Add the GPG key
+curl -fsSL https://aallbrig.github.io/apt-repo/KEY.gpg | sudo gpg --dearmor -o /usr/share/keyrings/allbctl.gpg
+
+# Add the repository
+echo "deb [signed-by=/usr/share/keyrings/allbctl.gpg] https://aallbrig.github.io/apt-repo stable main" | sudo tee /etc/apt/sources.list.d/allbctl.list
+
+# Install
+sudo apt update
+sudo apt install allbctl
+```
+
+To update:
+
+```bash
+sudo apt update && sudo apt upgrade allbctl
+```
+
+To uninstall:
+
+```bash
+sudo apt remove allbctl
+```
+
 ## Download Latest Release
 
 The easiest way to install allbctl is to download a pre-built binary from the releases page.
