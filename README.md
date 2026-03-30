@@ -12,6 +12,11 @@ brew tap aallbrig/tap
 brew install allbctl
 ```
 
+**Windows via Chocolatey:**
+```powershell
+choco install allbctl
+```
+
 Or download the latest release for your platform:
 - **Linux**: [allbctl-linux-amd64](https://github.com/aallbrig/allbctl/releases/latest/download/allbctl-linux-amd64)
 - **macOS**: [allbctl-darwin-amd64](https://github.com/aallbrig/allbctl/releases/latest/download/allbctl-darwin-amd64) | [allbctl-darwin-arm64](https://github.com/aallbrig/allbctl/releases/latest/download/allbctl-darwin-arm64)

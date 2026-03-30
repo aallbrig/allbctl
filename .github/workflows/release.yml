@@ -104,6 +104,37 @@ jobs:
           draft: false
           prerelease: false
 
+  publish-chocolatey:
+    name: Publish Chocolatey Package
+    needs: release
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Download release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-binaries
+          path: artifacts
+      - name: Generate Chocolatey package
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          TAG="${GITHUB_REF#refs/tags/}"
+          BASE_URL="https://github.com/aallbrig/allbctl/releases/download/${TAG}"
+          W_AMD64=$(grep "allbctl-windows-amd64.zip" artifacts/SHA256SUMS | awk '{print $1}')
+          W_ARM64=$(grep "allbctl-windows-arm64.zip" artifacts/SHA256SUMS | awk '{print $1}')
+          python3 scripts/generate-chocolatey-package.py \
+            "$VERSION" "$BASE_URL" "$W_AMD64" "$W_ARM64"
+      - name: Pack and push
+        shell: powershell
+        env:
+          CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
+        run: |
+          choco pack chocolatey/allbctl.nuspec --output-directory chocolatey
+          $nupkg = Get-ChildItem chocolatey/*.nupkg | Select-Object -First 1
+          choco push $nupkg.FullName --source https://push.chocolatey.org/ --api-key $env:CHOCOLATEY_API_KEY
+
   update-homebrew:
     name: Update Homebrew Formula
     needs: release

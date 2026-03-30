@@ -26,6 +26,26 @@ To update:
 brew upgrade allbctl
 ```
 
+## Chocolatey (Windows)
+
+The easiest way to install allbctl on Windows:
+
+```powershell
+choco install allbctl
+```
+
+To update:
+
+```powershell
+choco upgrade allbctl
+```
+
+To uninstall:
+
+```powershell
+choco uninstall allbctl
+```
+
 ## Download Latest Release
 
 The easiest way to install allbctl is to download a pre-built binary from the releases page.
