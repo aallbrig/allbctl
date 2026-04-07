@@ -12,6 +12,9 @@ type DotfilesSetup struct {
 	RepoURL       string
 	LocalPath     string
 	InstallScript string
+	// ModularFiles are the dotfiles expected to be symlinked from LocalPath
+	// into $HOME. Defaults to DefaultModularDotfiles; override in tests.
+	ModularFiles []string
 }
 
 func NewDotfilesSetup(repoURL, localPath, installScript string) *DotfilesSetup {
@@ -19,6 +22,7 @@ func NewDotfilesSetup(repoURL, localPath, installScript string) *DotfilesSetup {
 		RepoURL:       repoURL,
 		LocalPath:     localPath,
 		InstallScript: installScript,
+		ModularFiles:  append([]string(nil), DefaultModularDotfiles...),
 	}
 }
 
@@ -48,6 +52,12 @@ func (d DotfilesSetup) Validate() (out *bytes.Buffer, err error) {
 
 	_, _ = color.New(color.FgGreen).Fprint(out, "CLONED")
 	out.WriteString(fmt.Sprintf(" %s", d.LocalPath))
+
+	// Advisory health checks: append warnings only when something is wrong.
+	// These never set err — Install() relies on err==nil here meaning
+	// "the repo is cloned and is a git repo".
+	appendGitWarnings(d, out)
+	appendModularDotfileWarnings(d, out)
 
 	return
 }
