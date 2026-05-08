@@ -72,6 +72,10 @@ func TestFormatVersionWithUpdate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// Skip when the tool is installed — the result depends on the current live version.
+			if tt.tool != "unknown-tool" && exists(tt.tool) {
+				t.Skipf("%s is installed; no-update assertion is version-dependent", tt.tool)
+			}
 			got := formatVersionWithUpdate(tt.tool, tt.current)
 			// Since we don't have actual update data, it should return current version
 			if got != tt.want {
