@@ -3,6 +3,7 @@ package dotfiles
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -115,12 +116,52 @@ func currentBranch(t *testing.T, repoPath string) string {
 	return head.Name().Short()
 }
 
+func setFakeHome(t *testing.T) string {
+	t.Helper()
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+	if volume := filepath.VolumeName(home); volume != "" {
+		t.Setenv("HOMEDRIVE", volume)
+		t.Setenv("HOMEPATH", strings.TrimPrefix(home, volume))
+	}
+	return mustUserHomeDir(t)
+}
+
+func mustUserHomeDir(t *testing.T) string {
+	t.Helper()
+	home, err := os.UserHomeDir()
+	if err != nil {
+		t.Fatalf("UserHomeDir: %v", err)
+	}
+	return home
+}
+
+func mustOpenRepo(t *testing.T, repoPath string) *git.Repository {
+	t.Helper()
+	repo, err := git.PlainOpen(repoPath)
+	if err != nil {
+		t.Fatalf("PlainOpen(%s): %v", repoPath, err)
+	}
+	return repo
+}
+
+func mustSymlinkOrSkip(t *testing.T, oldname, newname string) {
+	t.Helper()
+	if err := os.Symlink(oldname, newname); err != nil {
+		if runtime.GOOS == "windows" {
+			t.Skipf("symlink creation unavailable on Windows: %v", err)
+		}
+		t.Fatalf("Symlink(%s -> %s): %v", newname, oldname, err)
+	}
+}
+
 // newDotfilesUnderHome wires a fresh fake $HOME and returns a DotfilesSetup
 // pointing at a worktree synced with a bare remote. The worktree is empty
 // of modular dotfiles by default — tests add the ones they need.
 func newDotfilesUnderHome(t *testing.T) *DotfilesSetup {
 	t.Helper()
-	t.Setenv("HOME", t.TempDir())
+	setFakeHome(t)
 	remote := initBareRepo(t)
 	worktree := initWorktreeWithRemote(t, remote)
 	branch := currentBranch(t, worktree)
@@ -138,7 +179,7 @@ func newDotfilesUnderHome(t *testing.T) *DotfilesSetup {
 // ---------------------------------------------------------------------------
 
 func TestValidate_MissingDirectory(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
+	setFakeHome(t)
 	d := NewDotfilesSetup("https://example.invalid/dotfiles.git",
 		filepath.Join(t.TempDir(), "missing"), "./fresh.sh")
 	out, err := d.Validate()
@@ -154,7 +195,7 @@ func TestValidate_MissingDirectory(t *testing.T) {
 }
 
 func TestValidate_NotAGitRepo(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
+	setFakeHome(t)
 	dir := t.TempDir()
 	d := NewDotfilesSetup("https://example.invalid/dotfiles.git", dir, "./fresh.sh")
 	out, err := d.Validate()
@@ -207,7 +248,7 @@ func TestValidate_DirtyWorktree(t *testing.T) {
 
 func TestValidate_AheadOfOrigin(t *testing.T) {
 	d := newDotfilesUnderHome(t)
-	repo, _ := git.PlainOpen(d.LocalPath)
+	repo := mustOpenRepo(t, d.LocalPath)
 	commitFile(t, repo, d.LocalPath, "extra.txt", "extra")
 	// Note: do NOT push, do NOT re-fetch — local is now ahead by 1.
 
@@ -222,17 +263,23 @@ func TestValidate_AheadOfOrigin(t *testing.T) {
 
 func TestValidate_BehindOrigin(t *testing.T) {
 	d := newDotfilesUnderHome(t)
-	repo, _ := git.PlainOpen(d.LocalPath)
+	repo := mustOpenRepo(t, d.LocalPath)
 	// Make a new commit, push it, but then reset the local HEAD so the
 	// cached refs/remotes/origin/<branch> is ahead of HEAD.
 	branch := currentBranch(t, d.LocalPath)
-	originalHead, _ := repo.Head()
+	originalHead, err := repo.Head()
+	if err != nil {
+		t.Fatalf("Head: %v", err)
+	}
 	commitFile(t, repo, d.LocalPath, "remote-only.txt", "remote-only")
 	pushCurrentBranch(t, d.LocalPath, branch)
 	fetchOrigin(t, d.LocalPath)
 
 	// Move local HEAD back one commit so cached origin/<branch> is ahead.
-	wt, _ := repo.Worktree()
+	wt, err := repo.Worktree()
+	if err != nil {
+		t.Fatalf("Worktree: %v", err)
+	}
 	if err := wt.Reset(&git.ResetOptions{
 		Commit: originalHead.Hash(),
 		Mode:   git.HardReset,
@@ -250,7 +297,7 @@ func TestValidate_BehindOrigin(t *testing.T) {
 }
 
 func TestValidate_NoCachedUpstream(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
+	setFakeHome(t)
 	remote := initBareRepo(t)
 	worktree := initWorktreeWithRemote(t, remote)
 	// Intentionally do NOT push or fetch — there's no cached origin/<branch>.
@@ -284,7 +331,7 @@ func TestValidate_Modular_FileNotInRepo_Silent(t *testing.T) {
 
 func TestValidate_Modular_NotInHome(t *testing.T) {
 	d := newDotfilesUnderHome(t)
-	repo, _ := git.PlainOpen(d.LocalPath)
+	repo := mustOpenRepo(t, d.LocalPath)
 	commitFile(t, repo, d.LocalPath, ".zshrc", "# zsh")
 	pushCurrentBranch(t, d.LocalPath, currentBranch(t, d.LocalPath))
 	fetchOrigin(t, d.LocalPath)
@@ -301,12 +348,12 @@ func TestValidate_Modular_NotInHome(t *testing.T) {
 
 func TestValidate_Modular_RegularFileInHome(t *testing.T) {
 	d := newDotfilesUnderHome(t)
-	repo, _ := git.PlainOpen(d.LocalPath)
+	repo := mustOpenRepo(t, d.LocalPath)
 	commitFile(t, repo, d.LocalPath, ".zshrc", "# zsh")
 	pushCurrentBranch(t, d.LocalPath, currentBranch(t, d.LocalPath))
 	fetchOrigin(t, d.LocalPath)
 	// Place a regular file (not a symlink) at $HOME/.zshrc.
-	homeFile := filepath.Join(os.Getenv("HOME"), ".zshrc")
+	homeFile := filepath.Join(mustUserHomeDir(t), ".zshrc")
 	if err := os.WriteFile(homeFile, []byte("manual"), 0644); err != nil {
 		t.Fatal(err)
 	}
@@ -323,7 +370,7 @@ func TestValidate_Modular_RegularFileInHome(t *testing.T) {
 
 func TestValidate_Modular_SymlinkPointsElsewhere(t *testing.T) {
 	d := newDotfilesUnderHome(t)
-	repo, _ := git.PlainOpen(d.LocalPath)
+	repo := mustOpenRepo(t, d.LocalPath)
 	commitFile(t, repo, d.LocalPath, ".zshrc", "# zsh")
 	pushCurrentBranch(t, d.LocalPath, currentBranch(t, d.LocalPath))
 	fetchOrigin(t, d.LocalPath)
@@ -333,10 +380,8 @@ func TestValidate_Modular_SymlinkPointsElsewhere(t *testing.T) {
 	if err := os.WriteFile(other, []byte("other"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	homeFile := filepath.Join(os.Getenv("HOME"), ".zshrc")
-	if err := os.Symlink(other, homeFile); err != nil {
-		t.Fatal(err)
-	}
+	homeFile := filepath.Join(mustUserHomeDir(t), ".zshrc")
+	mustSymlinkOrSkip(t, other, homeFile)
 	d.ModularFiles = []string{".zshrc"}
 
 	out, err := d.Validate()
@@ -350,16 +395,14 @@ func TestValidate_Modular_SymlinkPointsElsewhere(t *testing.T) {
 
 func TestValidate_Modular_CorrectSymlink(t *testing.T) {
 	d := newDotfilesUnderHome(t)
-	repo, _ := git.PlainOpen(d.LocalPath)
+	repo := mustOpenRepo(t, d.LocalPath)
 	commitFile(t, repo, d.LocalPath, ".zshrc", "# zsh")
 	pushCurrentBranch(t, d.LocalPath, currentBranch(t, d.LocalPath))
 	fetchOrigin(t, d.LocalPath)
 
-	homeFile := filepath.Join(os.Getenv("HOME"), ".zshrc")
+	homeFile := filepath.Join(mustUserHomeDir(t), ".zshrc")
 	repoFile := filepath.Join(d.LocalPath, ".zshrc")
-	if err := os.Symlink(repoFile, homeFile); err != nil {
-		t.Fatal(err)
-	}
+	mustSymlinkOrSkip(t, repoFile, homeFile)
 	d.ModularFiles = []string{".zshrc"}
 
 	out, err := d.Validate()
@@ -376,7 +419,7 @@ func TestValidate_Modular_CorrectSymlink(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestCommitDistance(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
+	setFakeHome(t)
 	dir := t.TempDir()
 	repo, err := git.PlainInit(dir, false)
 	if err != nil {

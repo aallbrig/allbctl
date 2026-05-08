@@ -67,7 +67,7 @@ echo ""
 mkdir -p "${OUTPUT_DIR}"
 
 # Get commit hashes dynamically
-mapfile -t COMMIT_DATA < <(git --no-pager log -${NUM_COMMITS} --pretty=format:"%h" HEAD)
+mapfile -t COMMIT_DATA < <(git --no-pager log --max-count="${NUM_COMMITS}" --pretty=format:"%h" HEAD)
 
 # Get current branch/commit to return to later
 CURRENT_REF=$(git rev-parse --abbrev-ref HEAD)
@@ -82,19 +82,19 @@ SCRIPT_REL_PATH=$(git ls-files --full-name "$SCRIPT_PATH" 2>/dev/null || echo ""
 echo "Stashing any uncommitted changes (excluding this script)..."
 
 # Get all dirty files
-DIRTY_FILES=$(git diff --name-only && git diff --cached --name-only)
+mapfile -t DIRTY_FILES < <({ git diff --name-only; git diff --cached --name-only; } | awk 'NF && !seen[$0]++')
 
 # Filter out this script and stash the rest
-if [ -n "$DIRTY_FILES" ]; then
-  FILES_TO_STASH=""
-  while IFS= read -r file; do
+if [ ${#DIRTY_FILES[@]} -gt 0 ]; then
+  FILES_TO_STASH=()
+  for file in "${DIRTY_FILES[@]}"; do
     if [ "$file" != "$SCRIPT_REL_PATH" ]; then
-      FILES_TO_STASH="$FILES_TO_STASH $file"
+      FILES_TO_STASH+=("$file")
     fi
-  done <<< "$DIRTY_FILES"
-  
-  if [ -n "$FILES_TO_STASH" ]; then
-    git stash push -m "capture_allbctl_outputs.sh temporary stash" $FILES_TO_STASH > /dev/null 2>&1
+  done
+
+  if [ ${#FILES_TO_STASH[@]} -gt 0 ]; then
+    git stash push -m "capture_allbctl_outputs.sh temporary stash" -- "${FILES_TO_STASH[@]}" > /dev/null 2>&1
     STASHED=$?
   else
     STASHED=1  # Nothing to stash
@@ -107,8 +107,9 @@ fi
 PREV_NORMALIZED_OUTPUT=""
 PREV_OUTPUT_FILE=""
 RANGE_START_NUM=""
-RANGE_START_HASH=""
 RANGE_HASHES=()
+
+read -r -a COMMAND_ARGS <<< "${COMMAND}"
 
 for i in "${!COMMIT_DATA[@]}"; do
   short_hash="${COMMIT_DATA[$i]}"
@@ -117,7 +118,7 @@ for i in "${!COMMIT_DATA[@]}"; do
   echo "Processing HEAD~${head_num} (${short_hash})..."
   
   # Checkout the commit
-  git checkout -q HEAD~${head_num}
+  git checkout -q "HEAD~${head_num}"
   
   # Recreate output directory (might be removed by checkout if untracked)
   mkdir -p "${OUTPUT_DIR}"
@@ -130,7 +131,7 @@ for i in "${!COMMIT_DATA[@]}"; do
   if go build -ldflags="-X 'github.com/aallbrig/allbctl/cmd.Version=$(git describe --tags --always --dirty 2>/dev/null || echo "dev")' -X 'github.com/aallbrig/allbctl/cmd.Commit=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")'" -o bin/allbctl main.go > /dev/null 2>&1; then
     if [ -f "bin/allbctl" ]; then
       # Run allbctl with specified command and capture output
-      raw_output=$(./bin/allbctl ${COMMAND} 2>&1)
+      raw_output=$(./bin/allbctl "${COMMAND_ARGS[@]}" 2>&1)
       
       # Normalize output by removing timestamps and memory usage
       normalized_output=$(echo "$raw_output" | sed -E 's/\( [0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2} [A-Z]+ [+-][0-9]{4} \)//g' | sed -E 's/Memory:[[:space:]]+[0-9]+\.[0-9]+ [A-Z]iB \/ [0-9]+\.[0-9]+ [A-Z]iB/Memory: REDACTED/g')
@@ -141,7 +142,6 @@ for i in "${!COMMIT_DATA[@]}"; do
         if [ -z "$RANGE_START_NUM" ]; then
           # Start a new range
           RANGE_START_NUM=$((head_num - 1))
-          RANGE_START_HASH="${COMMIT_DATA[$((i - 1))]}"
           RANGE_HASHES=("${COMMIT_DATA[$((i - 1))]}")
         fi
         RANGE_HASHES+=("$short_hash")
@@ -212,7 +212,7 @@ echo "Returning to ${CURRENT_REF}..."
 git checkout -q "${CURRENT_REF}"
 
 # Restore stashed changes if any
-if [ $STASHED -eq 0 ]; then
+if [ "${STASHED}" -eq 0 ]; then
   echo "Restoring stashed changes..."
   git stash pop > /dev/null 2>&1
 fi
@@ -225,4 +225,4 @@ go build -ldflags="-X 'github.com/aallbrig/allbctl/cmd.Version=$(git describe --
 
 echo ""
 echo "✓ Complete! Output files created in ${OUTPUT_DIR}/"
-ls -1 "${OUTPUT_DIR}"/*.${COMMAND_FILENAME}.output.txt 2>/dev/null | wc -l | xargs echo "Total files created:"
+find "${OUTPUT_DIR}" -maxdepth 1 -type f -name "*.${COMMAND_FILENAME}.output.txt" | wc -l | xargs echo "Total files created:"

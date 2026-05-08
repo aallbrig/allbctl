@@ -1,0 +1,22 @@
+version: '3'
+
+tasks:
+  lint:
+    desc: Run all linters
+    deps:
+      - lint-go
+      - lint-shell
+
+  lint-go:
+    desc: Run Go linters
+    cmds:
+      - go vet ./... && golangci-lint run ./...
+
+  lint-shell:
+    desc: Run shellcheck on repository shell scripts
+    cmds:
+      - |
+        scripts=$(git ls-files '*.sh')
+        if [ -n "$scripts" ]; then
+          echo "$scripts" | xargs shellcheck
+        fi
