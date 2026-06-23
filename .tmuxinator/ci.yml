@@ -1,0 +1,76 @@
+# allbctl CI quality-gates session
+# Start with: tmuxinator start -p .tmuxinator/ci.yml
+# Or:         make ci
+#
+# Runs all quality gates in parallel panes so you can see every result at once.
+# Each pane exits 0 on pass or 1 on fail. Session exits when all panes finish.
+#
+# Prerequisites:
+#   golangci-lint, govulncheck, gitleaks must be on PATH.
+#   Install: go install golang.org/x/vuln/cmd/govulncheck@latest
+#            brew install gitleaks  (or go install github.com/gitleaks/gitleaks/v8@latest)
+
+name: allbctl-ci
+root: <%= ENV['HOME'] %>/src/allbctl
+
+windows:
+  - ci:
+      layout: tiled
+      panes:
+        # ── Pane 0: dev shell (index 0, always reserved) ──────────────────
+        - dev:
+            - printf '\033]2;dev\033\\'
+
+        # ── Pane 1: gofmt check ───────────────────────────────────────────
+        - fmt:
+            - printf '\033]2;fmt\033\\'
+            - |
+              echo "=== go fmt check ===" &&
+              UNFORMATTED=$(gofmt -l .) &&
+              if [ -n "$UNFORMATTED" ]; then
+                echo "FAIL: unformatted files:" && echo "$UNFORMATTED"; exit 1
+              else
+                echo "PASS: all files formatted"
+              fi
+
+        # ── Pane 2: go vet ────────────────────────────────────────────────
+        - vet:
+            - printf '\033]2;vet\033\\'
+            - |
+              echo "=== go vet ===" &&
+              go vet ./... && echo "PASS: go vet" || { echo "FAIL: go vet"; exit 1; }
+
+        # ── Pane 3: golangci-lint ─────────────────────────────────────────
+        - lint:
+            - printf '\033]2;lint\033\\'
+            - |
+              echo "=== golangci-lint ===" &&
+              golangci-lint run ./... && echo "PASS: golangci-lint" || { echo "FAIL: golangci-lint"; exit 1; }
+
+        # ── Pane 4: go test ───────────────────────────────────────────────
+        - test:
+            - printf '\033]2;test\033\\'
+            - |
+              echo "=== go test ===" &&
+              go test -timeout 120s ./... && echo "PASS: go test" || { echo "FAIL: go test"; exit 1; }
+
+        # ── Pane 5: govulncheck ───────────────────────────────────────────
+        - vuln:
+            - printf '\033]2;vuln\033\\'
+            - |
+              echo "=== govulncheck ===" &&
+              govulncheck ./... && echo "PASS: govulncheck" || { echo "FAIL: govulncheck"; exit 1; }
+
+        # ── Pane 6: generated docs sync ───────────────────────────────────
+        - docs:
+            - printf '\033]2;docs\033\\'
+            - |
+              echo "=== check-docs ===" &&
+              make check-docs && echo "PASS: docs in sync" || { echo "FAIL: docs out of sync"; exit 1; }
+
+        # ── Pane 7: gitleaks secrets scan ────────────────────────────────
+        - secrets:
+            - printf '\033]2;secrets\033\\'
+            - |
+              echo "=== gitleaks ===" &&
+              gitleaks detect --source . --no-banner && echo "PASS: no secrets detected" || { echo "FAIL: secrets detected"; exit 1; }

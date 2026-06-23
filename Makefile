@@ -80,3 +80,30 @@ lint:
 
 run:
 	go run main.go
+
+# Dev / CI workflow
+# ---------------------------------------------------------------------------
+# dev: start the "allbctl" tmux session (sites + watchers windows).
+#      Requires tmuxinator and watchexec.
+dev:
+	tmuxinator start -p .tmuxinator/dev.yml
+
+# ci: open the allbctl-ci tmux session that runs all quality gates in parallel
+#     panes. Requires tmuxinator, golangci-lint, govulncheck, and gitleaks.
+ci:
+	tmuxinator start -p .tmuxinator/ci.yml
+
+# ci-local: run all quality gates sequentially in the current shell (no tmux).
+#           Suitable for scripted/headless CI environments.
+ci-local:
+	@echo "=== go fmt check ===" && \
+	UNFORMATTED=$$(gofmt -l .); \
+	if [ -n "$$UNFORMATTED" ]; then echo "FAIL: unformatted files:" && echo "$$UNFORMATTED" && exit 1; fi && \
+	echo "PASS: go fmt"
+	@echo "=== go vet ===" && go vet ./... && echo "PASS: go vet"
+	@echo "=== golangci-lint ===" && golangci-lint run ./... && echo "PASS: golangci-lint"
+	@echo "=== go test ===" && go test -timeout 120s ./... && echo "PASS: go test"
+	@echo "=== govulncheck ===" && govulncheck ./... && echo "PASS: govulncheck"
+	@echo "=== check-docs ===" && make check-docs && echo "PASS: docs in sync"
+	@echo "=== gitleaks ===" && gitleaks detect --source . --no-banner && echo "PASS: no secrets detected"
+	@echo "All quality gates passed."

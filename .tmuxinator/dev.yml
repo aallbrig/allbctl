@@ -1,0 +1,100 @@
+# allbctl dev session
+# Start with: tmuxinator start -p .tmuxinator/dev.yml
+# Or:         make dev
+#
+# Prerequisites:
+#   brew install tmuxinator watchexec
+#   docker (for the Grafana LGTM stack)
+#
+# Telemetry flows automatically to the local LGTM stack via OTLP HTTP.
+# Open Grafana at http://localhost:3000 (admin/admin).
+
+name: allbctl
+root: <%= ENV['HOME'] %>/src/allbctl
+
+# Inject OTLP endpoint so every allbctl invocation ships telemetry to LGTM
+# without needing --debug. Grafana LGTM listens on :4318 (HTTP) and :4317 (gRPC).
+environment:
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://localhost:4318
+  OTEL_SERVICE_NAME: allbctl
+  OTEL_SERVICE_VERSION: dev
+
+windows:
+  # ── Window 0: sites ────────────────────────────────────────────────────────
+  # Pane 0 (dev): general shell – reserved for ad-hoc commands
+  # Pane 1 (lgtm): Grafana LGTM all-in-one OTel backend
+  - sites:
+      layout: main-vertical
+      panes:
+        - dev:
+            - printf '\033]2;dev\033\\'
+        - lgtm:
+            - printf '\033]2;lgtm\033\\'
+            - >
+              echo "==> Starting Grafana LGTM (traces/metrics/logs → http://localhost:3000)" &&
+              docker run --rm
+              --name allbctl-lgtm
+              -p 3000:3000
+              -p 4317:4317
+              -p 4318:4318
+              grafana/otel-lgtm:latest
+
+  # ── Window 1: watchers ─────────────────────────────────────────────────────
+  # Pane 0 (dev): general shell – reserved for ad-hoc commands
+  # Pane 1 (fmt):   auto-format on every .go save
+  # Pane 2 (vet):   go vet on every .go save
+  # Pane 3 (build): rebuild binary on source/mod changes
+  # Pane 4 (test):  re-test when bin/allbctl changes (chains with build)
+  # Pane 5 (lint):  golangci-lint on every .go save (debounced 3 s)
+  - watchers:
+      layout: tiled
+      panes:
+        - dev:
+            - printf '\033]2;dev\033\\'
+        - fmt:
+            - printf '\033]2;fmt\033\\'
+            - >
+              watchexec
+              --clear=clear
+              --restart
+              --exts go
+              --debounce 300ms
+              -- go fmt ./...
+        - vet:
+            - printf '\033]2;vet\033\\'
+            - >
+              watchexec
+              --clear=clear
+              --restart
+              --exts go
+              --debounce 500ms
+              -- go vet ./...
+        - build:
+            - printf '\033]2;build\033\\'
+            - >
+              watchexec
+              --clear=clear
+              --restart
+              --exts go,mod,sum
+              --debounce 500ms
+              -- go build -o bin/allbctl .
+        - test:
+            - printf '\033]2;test\033\\'
+            - >
+              watchexec
+              --clear=clear
+              --restart
+              --watch bin/allbctl
+              --watch pkg
+              --watch cmd
+              --debounce 1s
+              -- go test -short -timeout 60s ./...
+        - lint:
+            - printf '\033]2;lint\033\\'
+            - >
+              watchexec
+              --clear=clear
+              --restart
+              --exts go
+              --debounce 3s
+              -- golangci-lint run ./...

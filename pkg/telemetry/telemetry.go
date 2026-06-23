@@ -1,9 +1,18 @@
 // Package telemetry wires up OpenTelemetry SDK providers and a structured
-// slog logger for allbctl. When debug is false every provider is a no-op so
-// instrumented code compiles and runs with zero overhead. When debug is true
-// traces are written to stderr via the stdouttrace exporter, metrics are
-// collected in-memory and flushed as JSON slog records on shutdown, and the
-// slog logger writes JSON to stderr.
+// slog logger for allbctl.
+//
+// Two independent signal paths exist and can be active simultaneously:
+//
+//   - Console path (--debug flag): traces → stdouttrace pretty-print on stderr;
+//     metrics → JSON slog records on stderr at shutdown; slog logger → JSON on stderr.
+//
+//   - OTLP path (OTEL_EXPORTER_OTLP_ENDPOINT env var): traces and metrics are
+//     shipped via OTLP HTTP to the configured endpoint (e.g. a local Grafana
+//     LGTM stack). This is always active when the env var is set, regardless of
+//     the --debug flag.
+//
+// When neither path is active, no-op providers are installed so instrumented
+// code compiles and runs with zero overhead.
 package telemetry
 
 import (
@@ -18,6 +27,8 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	otlpmetrichttp "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
+	otlptracehttp "go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	"go.opentelemetry.io/otel/metric"
 	metricnoop "go.opentelemetry.io/otel/metric/noop"
@@ -31,21 +42,33 @@ import (
 
 const instrumentationScope = "github.com/aallbrig/allbctl"
 
-// Logger is the process-wide structured logger. It is set to a discard handler
-// until Setup is called.
+// otlpEndpointEnv is the standard OTel env var for the OTLP HTTP endpoint.
+const otlpEndpointEnv = "OTEL_EXPORTER_OTLP_ENDPOINT"
+
+// Logger is the process-wide structured logger. It discards all records until
+// Setup is called with debug=true.
 var Logger = slog.New(slog.NewTextHandler(io.Discard, nil))
 
 // Setup initialises the OpenTelemetry SDK. Call the returned shutdown function
-// (exactly once) to flush and stop all providers. If debug is false, no-op
-// providers are installed and Logger discards all records.
+// (exactly once) to flush and stop all providers.
+//
+//   - debug=true enables the console (stderr) signal path.
+//   - OTEL_EXPORTER_OTLP_ENDPOINT being set enables the OTLP signal path.
+//
+// If neither is active, no-op providers are installed.
 func Setup(ctx context.Context, debug bool) (shutdown func(context.Context) error, err error) {
-	if !debug {
+	otlpEndpoint := os.Getenv(otlpEndpointEnv)
+	otlpEnabled := otlpEndpoint != ""
+
+	if !debug && !otlpEnabled {
 		otel.SetTracerProvider(tracenoop.NewTracerProvider())
 		otel.SetMeterProvider(metricnoop.NewMeterProvider())
 		return func(context.Context) error { return nil }, nil
 	}
 
-	Logger = slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	if debug {
+		Logger = slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	}
 
 	res, err := resource.Merge(
 		resource.Default(),
@@ -58,42 +81,73 @@ func Setup(ctx context.Context, debug bool) (shutdown func(context.Context) erro
 		return nil, fmt.Errorf("build otel resource: %w", err)
 	}
 
-	// ── Traces ──────────────────────────────────────────────────────────────
-	traceExp, err := stdouttrace.New(
-		stdouttrace.WithWriter(os.Stderr),
-		stdouttrace.WithPrettyPrint(),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("stdouttrace exporter: %w", err)
+	// ── Trace provider ───────────────────────────────────────────────────────
+	var traceOpts []sdktrace.TracerProviderOption
+	traceOpts = append(traceOpts, sdktrace.WithResource(res))
+
+	if debug {
+		consoleExp, cErr := stdouttrace.New(
+			stdouttrace.WithWriter(os.Stderr),
+			stdouttrace.WithPrettyPrint(),
+		)
+		if cErr != nil {
+			return nil, fmt.Errorf("stdouttrace exporter: %w", cErr)
+		}
+		traceOpts = append(traceOpts, sdktrace.WithBatcher(consoleExp))
 	}
-	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithBatcher(traceExp),
-		sdktrace.WithResource(res),
-	)
+
+	if otlpEnabled {
+		otlpExp, oErr := otlptracehttp.New(ctx,
+			otlptracehttp.WithEndpointURL(otlpEndpoint+"/v1/traces"),
+			otlptracehttp.WithInsecure(),
+		)
+		if oErr != nil {
+			// Non-fatal: log and continue without OTLP traces
+			fmt.Fprintf(os.Stderr, "OTLP trace exporter warning: %v\n", oErr)
+		} else {
+			traceOpts = append(traceOpts, sdktrace.WithBatcher(otlpExp))
+		}
+	}
+
+	tp := sdktrace.NewTracerProvider(traceOpts...)
 	otel.SetTracerProvider(tp)
 
-	// ── Metrics ─────────────────────────────────────────────────────────────
-	// ManualReader lets us collect and log metrics as structured JSON on shutdown
-	// instead of needing a separate stdout metric exporter in the vendor tree.
+	// ── Metric provider ──────────────────────────────────────────────────────
+	var metricReaders []sdkmetric.Option
+	metricReaders = append(metricReaders, sdkmetric.WithResource(res))
+
+	// ManualReader lets us flush metrics as slog JSON records at shutdown.
 	mReader := sdkmetric.NewManualReader()
-	mp := sdkmetric.NewMeterProvider(
-		sdkmetric.WithReader(mReader),
-		sdkmetric.WithResource(res),
-	)
+	metricReaders = append(metricReaders, sdkmetric.WithReader(mReader))
+
+	if otlpEnabled {
+		otlpMetricExp, oErr := otlpmetrichttp.New(ctx,
+			otlpmetrichttp.WithEndpointURL(otlpEndpoint+"/v1/metrics"),
+			otlpmetrichttp.WithInsecure(),
+		)
+		if oErr != nil {
+			fmt.Fprintf(os.Stderr, "OTLP metric exporter warning: %v\n", oErr)
+		} else {
+			metricReaders = append(metricReaders,
+				sdkmetric.WithReader(sdkmetric.NewPeriodicReader(otlpMetricExp)),
+			)
+		}
+	}
+
+	mp := sdkmetric.NewMeterProvider(metricReaders...)
 	otel.SetMeterProvider(mp)
 
 	return func(ctx context.Context) error {
 		var errs []error
 
-		// Flush metrics → slog JSON records on stderr
-		if mErr := flushMetrics(ctx, mReader); mErr != nil {
-			errs = append(errs, fmt.Errorf("flush metrics: %w", mErr))
+		if debug {
+			if mErr := flushMetrics(ctx, mReader); mErr != nil {
+				errs = append(errs, fmt.Errorf("flush metrics: %w", mErr))
+			}
 		}
 		if mErr := mp.Shutdown(ctx); mErr != nil {
 			errs = append(errs, fmt.Errorf("metric provider shutdown: %w", mErr))
 		}
-
-		// Flush traces
 		if tErr := tp.Shutdown(ctx); tErr != nil {
 			errs = append(errs, fmt.Errorf("trace provider shutdown: %w", tErr))
 		}
