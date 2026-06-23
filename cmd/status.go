@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -9,11 +10,17 @@ import (
 	"runtime"
 	"strings"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
+
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/disk"
 	"github.com/shirou/gopsutil/v4/host"
 	"github.com/shirou/gopsutil/v4/mem"
 	"github.com/spf13/cobra"
+
+	"github.com/aallbrig/allbctl/pkg/telemetry"
 )
 
 // browserVersionRegex is used to extract version numbers from browser output
@@ -24,7 +31,15 @@ var StatusCmd = &cobra.Command{
 	Use:   "status",
 	Short: "Display system information (like neofetch)",
 	Run: func(cmd *cobra.Command, args []string) {
-		printSystemInfo()
+		ctx := cmd.Context()
+		if ctx == nil {
+			ctx = context.Background()
+		}
+		ctx, span := otel.Tracer("github.com/aallbrig/allbctl").Start(ctx, "status.printSystemInfo",
+			trace.WithAttributes(attribute.String("command", "status")),
+		)
+		defer span.End()
+		printSystemInfo(ctx)
 	},
 }
 
@@ -347,7 +362,7 @@ func printBrowsers(browsers []BrowserInfo) {
 }
 
 // printSystemInfo collects and prints system information in a structured format
-func printSystemInfo() {
+func printSystemInfo(ctx context.Context) {
 	// Start package detection early (runs in background)
 	packagesFuture := StartPackageSummary()
 
@@ -494,6 +509,35 @@ func printSystemInfo() {
 
 	// Projects section
 	printProjectsInline(5)
+
+	// Wide structured log with all detected system info
+	runtimeCount := len(strings.Split(runtimesInline, ","))
+	if runtimesInline == "" {
+		runtimeCount = 0
+	}
+	browserNames := make([]string, 0, len(browsers))
+	for _, b := range browsers {
+		browserNames = append(browserNames, b.Name)
+	}
+	telemetry.Logger.InfoContext(ctx, "status.system_info",
+		"os", osStr,
+		"hostname", hostname,
+		"shell", shell,
+		"terminal", terminal,
+		"memory", memStr,
+		"disk_count", len(disks),
+		"runtimes_count", runtimeCount,
+		"runtimes", runtimesInline,
+		"browsers", browserNames,
+	)
+	span := trace.SpanFromContext(ctx)
+	span.SetAttributes(
+		attribute.String("os", osStr),
+		attribute.String("hostname", hostname),
+		attribute.Int("disk_count", len(disks)),
+		attribute.Int("runtime_count", runtimeCount),
+		attribute.Int("browser_count", len(browsers)),
+	)
 }
 
 // GPUInfo holds detailed GPU information

@@ -1,12 +1,20 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
 	"strings"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
+
 	"github.com/spf13/cobra"
+
+	"github.com/aallbrig/allbctl/pkg/telemetry"
 )
 
 var (
@@ -47,7 +55,11 @@ Examples:
   allbctl update --managers apt,npm # Only update apt and npm`,
 	Aliases: []string{"up", "upgrade"},
 	Run: func(cmd *cobra.Command, args []string) {
-		runUpdate()
+		ctx := cmd.Context()
+		if ctx == nil {
+			ctx = context.Background()
+		}
+		runUpdate(ctx)
 	},
 }
 
@@ -176,7 +188,7 @@ func runUpdateCommand(args []string, needsSudo bool) error {
 	return cmd.Run()
 }
 
-func runUpdate() {
+func runUpdate(ctx context.Context) {
 	managers := filterUpdatableManagers()
 
 	if len(managers) == 0 {
@@ -186,7 +198,9 @@ func runUpdate() {
 
 	// Print summary
 	fmt.Println("Package managers to update:")
+	managerNames := make([]string, 0, len(managers))
 	for _, mgr := range managers {
+		managerNames = append(managerNames, mgr.Name)
 		updateCount, _ := checkPackageUpdates(mgr.Name) //nolint:errcheck
 		if updateCount > 0 {
 			fmt.Printf("  %-12s %s (%d updates available)\n", mgr.Name+":", mgr.Description, updateCount)
@@ -195,6 +209,11 @@ func runUpdate() {
 		}
 	}
 	fmt.Println()
+
+	telemetry.Logger.InfoContext(ctx, "update.start",
+		"managers", managerNames,
+		"dry_run", updateDryRun,
+	)
 
 	// Dry run: show commands and stop
 	if updateDryRun {
@@ -219,6 +238,15 @@ func runUpdate() {
 
 	for _, mgr := range managers {
 		fmt.Printf("==> Updating %s...\n", mgr.Name)
+
+		mgrCtx, mgrSpan := otel.Tracer("github.com/aallbrig/allbctl").Start(ctx,
+			"update.manager",
+			trace.WithAttributes(
+				attribute.String("manager", mgr.Name),
+				attribute.Bool("needs_sudo", mgr.NeedsSudo),
+			),
+		)
+
 		mgrFailed := false
 
 		for _, cmdArgs := range mgr.Commands {
@@ -231,17 +259,31 @@ func runUpdate() {
 			if err := runUpdateCommand(cmdArgs, mgr.NeedsSudo); err != nil {
 				fmt.Printf("  Error: %v\n", err)
 				mgrFailed = true
+				mgrSpan.RecordError(err)
+				mgrSpan.SetStatus(codes.Error, err.Error())
 				break
 			}
 		}
 
 		if mgrFailed {
 			failed = append(failed, mgr.Name)
+			telemetry.Logger.InfoContext(mgrCtx, "update.manager.failed", "manager", mgr.Name)
 		} else {
 			succeeded = append(succeeded, mgr.Name)
+			mgrSpan.SetStatus(codes.Ok, "")
+			telemetry.Logger.InfoContext(mgrCtx, "update.manager.succeeded", "manager", mgr.Name)
 		}
+
+		mgrSpan.End()
 		fmt.Println()
 	}
+
+	telemetry.Logger.InfoContext(ctx, "update.finish",
+		"succeeded", succeeded,
+		"failed", failed,
+		"succeeded_count", len(succeeded),
+		"failed_count", len(failed),
+	)
 
 	// Print summary
 	fmt.Println("---")

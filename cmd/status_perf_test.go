@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"io"
 	"os"
 	"testing"
@@ -33,7 +34,7 @@ func Test_StatusCommandPerformance(t *testing.T) {
 
 	// Measure execution time
 	start := time.Now()
-	printSystemInfo()
+	printSystemInfo(context.Background())
 	duration := time.Since(start)
 
 	// Restore stdout
@@ -77,7 +78,7 @@ func Benchmark_StatusCommand(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		printSystemInfo()
+		printSystemInfo(context.Background())
 	}
 }
 

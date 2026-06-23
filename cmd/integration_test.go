@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"io"
 	"os"
 	"os/exec"
@@ -182,7 +183,7 @@ func TestStatusCommandSections(t *testing.T) {
 	}
 	os.Stdout = w
 
-	printSystemInfo()
+	printSystemInfo(context.Background())
 
 	w.Close()
 	os.Stdout = oldStdout

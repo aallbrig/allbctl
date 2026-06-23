@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -39,23 +40,23 @@ func TestBootstrapSubcommandsRegistered(t *testing.T) {
 
 func TestPrintBootstrapStatus_Runs(t *testing.T) {
 	output := captureOutput(func() {
-		printBootstrapStatus()
+		printBootstrapStatus(context.Background())
 	})
 	// Should produce some output — either the status table or "No configuration provider"
 	if len(output) == 0 {
-		t.Error("printBootstrapStatus() produced no output")
+		t.Error("printBootstrapStatus(context.Background()) produced no output")
 	}
 	t.Logf("bootstrap status output:\n%s", output)
 }
 
 func TestPrintBootstrapStatus_ContainsHeader(t *testing.T) {
 	output := captureOutput(func() {
-		printBootstrapStatus()
+		printBootstrapStatus(context.Background())
 	})
 	// On a supported OS, should print "Workstation Bootstrap Status:"
 	// On an unsupported OS, should print "No configuration provider for ..."
 	if !strings.Contains(output, "Bootstrap") && !strings.Contains(output, "configuration provider") {
-		t.Errorf("printBootstrapStatus() output missing expected header; got:\n%s", output)
+		t.Errorf("printBootstrapStatus(context.Background()) output missing expected header; got:\n%s", output)
 	}
 }
 

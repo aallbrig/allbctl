@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"testing"
 )
 
@@ -145,11 +146,11 @@ func TestRunUpdateDryRun(t *testing.T) {
 
 	// Should not panic and should produce output
 	output := captureOutput(func() {
-		runUpdate()
+		runUpdate(context.Background())
 	})
 
 	if len(output) == 0 {
-		t.Error("runUpdate() with --dry-run produced no output")
+		t.Error("runUpdate(context.Background()) with --dry-run produced no output")
 	}
 	t.Logf("dry-run output length: %d", len(output))
 }

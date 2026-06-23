@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"log"
 	"strings"
@@ -9,6 +10,7 @@ import (
 	computerSetup "github.com/aallbrig/allbctl/pkg/computersetup"
 	"github.com/aallbrig/allbctl/pkg/osagnostic"
 	"github.com/aallbrig/allbctl/pkg/status"
+	"github.com/aallbrig/allbctl/pkg/telemetry"
 	"github.com/spf13/cobra"
 )
 
@@ -38,7 +40,11 @@ var bootstrapStatusCmd = &cobra.Command{
 	Short: "Check workstation bootstrap status",
 	Long:  `Check the status of workstation bootstrap configuration including directories, tools, SSH keys, and dotfiles.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		printBootstrapStatus()
+		ctx := cmd.Context()
+		if ctx == nil {
+			ctx = context.Background()
+		}
+		printBootstrapStatus(ctx)
 	},
 }
 
@@ -50,6 +56,11 @@ var bootstrapInstallCmd = &cobra.Command{
 By default, SSH key generation and GitHub registration are SKIPPED.
 Use --register-ssh-keys flag to enable SSH key generation and GitHub registration.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		ctx := cmd.Context()
+		if ctx == nil {
+			ctx = context.Background()
+		}
+
 		os := osagnostic.NewOperatingSystem()
 		identifier := computerSetup.MachineIdentifier{}
 		configProvider := identifier.ConfigurationProviderForOperatingSystem(os.Name)
@@ -64,9 +75,20 @@ Use --register-ssh-keys flag to enable SSH key generation and GitHub registratio
 			configs = computerSetup.FilterOutSSHKeyRegistration(configs)
 		}
 
+		telemetry.Logger.InfoContext(ctx, "bootstrap.install.start",
+			"os", os.Name,
+			"register_ssh_keys", registerSSHKeys,
+			"config_count", len(configs),
+		)
+
 		tweaker := computerSetup.NewMachineTweaker(configs)
 		_, out := tweaker.ApplyConfiguration()
 		fmt.Print(out.String())
+
+		telemetry.Logger.InfoContext(ctx, "bootstrap.install.finish",
+			"os", os.Name,
+			"config_count", len(configs),
+		)
 	},
 }
 
@@ -75,6 +97,11 @@ var bootstrapResetCmd = &cobra.Command{
 	Short: "Reset workstation bootstrap configuration",
 	Long:  `Reset workstation bootstrap configuration, removing directories, tools, SSH keys, and dotfiles.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		ctx := cmd.Context()
+		if ctx == nil {
+			ctx = context.Background()
+		}
+
 		out := bytes.NewBufferString("")
 		out.WriteString("System Info\n")
 		out.WriteString("-----\n")
@@ -92,14 +119,19 @@ var bootstrapResetCmd = &cobra.Command{
 		}
 
 		tweaker := computerSetup.NewMachineTweaker(configProvider.GetConfiguration())
+
+		telemetry.Logger.InfoContext(ctx, "bootstrap.reset.start", "os", os.Name)
+
 		_, statusOut := tweaker.ResetConfiguration()
 		out.WriteString(statusOut.String())
+
+		telemetry.Logger.InfoContext(ctx, "bootstrap.reset.finish", "os", os.Name)
 
 		log.Print(out)
 	},
 }
 
-func printBootstrapStatus() {
+func printBootstrapStatus(ctx context.Context) {
 	os := osagnostic.NewOperatingSystem()
 	identifier := computerSetup.MachineIdentifier{}
 	configProvider := identifier.ConfigurationProviderForOperatingSystem(os.Name)
@@ -110,6 +142,11 @@ func printBootstrapStatus() {
 
 	tweaker := computerSetup.NewMachineTweaker(configProvider.GetConfiguration())
 	_, out := tweaker.ConfigurationStatus()
+
+	telemetry.Logger.InfoContext(ctx, "bootstrap.status",
+		"os", os.Name,
+		"config_count", len(configProvider.GetConfiguration()),
+	)
 
 	fmt.Println("Workstation Bootstrap Status:")
 	fmt.Println()
