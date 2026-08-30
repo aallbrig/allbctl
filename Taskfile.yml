@@ -27,7 +27,7 @@ tasks:
     desc: Verify all Go files are gofmt-formatted
     cmds:
       - |
-        UNFORMATTED=$(gofmt -l .)
+        UNFORMATTED=$(gofmt -l $(git ls-files '*.go'))
         if [ -n "$UNFORMATTED" ]; then
           echo "FAIL: unformatted files:" && echo "$UNFORMATTED" && exit 1
         fi

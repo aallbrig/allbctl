@@ -89,8 +89,11 @@ func TestSetup_LoggerActiveWhenOTLPSet(t *testing.T) {
 		"runtime_count", 5,
 	)
 
-	// Shutdown may return an error due to failed OTLP flush — that's acceptable.
-	_ = shutdown(context.Background())
+	// Shutdown may return an error due to failed OTLP flush — that's acceptable,
+	// so we only log it rather than failing the test.
+	if err := shutdown(context.Background()); err != nil {
+		t.Logf("shutdown returned error (acceptable, OTLP endpoint unreachable): %v", err)
+	}
 }
 
 func TestRecordCommandMetrics_NoopProviders(t *testing.T) {
