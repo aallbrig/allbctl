@@ -470,7 +470,7 @@ func printSystemInfo(ctx context.Context) {
 	fmt.Println()
 
 	// Network section
-	printNetworkInfo()
+	printNetworkInfo(ctx)
 	fmt.Println()
 
 	// Ports section
@@ -505,7 +505,7 @@ func printSystemInfo(ctx context.Context) {
 	fmt.Println()
 
 	// Cloud Native section
-	printCloudNativeForStatus()
+	printCloudNativeForStatus(ctx)
 
 	// Projects section
 	printProjectsInline(5)
@@ -1074,9 +1074,9 @@ func detectTerminal() string {
 }
 
 // printNetworkInfo prints network information for status command
-func printNetworkInfo() {
+func printNetworkInfo(ctx context.Context) {
 	// Use the enhanced network details function from network.go
-	PrintNetworkInfo()
+	PrintNetworkInfo(ctx)
 }
 
 // getRouterIP gets the default gateway IP (exported for network subcommand)

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"io"
 	"os"
 	"strings"
@@ -167,7 +168,7 @@ func TestPrintNetworkInfo(t *testing.T) {
 	}
 	os.Stdout = w
 
-	PrintNetworkInfo()
+	PrintNetworkInfo(context.Background())
 
 	w.Close()
 	os.Stdout = old

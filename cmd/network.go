@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"os/exec"
@@ -11,6 +12,11 @@ import (
 
 	psnet "github.com/shirou/gopsutil/v4/net"
 	"github.com/spf13/cobra"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
+
+	"github.com/aallbrig/allbctl/pkg/telemetry"
 )
 
 var NetworkCmd = &cobra.Command{
@@ -20,7 +26,13 @@ var NetworkCmd = &cobra.Command{
 
 This is the same output shown in the 'Network:' section of 'allbctl status'.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		PrintNetworkInfo()
+		ctx := cmd.Context()
+		if ctx == nil {
+			ctx = context.Background()
+		}
+		ctx, span := otel.Tracer("github.com/aallbrig/allbctl").Start(ctx, "status.network")
+		defer span.End()
+		PrintNetworkInfo(ctx)
 	},
 }
 
@@ -58,7 +70,7 @@ type WiFiInfo struct {
 }
 
 // PrintNetworkInfo outputs comprehensive network information
-func PrintNetworkInfo() {
+func PrintNetworkInfo(ctx context.Context) {
 	details := gatherNetworkDetails()
 
 	// Primary Interface
@@ -159,6 +171,28 @@ func PrintNetworkInfo() {
 			}
 		}
 	}
+
+	primaryName, primaryIP := "", ""
+	if details.PrimaryIface != nil {
+		primaryName = details.PrimaryIface.Name
+		primaryIP = details.PrimaryIface.IP
+	}
+	telemetry.Logger.InfoContext(ctx, "status.network",
+		"internet_ok", details.InternetOK,
+		"vpn_active", details.VPNActive,
+		"interface_count", len(details.Interfaces),
+		"primary_interface", primaryName,
+		"primary_ip", primaryIP,
+		"public_ip", details.PublicIP,
+		"dns_count", len(details.DNSServers),
+	)
+	span := trace.SpanFromContext(ctx)
+	span.SetAttributes(
+		attribute.Bool("network.internet_ok", details.InternetOK),
+		attribute.Bool("network.vpn_active", details.VPNActive),
+		attribute.Int("network.interface_count", len(details.Interfaces)),
+		attribute.String("network.primary_interface", primaryName),
+	)
 }
 
 // gatherNetworkDetails collects comprehensive network information

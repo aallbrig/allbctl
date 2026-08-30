@@ -1,12 +1,12 @@
 // Package telemetry wires up OpenTelemetry SDK providers and a structured
 // slog logger for allbctl.
 //
-// Two independent signal paths exist and can be active simultaneously:
+// Three independent signal paths exist and can be active simultaneously:
 //
 //   - Console path (--debug flag): traces → stdouttrace pretty-print on stderr;
 //     metrics → JSON slog records on stderr at shutdown; slog logger → JSON on stderr.
 //
-//   - OTLP path (OTEL_EXPORTER_OTLP_ENDPOINT env var): traces and metrics are
+//   - OTLP path (OTEL_EXPORTER_OTLP_ENDPOINT env var): traces, metrics, and logs are
 //     shipped via OTLP HTTP to the configured endpoint (e.g. a local Grafana
 //     LGTM stack). This is always active when the env var is set, regardless of
 //     the --debug flag.
@@ -25,13 +25,17 @@ import (
 	"os"
 	"time"
 
+	"go.opentelemetry.io/contrib/bridges/otelslog"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	otlploghttp "go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp"
 	otlpmetrichttp "go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
 	otlptracehttp "go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
+	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/metric"
 	metricnoop "go.opentelemetry.io/otel/metric/noop"
+	sdklog "go.opentelemetry.io/otel/sdk/log"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -40,13 +44,58 @@ import (
 	tracenoop "go.opentelemetry.io/otel/trace/noop"
 )
 
+// multiHandler fans slog records out to multiple slog.Handler implementations.
+type multiHandler struct {
+	handlers []slog.Handler
+}
+
+func (m *multiHandler) Enabled(ctx context.Context, level slog.Level) bool {
+	for _, h := range m.handlers {
+		if h.Enabled(ctx, level) {
+			return true
+		}
+	}
+	return false
+}
+
+func (m *multiHandler) Handle(ctx context.Context, r slog.Record) error {
+	var errs []error
+	for _, h := range m.handlers {
+		if h.Enabled(ctx, r.Level) {
+			if err := h.Handle(ctx, r.Clone()); err != nil {
+				errs = append(errs, err)
+			}
+		}
+	}
+	return errors.Join(errs...)
+}
+
+func (m *multiHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	handlers := make([]slog.Handler, len(m.handlers))
+	for i, h := range m.handlers {
+		handlers[i] = h.WithAttrs(attrs)
+	}
+	return &multiHandler{handlers: handlers}
+}
+
+func (m *multiHandler) WithGroup(name string) slog.Handler {
+	handlers := make([]slog.Handler, len(m.handlers))
+	for i, h := range m.handlers {
+		handlers[i] = h.WithGroup(name)
+	}
+	return &multiHandler{handlers: handlers}
+}
+
+// ensure multiHandler satisfies the interface at compile time
+var _ slog.Handler = (*multiHandler)(nil)
+
 const instrumentationScope = "github.com/aallbrig/allbctl"
 
 // otlpEndpointEnv is the standard OTel env var for the OTLP HTTP endpoint.
 const otlpEndpointEnv = "OTEL_EXPORTER_OTLP_ENDPOINT"
 
 // Logger is the process-wide structured logger. It discards all records until
-// Setup is called with debug=true.
+// Setup is called with debug=true or OTEL_EXPORTER_OTLP_ENDPOINT is set.
 var Logger = slog.New(slog.NewTextHandler(io.Discard, nil))
 
 // Setup initialises the OpenTelemetry SDK. Call the returned shutdown function
@@ -64,10 +113,6 @@ func Setup(ctx context.Context, debug bool) (shutdown func(context.Context) erro
 		otel.SetTracerProvider(tracenoop.NewTracerProvider())
 		otel.SetMeterProvider(metricnoop.NewMeterProvider())
 		return func(context.Context) error { return nil }, nil
-	}
-
-	if debug {
-		Logger = slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}))
 	}
 
 	res, err := resource.Merge(
@@ -137,6 +182,47 @@ func Setup(ctx context.Context, debug bool) (shutdown func(context.Context) erro
 	mp := sdkmetric.NewMeterProvider(metricReaders...)
 	otel.SetMeterProvider(mp)
 
+	// ── Log provider ─────────────────────────────────────────────────────────
+	// Build a fan-out slog.Logger that routes to every active log sink:
+	//   - stderr JSON handler (debug mode)
+	//   - OTel log provider → OTLP HTTP exporter (when endpoint is set)
+	var logHandlers []slog.Handler
+
+	if debug {
+		logHandlers = append(logHandlers,
+			slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}),
+		)
+	}
+
+	var lp *sdklog.LoggerProvider
+	if otlpEnabled {
+		otlpLogExp, oErr := otlploghttp.New(ctx,
+			otlploghttp.WithEndpointURL(otlpEndpoint+"/v1/logs"),
+			otlploghttp.WithInsecure(),
+		)
+		if oErr != nil {
+			fmt.Fprintf(os.Stderr, "OTLP log exporter warning: %v\n", oErr)
+		} else {
+			lp = sdklog.NewLoggerProvider(
+				sdklog.WithResource(res),
+				sdklog.WithProcessor(sdklog.NewBatchProcessor(otlpLogExp)),
+			)
+			global.SetLoggerProvider(lp)
+			logHandlers = append(logHandlers,
+				otelslog.NewHandler(instrumentationScope, otelslog.WithLoggerProvider(lp)),
+			)
+		}
+	}
+
+	switch len(logHandlers) {
+	case 0:
+		// both debug and otlp paths inactive — keep the discard logger
+	case 1:
+		Logger = slog.New(logHandlers[0])
+	default:
+		Logger = slog.New(&multiHandler{handlers: logHandlers})
+	}
+
 	return func(ctx context.Context) error {
 		var errs []error
 
@@ -150,6 +236,11 @@ func Setup(ctx context.Context, debug bool) (shutdown func(context.Context) erro
 		}
 		if tErr := tp.Shutdown(ctx); tErr != nil {
 			errs = append(errs, fmt.Errorf("trace provider shutdown: %w", tErr))
+		}
+		if lp != nil {
+			if lErr := lp.Shutdown(ctx); lErr != nil {
+				errs = append(errs, fmt.Errorf("log provider shutdown: %w", lErr))
+			}
 		}
 
 		return errors.Join(errs...)

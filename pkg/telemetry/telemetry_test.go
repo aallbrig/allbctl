@@ -38,9 +38,13 @@ func TestSetup_DebugTrue(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, shutdown)
 
-	// Logger should be non-nil and usable
+	// Logger should be non-nil and usable — it routes to the stderr JSON handler
 	assert.NotNil(t, telemetry.Logger)
 	telemetry.Logger.Info("test structured log", "key", "value")
+	telemetry.Logger.InfoContext(context.Background(), "test.with_context",
+		"command", "status",
+		"count", 3,
+	)
 
 	// Create a span and some metrics
 	tracer := otel.Tracer("allbctl/test")
@@ -64,6 +68,29 @@ func TestSetup_DebugTrue(t *testing.T) {
 	hist.Record(context.Background(), 42, metric.WithAttributes(attribute.String("cmd", "status")))
 
 	require.NoError(t, shutdown(context.Background()))
+}
+
+// TestSetup_LoggerActiveWhenOTLPSet verifies Logger is non-discard when
+// OTEL_EXPORTER_OTLP_ENDPOINT is set (even without --debug). The Logger should
+// be the otelslog bridge handler; we just verify it doesn't panic.
+func TestSetup_LoggerActiveWhenOTLPSet(t *testing.T) {
+	// Point at a dummy endpoint — the exporter will fail to connect but Setup
+	// should still succeed (non-fatal) and return a working Logger.
+	t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://127.0.0.1:19999")
+
+	shutdown, err := telemetry.Setup(context.Background(), false)
+	require.NoError(t, err)
+	require.NotNil(t, shutdown)
+
+	assert.NotNil(t, telemetry.Logger)
+	// Should not panic even if the OTLP endpoint is unreachable at record time.
+	telemetry.Logger.InfoContext(context.Background(), "test.otlp_path",
+		"command", "status",
+		"runtime_count", 5,
+	)
+
+	// Shutdown may return an error due to failed OTLP flush — that's acceptable.
+	_ = shutdown(context.Background())
 }
 
 func TestRecordCommandMetrics_NoopProviders(t *testing.T) {

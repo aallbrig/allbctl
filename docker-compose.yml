@@ -1,0 +1,12 @@
+services:
+  lgtm:
+    image: grafana/otel-lgtm:latest
+    container_name: allbctl-lgtm
+    ports:
+      - "3002:3000"   # Grafana UI  → http://localhost:3002 (admin/admin)
+      - "4319:4317"   # OTLP gRPC
+      - "4320:4318"   # OTLP HTTP
+      - "9092:9090"   # Prometheus  → http://localhost:9092
+      - "3202:3200"   # Tempo       → http://localhost:3202
+    volumes:
+      - ./lgtm/logging.sh:/otel-lgtm/logging.sh:ro   # per-service log files in /tmp/<service>.log

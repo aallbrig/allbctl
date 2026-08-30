@@ -86,12 +86,7 @@ run:
 # dev: start the "allbctl" tmux session (sites + watchers windows).
 #      Requires tmuxinator and watchexec.
 dev:
-	tmuxinator start -p .tmuxinator/dev.yml
-
-# ci: open the allbctl-ci tmux session that runs all quality gates in parallel
-#     panes. Requires tmuxinator, golangci-lint, govulncheck, and gitleaks.
-ci:
-	tmuxinator start -p .tmuxinator/ci.yml
+	tmuxinator start -p .tmuxinator/allbctl.yml
 
 # ci-local: run all quality gates sequentially in the current shell (no tmux).
 #           Suitable for scripted/headless CI environments.
@@ -105,5 +100,5 @@ ci-local:
 	@echo "=== go test ===" && go test -timeout 120s ./... && echo "PASS: go test"
 	@echo "=== govulncheck ===" && govulncheck ./... && echo "PASS: govulncheck"
 	@echo "=== check-docs ===" && make check-docs && echo "PASS: docs in sync"
-	@echo "=== gitleaks ===" && gitleaks detect --source . --no-banner && echo "PASS: no secrets detected"
+	@echo "=== gitleaks ===" && gitleaks detect --source . --config .gitleaks.toml --no-banner --redact && echo "PASS: no secrets detected"
 	@echo "All quality gates passed."

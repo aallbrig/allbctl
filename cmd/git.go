@@ -1,11 +1,17 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os/exec"
 	"strings"
 
 	"github.com/spf13/cobra"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
+
+	"github.com/aallbrig/allbctl/pkg/telemetry"
 )
 
 var GitConfigCmd = &cobra.Command{
@@ -13,7 +19,13 @@ var GitConfigCmd = &cobra.Command{
 	Short: "Display git global configuration",
 	Long:  `Display git global configuration including user name, email, and editor.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		PrintGitConfigInfo()
+		ctx := cmd.Context()
+		if ctx == nil {
+			ctx = context.Background()
+		}
+		ctx, span := otel.Tracer("github.com/aallbrig/allbctl").Start(ctx, "status.git")
+		defer span.End()
+		PrintGitConfigInfo(ctx)
 	},
 }
 
@@ -23,9 +35,10 @@ type GitConfigInfo struct {
 	CoreEditor string
 }
 
-func PrintGitConfigInfo() {
+func PrintGitConfigInfo(ctx context.Context) {
 	if !exists("git") {
 		fmt.Println("Git is not installed")
+		telemetry.Logger.InfoContext(ctx, "status.git", "installed", false)
 		return
 	}
 
@@ -51,6 +64,19 @@ func PrintGitConfigInfo() {
 	} else {
 		fmt.Printf("  Editor:     (not set)\n")
 	}
+
+	telemetry.Logger.InfoContext(ctx, "status.git",
+		"installed", true,
+		"user_name_set", info.UserName != "",
+		"user_email_set", info.UserEmail != "",
+		"editor_set", info.CoreEditor != "",
+	)
+	span := trace.SpanFromContext(ctx)
+	span.SetAttributes(
+		attribute.Bool("git.user_name_set", info.UserName != ""),
+		attribute.Bool("git.user_email_set", info.UserEmail != ""),
+		attribute.Bool("git.editor_set", info.CoreEditor != ""),
+	)
 }
 
 func gatherGitConfigInfo() *GitConfigInfo {

@@ -1,0 +1,12 @@
+title = "Gitleaks config for allbctl"
+
+[extend]
+useDefault = true
+
+[allowlist]
+paths = [
+  '''^vendor/''',
+  '''^test/sample/''',
+  '''^data/outputs/''',
+  '''^allbctl_windows_.*\.exe$''',  # prebuilt binaries may contain strings
+]

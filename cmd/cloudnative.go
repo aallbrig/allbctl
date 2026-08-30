@@ -13,6 +13,11 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/resourcegroupstaggingapi"
 	"github.com/spf13/cobra"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
+
+	"github.com/aallbrig/allbctl/pkg/telemetry"
 )
 
 var (
@@ -38,7 +43,13 @@ Examples:
   allbctl status cloud-native aws      # Show detailed AWS resource info
   allbctl status cn aws --region us-east-1  # AWS resources in specific region`,
 	Run: func(cmd *cobra.Command, args []string) {
-		printCloudNativeSummary()
+		ctx := cmd.Context()
+		if ctx == nil {
+			ctx = context.Background()
+		}
+		ctx, span := otel.Tracer("github.com/aallbrig/allbctl").Start(ctx, "status.cloud-native")
+		defer span.End()
+		printCloudNativeSummary(ctx)
 	},
 }
 
@@ -58,7 +69,13 @@ Examples:
   allbctl status cloud-native aws --profile production      # Specific profile, all regions
   allbctl status cloud-native aws --profile prod --region us-east-1  # Specific profile and region`,
 	Run: func(cmd *cobra.Command, args []string) {
-		printAWSDetails()
+		ctx := cmd.Context()
+		if ctx == nil {
+			ctx = context.Background()
+		}
+		ctx, span := otel.Tracer("github.com/aallbrig/allbctl").Start(ctx, "status.cloud-native.aws")
+		defer span.End()
+		printAWSDetails(ctx)
 	},
 }
 
@@ -479,10 +496,11 @@ func getKubeContexts() []string {
 }
 
 // printCloudNativeSummary prints a summary of all cloud CLIs
-func printCloudNativeSummary() {
+func printCloudNativeSummary(ctx context.Context) {
 	clis := detectCloudCLIs()
 
 	if len(clis) == 0 {
+		telemetry.Logger.InfoContext(ctx, "status.cloud-native", "cli_count", 0)
 		// No output if no CLIs detected
 		return
 	}
@@ -527,13 +545,28 @@ func printCloudNativeSummary() {
 			fmt.Printf(" ✗\n")
 		}
 	}
+
+	cliNames := make([]string, 0, len(clis))
+	for _, c := range clis {
+		cliNames = append(cliNames, c.Name)
+	}
+	telemetry.Logger.InfoContext(ctx, "status.cloud-native",
+		"cli_count", len(clis),
+		"clis", cliNames,
+	)
+	span := trace.SpanFromContext(ctx)
+	span.SetAttributes(
+		attribute.Int("cloud_native.cli_count", len(clis)),
+		attribute.StringSlice("cloud_native.clis", cliNames),
+	)
 }
 
 // printAWSDetails prints detailed AWS resource information
-func printAWSDetails() {
+func printAWSDetails(ctx context.Context) {
 	// Check if AWS CLI is available
 	if !exists("aws") {
 		fmt.Println("AWS CLI not found")
+		telemetry.Logger.InfoContext(ctx, "status.cloud-native.aws", "available", false)
 		return
 	}
 
@@ -547,6 +580,11 @@ func printAWSDetails() {
 	allProfiles := getAWSProfiles()
 	if len(allProfiles) == 0 {
 		fmt.Println("No AWS profiles configured")
+		telemetry.Logger.InfoContext(ctx, "status.cloud-native.aws",
+			"available", true,
+			"version", version,
+			"profile_count", 0,
+		)
 		return
 	}
 
@@ -571,6 +609,17 @@ func printAWSDetails() {
 	}
 
 	fmt.Printf("Profiles: %d\n", len(profiles))
+
+	telemetry.Logger.InfoContext(ctx, "status.cloud-native.aws",
+		"available", true,
+		"version", version,
+		"profile_count", len(profiles),
+	)
+	span := trace.SpanFromContext(ctx)
+	span.SetAttributes(
+		attribute.Bool("aws.available", true),
+		attribute.Int("aws.profile_count", len(profiles)),
+	)
 
 	// Get default profile if showing multiple profiles
 	var defaultProfile string
@@ -795,53 +844,7 @@ type AWSResourceCount struct {
 }
 
 // printCloudNativeForStatus prints cloud-native summary in status command format
-func printCloudNativeForStatus() {
-	clis := detectCloudCLIs()
-
-	if len(clis) == 0 {
-		// No output if no CLIs detected
-		return
-	}
-
-	fmt.Println("Cloud Native:")
-	for _, cli := range clis {
-		// Print CLI name and version
-		if cli.Version != "" {
-			fmt.Printf("  %s (%s)", cli.Name, cli.Version)
-		} else {
-			fmt.Printf("  %s", cli.Name)
-		}
-
-		// For kubectl, also show kustomize version
-		if cli.Name == "kubectl" && cli.KustomizeVersion != "" {
-			fmt.Printf(" [kustomize: %s]", cli.KustomizeVersion)
-		}
-
-		// Print profile/context count (kubectl uses contexts, others use profiles)
-		if cli.Name == "kubectl" {
-			if cli.ProfileCount == 0 {
-				fmt.Printf(" - 0 contexts")
-			} else if cli.ProfileCount == 1 {
-				fmt.Printf(" - 1 context")
-			} else {
-				fmt.Printf(" - %d contexts", cli.ProfileCount)
-			}
-		} else {
-			if cli.ProfileCount == 0 {
-				fmt.Printf(" - 0 profiles")
-			} else if cli.ProfileCount == 1 {
-				fmt.Printf(" - 1 profile")
-			} else {
-				fmt.Printf(" - %d profiles", cli.ProfileCount)
-			}
-		}
-
-		// Print connectivity status
-		if cli.Connected {
-			fmt.Printf(" ✓\n")
-		} else {
-			fmt.Printf(" ✗\n")
-		}
-	}
+func printCloudNativeForStatus(ctx context.Context) {
+	printCloudNativeSummary(ctx)
 	fmt.Println()
 }

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -8,6 +9,10 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+
+	"github.com/aallbrig/allbctl/pkg/telemetry"
 )
 
 var (
@@ -29,13 +34,39 @@ Examples:
   allbctl status db --detail         # Show detailed info for all databases
   allbctl status db sqlite3 --detail # Show detailed SQLite3 info with .db files`,
 	Run: func(cmd *cobra.Command, args []string) {
+		ctx := cmd.Context()
+		if ctx == nil {
+			ctx = context.Background()
+		}
+		ctx, span := otel.Tracer("github.com/aallbrig/allbctl").Start(ctx, "status.db")
+		defer span.End()
+
 		if len(args) > 0 {
-			// Show specific database
 			dbName := args[0]
 			showDatabaseInfo(dbName, dbDetailFlag)
+			telemetry.Logger.InfoContext(ctx, "status.db",
+				"database", dbName,
+				"detail", dbDetailFlag,
+			)
+			span.SetAttributes(attribute.String("db.filter", dbName))
 		} else {
-			// Show all databases
+			// Detect all for telemetry before showing
+			var detectedNames []string
+			for dbName := range databaseConfigs {
+				if info := detectDatabase(dbName); info != nil {
+					detectedNames = append(detectedNames, dbName)
+				}
+			}
 			showAllDatabases(dbDetailFlag)
+			telemetry.Logger.InfoContext(ctx, "status.db",
+				"detected_count", len(detectedNames),
+				"databases", detectedNames,
+				"detail", dbDetailFlag,
+			)
+			span.SetAttributes(
+				attribute.Int("db.detected_count", len(detectedNames)),
+				attribute.StringSlice("db.databases", detectedNames),
+			)
 		}
 	},
 }

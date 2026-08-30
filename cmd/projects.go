@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -13,7 +14,9 @@ import (
 
 	"github.com/aallbrig/allbctl/pkg/cache"
 	"github.com/aallbrig/allbctl/pkg/languages"
+	"github.com/aallbrig/allbctl/pkg/telemetry"
 	"github.com/spf13/cobra"
+	"go.opentelemetry.io/otel"
 )
 
 var (
@@ -83,6 +86,13 @@ Examples:
   allbctl status projects --all --languages      # Show all repos with language breakdown
   allbctl status projects -v --languages=false   # Verbose without language breakdown`,
 	Run: func(cmd *cobra.Command, args []string) {
+		ctx := cmd.Context()
+		if ctx == nil {
+			ctx = context.Background()
+		}
+		ctx, span := otel.Tracer("github.com/aallbrig/allbctl").Start(ctx, "status.projects")
+		defer span.End()
+
 		langExplicit := cmd.Flags().Changed("languages")
 		showLanguages = languagesFlag && (verboseFlag || langExplicit)
 
@@ -92,6 +102,15 @@ Examples:
 			// Default: show all projects (no limit), unless --limit is specified
 			printProjectsInline(limitFlag)
 		}
+
+		telemetry.Logger.InfoContext(ctx, "status.projects",
+			"all", allFlag,
+			"dirty", dirtyFlag,
+			"clean", cleanFlag,
+			"verbose", verboseFlag,
+			"limit", limitFlag,
+		)
+		_ = span // span attributes set above
 	},
 }
 

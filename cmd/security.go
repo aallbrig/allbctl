@@ -1,12 +1,18 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os/exec"
 	"runtime"
 	"strings"
 
 	"github.com/spf13/cobra"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
+
+	"github.com/aallbrig/allbctl/pkg/telemetry"
 )
 
 var SecurityCmd = &cobra.Command{
@@ -14,7 +20,13 @@ var SecurityCmd = &cobra.Command{
 	Short: "Display security and authentication status",
 	Long:  `Display information about SSH keys, GPG keys, and kernel keyring.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		PrintSecurityInfo()
+		ctx := cmd.Context()
+		if ctx == nil {
+			ctx = context.Background()
+		}
+		ctx, span := otel.Tracer("github.com/aallbrig/allbctl").Start(ctx, "status.security")
+		defer span.End()
+		PrintSecurityInfo(ctx)
 	},
 }
 
@@ -24,7 +36,7 @@ type SecurityInfo struct {
 	KeyringInfo string
 }
 
-func PrintSecurityInfo() {
+func PrintSecurityInfo(ctx context.Context) {
 	fmt.Println("Security/Authentication Status:")
 	fmt.Println()
 
@@ -66,6 +78,17 @@ func PrintSecurityInfo() {
 			fmt.Printf("    No keys in user keyring\n")
 		}
 	}
+
+	telemetry.Logger.InfoContext(ctx, "status.security",
+		"ssh_key_count", len(info.SSHKeys),
+		"gpg_key_count", len(info.GPGKeys),
+		"keyring_info", info.KeyringInfo,
+	)
+	span := trace.SpanFromContext(ctx)
+	span.SetAttributes(
+		attribute.Int("security.ssh_keys", len(info.SSHKeys)),
+		attribute.Int("security.gpg_keys", len(info.GPGKeys)),
+	)
 }
 
 func gatherSecurityInfo() *SecurityInfo {

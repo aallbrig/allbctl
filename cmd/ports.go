@@ -1,12 +1,18 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os/exec"
 	"runtime"
 	"strings"
 
 	"github.com/spf13/cobra"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
+
+	"github.com/aallbrig/allbctl/pkg/telemetry"
 )
 
 var PortsCmd = &cobra.Command{
@@ -14,7 +20,13 @@ var PortsCmd = &cobra.Command{
 	Short: "Display listening ports",
 	Long:  `Display count of listening TCP/UDP ports and details about what's listening.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		PrintPortsInfo()
+		ctx := cmd.Context()
+		if ctx == nil {
+			ctx = context.Background()
+		}
+		ctx, span := otel.Tracer("github.com/aallbrig/allbctl").Start(ctx, "status.ports")
+		defer span.End()
+		PrintPortsInfo(ctx)
 	},
 }
 
@@ -24,7 +36,7 @@ type PortInfo struct {
 	Ports    []string
 }
 
-func PrintPortsInfo() {
+func PrintPortsInfo(ctx context.Context) {
 	fmt.Println("Listening Ports:")
 	fmt.Println()
 
@@ -41,6 +53,18 @@ func PrintPortsInfo() {
 			fmt.Printf("    %s\n", port)
 		}
 	}
+
+	telemetry.Logger.InfoContext(ctx, "status.ports",
+		"tcp_ports", info.TCPPorts,
+		"udp_ports", info.UDPPorts,
+		"total_ports", info.TCPPorts+info.UDPPorts,
+	)
+	span := trace.SpanFromContext(ctx)
+	span.SetAttributes(
+		attribute.Int("ports.tcp", info.TCPPorts),
+		attribute.Int("ports.udp", info.UDPPorts),
+		attribute.Int("ports.total", info.TCPPorts+info.UDPPorts),
+	)
 }
 
 func gatherPortsInfo() *PortInfo {

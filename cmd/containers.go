@@ -1,12 +1,18 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os/exec"
 	"runtime"
 	"strings"
 
 	"github.com/spf13/cobra"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
+
+	"github.com/aallbrig/allbctl/pkg/telemetry"
 )
 
 var ContainersCmd = &cobra.Command{
@@ -14,7 +20,13 @@ var ContainersCmd = &cobra.Command{
 	Short: "Display container and virtualization information",
 	Long:  `Display information about containers (Docker, Podman) and virtualization status.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		PrintContainersInfo()
+		ctx := cmd.Context()
+		if ctx == nil {
+			ctx = context.Background()
+		}
+		ctx, span := otel.Tracer("github.com/aallbrig/allbctl").Start(ctx, "status.containers")
+		defer span.End()
+		PrintContainersInfo(ctx)
 	},
 }
 
@@ -27,7 +39,7 @@ type ContainerInfo struct {
 	VirtType    string
 }
 
-func PrintContainersInfo() {
+func PrintContainersInfo(ctx context.Context) {
 	fmt.Println("Containers/Virtualization:")
 	fmt.Println()
 
@@ -72,6 +84,34 @@ func PrintContainersInfo() {
 	if dockerInfo == nil && podmanInfo == nil {
 		fmt.Println("  No container runtimes detected")
 	}
+
+	dockerRunning, dockerImages, podmanRunning, podmanImages := 0, 0, 0, 0
+	if dockerInfo != nil {
+		dockerRunning = dockerInfo.Running
+		dockerImages = dockerInfo.Images
+	}
+	if podmanInfo != nil {
+		podmanRunning = podmanInfo.Running
+		podmanImages = podmanInfo.Images
+	}
+	telemetry.Logger.InfoContext(ctx, "status.containers",
+		"docker_available", dockerInfo != nil,
+		"docker_running", dockerRunning,
+		"docker_images", dockerImages,
+		"podman_available", podmanInfo != nil,
+		"podman_running", podmanRunning,
+		"podman_images", podmanImages,
+		"virtualized", virtInfo.Virtualized,
+		"virt_type", virtInfo.VirtType,
+	)
+	span := trace.SpanFromContext(ctx)
+	span.SetAttributes(
+		attribute.Bool("containers.docker_available", dockerInfo != nil),
+		attribute.Int("containers.docker_running", dockerRunning),
+		attribute.Bool("containers.podman_available", podmanInfo != nil),
+		attribute.Int("containers.podman_running", podmanRunning),
+		attribute.Bool("containers.virtualized", virtInfo.Virtualized),
+	)
 }
 
 func checkDocker() *ContainerInfo {

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"io"
 	"os"
 	"runtime"
@@ -64,7 +65,7 @@ func TestAllStatusSubcommandsRegistered(t *testing.T) {
 
 // TestPrintContainersInfo verifies the function produces output without panicking.
 func TestPrintContainersInfo(t *testing.T) {
-	output := captureOutput(PrintContainersInfo)
+	output := captureOutput(func() { PrintContainersInfo(context.Background()) })
 	if !strings.Contains(output, "Containers") {
 		t.Errorf("PrintContainersInfo() output missing 'Containers'\noutput:\n%s", output)
 	}
@@ -116,7 +117,7 @@ func TestDbCmdRegistered(t *testing.T) {
 
 // TestPrintPortsInfo verifies the function produces output without panicking.
 func TestPrintPortsInfo(t *testing.T) {
-	output := captureOutput(PrintPortsInfo)
+	output := captureOutput(func() { PrintPortsInfo(context.Background()) })
 	if !strings.Contains(output, "Ports") {
 		t.Errorf("PrintPortsInfo() output missing 'Ports'\noutput:\n%s", output)
 	}
@@ -143,7 +144,7 @@ func TestGatherPortsInfo(t *testing.T) {
 
 // TestPrintSystemctlInfo verifies the function handles non-Linux gracefully.
 func TestPrintSystemctlInfo(t *testing.T) {
-	output := captureOutput(PrintSystemctlInfo)
+	output := captureOutput(func() { PrintSystemctlInfo(context.Background()) })
 	if runtime.GOOS != "linux" {
 		if !strings.Contains(output, "only available on Linux") {
 			t.Errorf("PrintSystemctlInfo() on non-Linux should say 'only available on Linux'\noutput:\n%s", output)
@@ -176,7 +177,7 @@ func TestGatherSystemctlInfo(t *testing.T) {
 
 // TestPrintGitConfigInfo verifies the function produces output without panicking.
 func TestPrintGitConfigInfo(t *testing.T) {
-	output := captureOutput(PrintGitConfigInfo)
+	output := captureOutput(func() { PrintGitConfigInfo(context.Background()) })
 	// Either shows git config or "Git is not installed" — must produce something.
 	if output == "" {
 		t.Error("PrintGitConfigInfo() produced no output")
@@ -201,7 +202,7 @@ func TestGatherGitConfigInfo(t *testing.T) {
 
 // TestPrintSecurityInfo verifies the function produces output without panicking.
 func TestPrintSecurityInfo(t *testing.T) {
-	output := captureOutput(PrintSecurityInfo)
+	output := captureOutput(func() { PrintSecurityInfo(context.Background()) })
 	if !strings.Contains(output, "SSH Keys") {
 		t.Errorf("PrintSecurityInfo() output missing 'SSH Keys'\noutput:\n%s", output)
 	}

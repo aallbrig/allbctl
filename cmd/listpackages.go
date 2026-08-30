@@ -1,12 +1,18 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os/exec"
 	"runtime"
 	"strings"
 
 	"github.com/spf13/cobra"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
+
+	"github.com/aallbrig/allbctl/pkg/telemetry"
 )
 
 var detailFlag bool
@@ -34,7 +40,13 @@ You can also specify a specific package manager to list only its packages:
   allbctl list-packages npm
   allbctl list-packages flatpak`,
 	Run: func(cmd *cobra.Command, args []string) {
-		listInstalledPackages(args)
+		ctx := cmd.Context()
+		if ctx == nil {
+			ctx = context.Background()
+		}
+		ctx, span := otel.Tracer("github.com/aallbrig/allbctl").Start(ctx, "status.list-packages")
+		defer span.End()
+		listInstalledPackages(ctx, args)
 	},
 }
 
@@ -223,12 +235,16 @@ func PrintPackageSummary() {
 	future.PrintResults()
 }
 
-func listInstalledPackages(args []string) {
+func listInstalledPackages(ctx context.Context, args []string) {
 	// If a specific package manager is requested
 	if len(args) > 0 {
 		manager := args[0]
 		if !exists(getCommandForManager(manager)) {
 			fmt.Printf("Package manager '%s' not found on this system.\n", manager)
+			telemetry.Logger.InfoContext(ctx, "status.list-packages",
+				"manager", manager,
+				"found", false,
+			)
 			return
 		}
 		pkgs := getPackages(manager)
@@ -249,9 +265,20 @@ func listInstalledPackages(args []string) {
 					}
 				}
 			}
+			count := countPackages(manager, pkgs)
+			telemetry.Logger.InfoContext(ctx, "status.list-packages",
+				"manager", manager,
+				"found", true,
+				"package_count", count,
+			)
 		} else {
 			fmt.Printf("No packages found for %s\n", manager)
 			fmt.Printf("\nCommand: %s\n", getQueryCommand(manager))
+			telemetry.Logger.InfoContext(ctx, "status.list-packages",
+				"manager", manager,
+				"found", true,
+				"package_count", 0,
+			)
 		}
 		return
 	}
@@ -261,9 +288,11 @@ func listInstalledPackages(args []string) {
 
 	if len(managers) == 0 {
 		fmt.Println("No known package managers detected.")
+		telemetry.Logger.InfoContext(ctx, "status.list-packages", "manager_count", 0)
 		return
 	}
 
+	totalPackages := 0
 	if detailFlag {
 		// Detail mode: show full listing
 		for _, m := range managers {
@@ -272,6 +301,7 @@ func listInstalledPackages(args []string) {
 				fmt.Printf("Packages installed via %s:\n", m)
 				fmt.Println(pkgs)
 				fmt.Println()
+				totalPackages += countPackages(m, pkgs)
 			}
 		}
 	} else {
@@ -280,6 +310,7 @@ func listInstalledPackages(args []string) {
 			pkgs := getPackages(m)
 			if pkgs != "" {
 				count := countPackages(m, pkgs)
+				totalPackages += count
 				if m == "ollama" {
 					fmt.Printf("%-15s %d models\n", m+":", count)
 				} else if m == "vagrant" || m == "vboxmanage" {
@@ -292,6 +323,16 @@ func listInstalledPackages(args []string) {
 		fmt.Println("\nUse --detail flag to see the full list of all installed packages.")
 		fmt.Println("Or specify a package manager: allbctl status list-packages <manager>")
 	}
+
+	telemetry.Logger.InfoContext(ctx, "status.list-packages",
+		"manager_count", len(managers),
+		"total_packages", totalPackages,
+	)
+	span := trace.SpanFromContext(ctx)
+	span.SetAttributes(
+		attribute.Int("packages.manager_count", len(managers)),
+		attribute.Int("packages.total", totalPackages),
+	)
 }
 
 func getCommandForManager(manager string) string {
