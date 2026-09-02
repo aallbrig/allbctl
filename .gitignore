@@ -1,9 +1,11 @@
 *.output.txt
 # vendor folder
 vendor
+# CI-watch tmux panes: local sentinel/state files, not shared
+.ci-watch/
 # build artifacts
 bin
-allbctl*
+/allbctl*
 
 # Go test / profiling outputs
 coverage.out
