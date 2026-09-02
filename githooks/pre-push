@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# Signals the CI-watch tmux panes (see Taskfile.yml `watch:ci-job`) that a
+# relevant push just happened, instead of having those panes poll the
+# GitHub API continuously. Never blocks the actual push.
+#
+# git invokes this with ref lines on stdin:
+#   <local ref> SP <local sha1> SP <remote ref> SP <remote sha1> LF
+# shellcheck disable=SC2034  # local_ref/remote_sha are part of the protocol but unused here
+set -uo pipefail
+
+trigger_dir=".ci-watch"
+zero_sha="0000000000000000000000000000000000000000"
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+  # Skip deletions (a deleted ref pushes a zero local sha).
+  [ "$local_sha" = "$zero_sha" ] && continue
+
+  case "$remote_ref" in
+    refs/heads/main)
+      mkdir -p "$trigger_dir"
+      touch "$trigger_dir/cicd.trigger"
+      ;;
+    refs/tags/v*)
+      mkdir -p "$trigger_dir"
+      touch "$trigger_dir/release.trigger"
+      ;;
+  esac
+done
+
+exit 0

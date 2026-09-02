@@ -4,9 +4,17 @@ tasks:
   # ── Composite tasks ──────────────────────────────────────────────────────────
 
   dev:
-    desc: Start the allbctl tmux dev session (bootstrap + sites + watchers)
+    desc: Start the allbctl tmux dev session (bootstrap + sites + watchers + ci + release)
     cmds:
       - tmuxinator start -p .tmuxinator/allbctl.yml
+
+  setup:
+    desc: One-time setup — install git hooks for the CI-watch tmux panes
+    cmds:
+      - git config core.hooksPath githooks
+      - mkdir -p .ci-watch/state
+      - touch .ci-watch/cicd.trigger .ci-watch/release.trigger .ci-watch/deploy-docs.trigger
+      - echo "✓ Setup complete. Git hooks installed from githooks/."
 
   ci:
     desc: Run all quality gates sequentially (fmt, vet, lint, test, vuln, docs, secrets)
@@ -50,10 +58,10 @@ tasks:
       - golangci-lint run ./...
 
   lint-shell:
-    desc: Run shellcheck on all tracked shell scripts
+    desc: Run shellcheck on all tracked shell scripts (incl. githooks/)
     cmds:
       - |
-        scripts=$(git ls-files '*.sh')
+        scripts=$(git ls-files '*.sh' 'githooks/*')
         if [ -n "$scripts" ]; then
           echo "$scripts" | xargs shellcheck
         fi
@@ -77,6 +85,13 @@ tasks:
     desc: Scan for secrets with gitleaks (entrypoint for secret scanning)
     cmds:
       - gitleaks detect --source . --config .gitleaks.toml --no-banner --redact
+
+  # ── CI watch ──────────────────────────────────────────────────────────────────
+
+  watch:ci-job:
+    desc: "Poll one CI job's status until it completes; wrapped by watchexec per tmux pane. Vars: WORKFLOW, JOB"
+    cmds:
+      - scripts/watch-ci-job.sh "{{.WORKFLOW}}" "{{.JOB}}"
 
   # ── Release ───────────────────────────────────────────────────────────────────
 

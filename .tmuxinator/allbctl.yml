@@ -1,0 +1,331 @@
+# allbctl dev session
+# Start with: tmuxinator start -p .tmuxinator/allbctl.yml
+# Or:         task dev
+#
+# Prerequisites:
+#   brew install tmuxinator watchexec
+#   docker (for the Grafana LGTM stack)
+#
+# Telemetry flows automatically to the local LGTM stack via OTLP HTTP.
+# Open Grafana at http://localhost:3002 (admin/admin).
+
+name: allbctl
+root: <%= ENV['HOME'] %>/src/allbctl
+
+# Inject OTLP endpoint so every allbctl invocation ships telemetry to LGTM
+# without needing --debug. Port 4320 is the compose-mapped OTLP HTTP port.
+environment:
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://localhost:4320
+  OTEL_SERVICE_NAME: allbctl
+  OTEL_SERVICE_VERSION: dev
+
+windows:
+  # ── Window 0: bootstrap ──────────────────────────────────────────────────────
+  # One-time infrastructure start and configuration.
+  # Runs docker compose up -d then waits for the LGTM stack to report ready.
+  - bootstrap:
+      layout: even-horizontal
+      panes:
+        - infra:
+            - printf '\033]2;infra\033\\'
+            - >
+              echo "==> Starting infrastructure..." &&
+              docker compose up -d &&
+              echo "==> Waiting for LGTM stack to be ready..." &&
+              until docker exec allbctl-lgtm test -f /tmp/ready 2>/dev/null; do sleep 2; done &&
+              echo "==> LGTM stack ready." &&
+              docker compose ps
+
+  # ── Window 1: sites ───────────────────────────────────────────────────────────
+  # Live log stream for every service in the LGTM stack.
+  # Pane 0 (dev): general shell for ad-hoc allbctl invocations.
+  # Panes 1–6:    one pane per LGTM service, each tailing its own log file
+  #               written by lgtm/logging.sh inside the container.
+  - sites:
+      layout: tiled
+      panes:
+        - dev:
+            - printf '\033]2;dev\033\\'
+        - grafana:
+            - printf '\033]2;grafana\033\\'
+            - >
+              until docker exec allbctl-lgtm test -f /tmp/grafana.log 2>/dev/null;
+              do sleep 2; done &&
+              docker exec allbctl-lgtm tail -f /tmp/grafana.log
+        - loki:
+            - printf '\033]2;loki\033\\'
+            - >
+              until docker exec allbctl-lgtm test -f /tmp/loki.log 2>/dev/null;
+              do sleep 2; done &&
+              docker exec allbctl-lgtm tail -f /tmp/loki.log
+        - tempo:
+            - printf '\033]2;tempo\033\\'
+            - >
+              until docker exec allbctl-lgtm test -f /tmp/tempo.log 2>/dev/null;
+              do sleep 2; done &&
+              docker exec allbctl-lgtm tail -f /tmp/tempo.log
+        - prometheus:
+            - printf '\033]2;prometheus\033\\'
+            - >
+              until docker exec allbctl-lgtm test -f /tmp/prometheus.log 2>/dev/null;
+              do sleep 2; done &&
+              docker exec allbctl-lgtm tail -f /tmp/prometheus.log
+        - otelcol:
+            - printf '\033]2;otelcol\033\\'
+            - >
+              until docker exec allbctl-lgtm test -f /tmp/opentelemetry.log 2>/dev/null;
+              do sleep 2; done &&
+              docker exec allbctl-lgtm tail -f /tmp/opentelemetry.log
+        - pyroscope:
+            - printf '\033]2;pyroscope\033\\'
+            - >
+              until docker exec allbctl-lgtm test -f /tmp/pyroscope.log 2>/dev/null;
+              do sleep 2; done &&
+              docker exec allbctl-lgtm tail -f /tmp/pyroscope.log
+
+  # ── Window 2: watchers ───────────────────────────────────────────────────────
+  # Intelligent file watchers — each gate fires only on relevant changes.
+  # Pane 0 (dev):        general shell for ad-hoc commands
+  # Pane 1 (fmt):        go fmt on any .go save
+  # Pane 2 (vet):        go vet on any .go save
+  # Pane 3 (build):      rebuild binary on source/mod changes
+  # Pane 4 (test):       unit tests after binary rebuilds (chains with build)
+  # Pane 5 (acceptance): integration tests against rebuilt binary
+  # Pane 6 (lint):       golangci-lint on any .go save (debounced 3 s)
+  # Pane 7 (secrets):    gitleaks scan on any tracked-file change
+  - watchers:
+      layout: tiled
+      panes:
+        - dev:
+            - printf '\033]2;dev\033\\'
+        - fmt:
+            - printf '\033]2;fmt\033\\'
+            - >
+              watchexec
+              --clear=clear
+              --restart
+              --exts go
+              --debounce 300ms
+              -- go fmt ./...
+        - vet:
+            - printf '\033]2;vet\033\\'
+            - >
+              watchexec
+              --clear=clear
+              --restart
+              --exts go
+              --debounce 500ms
+              -- go vet ./...
+        - build:
+            - printf '\033]2;build\033\\'
+            - >
+              watchexec
+              --clear=clear
+              --restart
+              --exts go,mod,sum
+              --debounce 500ms
+              -- go build -o bin/allbctl .
+        - test:
+            - printf '\033]2;test\033\\'
+            - >
+              watchexec
+              --clear=clear
+              --restart
+              --watch bin/allbctl
+              --watch pkg
+              --watch cmd
+              --debounce 2s
+              -- go test -short -timeout 60s ./...
+        - acceptance:
+            - printf '\033]2;acceptance\033\\'
+            - >
+              watchexec
+              --clear=clear
+              --restart
+              --watch bin/allbctl
+              --debounce 1s
+              -- go test -run TestCLI -timeout 60s ./cmd/...
+        - lint:
+            - printf '\033]2;lint\033\\'
+            - >
+              watchexec
+              --clear=clear
+              --restart
+              --exts go
+              --debounce 3s
+              -- golangci-lint run ./...
+        - secrets:
+            - printf '\033]2;secrets\033\\'
+            - >
+              watchexec
+              --clear=clear
+              --restart
+              --debounce 1s
+              -- gitleaks detect --source . --no-banner
+
+  # ── Window 3: ci ─────────────────────────────────────────────────────────────
+  # Reactive panes for the cicd.yaml jobs, one per job. Idle until
+  # githooks/pre-push touches .ci-watch/cicd.trigger on a push to main, then
+  # each pane polls `gh` until its job completes and shows a
+  # "[sha] job: ✓/✗" summary. Run `task setup` once to install the hook.
+  # WORKFLOW/JOB are set as an env-var prefix (not passed after `--`) because
+  # watchexec rejoins its post-`--` argv into a shell string without
+  # re-quoting, which breaks JOB values with spaces/parens like
+  # "test (ubuntu-latest)" — see scripts/watch-ci-job.sh's header comment.
+  # Pane 0 (dev): general shell for ad-hoc commands.
+  - ci:
+      layout: tiled
+      panes:
+        - dev:
+            - printf '\033]2;dev\033\\'
+        - lint:
+            - printf '\033]2;lint\033\\'
+            - >
+              WORKFLOW=cicd.yaml JOB="lint"
+              watchexec
+              --clear=clear
+              --watch .ci-watch/cicd.trigger
+              --restart
+              -- scripts/watch-ci-job.sh
+        - test-ubuntu:
+            - printf '\033]2;test-ubuntu\033\\'
+            - >
+              WORKFLOW=cicd.yaml JOB="test (ubuntu-latest)"
+              watchexec
+              --clear=clear
+              --watch .ci-watch/cicd.trigger
+              --restart
+              -- scripts/watch-ci-job.sh
+        - test-macos:
+            - printf '\033]2;test-macos\033\\'
+            - >
+              WORKFLOW=cicd.yaml JOB="test (macos-latest)"
+              watchexec
+              --clear=clear
+              --watch .ci-watch/cicd.trigger
+              --restart
+              -- scripts/watch-ci-job.sh
+        - test-windows:
+            - printf '\033]2;test-windows\033\\'
+            - >
+              WORKFLOW=cicd.yaml JOB="test (windows-latest)"
+              watchexec
+              --clear=clear
+              --watch .ci-watch/cicd.trigger
+              --restart
+              -- scripts/watch-ci-job.sh
+        - govulncheck:
+            - printf '\033]2;govulncheck\033\\'
+            - >
+              WORKFLOW=cicd.yaml JOB="govulncheck"
+              watchexec
+              --clear=clear
+              --watch .ci-watch/cicd.trigger
+              --restart
+              -- scripts/watch-ci-job.sh
+        - build:
+            - printf '\033]2;ci-build\033\\'
+            - >
+              WORKFLOW=cicd.yaml JOB="build"
+              watchexec
+              --clear=clear
+              --watch .ci-watch/cicd.trigger
+              --restart
+              -- scripts/watch-ci-job.sh
+        - docker:
+            - printf '\033]2;docker\033\\'
+            - >
+              WORKFLOW=cicd.yaml JOB="docker"
+              watchexec
+              --clear=clear
+              --watch .ci-watch/cicd.trigger
+              --restart
+              -- scripts/watch-ci-job.sh
+
+  # ── Window 4: release ────────────────────────────────────────────────────────
+  # Reactive panes for the release.yml + deploy-docs.yml jobs, one per job.
+  # release.yml panes are idle until githooks/pre-push touches
+  # .ci-watch/release.trigger on a tag push (incl. via `task release:*`).
+  # deploy-docs.yml fires on a GitHub-side "release published" event with no
+  # local git action of its own, so its panes are instead chained: the
+  # "Create GitHub Release" pane touches .ci-watch/deploy-docs.trigger itself
+  # once that job succeeds. See the `ci` window comment above for why
+  # WORKFLOW/JOB are passed as an env-var prefix rather than post-`--` args.
+  # Pane 0 (dev): general shell for ad-hoc commands.
+  - release:
+      layout: tiled
+      panes:
+        - dev:
+            - printf '\033]2;dev\033\\'
+        - docker-push:
+            - printf '\033]2;docker-push\033\\'
+            - >
+              WORKFLOW=release.yml JOB="Push Docker Image to GHCR"
+              watchexec
+              --clear=clear
+              --watch .ci-watch/release.trigger
+              --restart
+              -- scripts/watch-ci-job.sh
+        - build-binaries:
+            - printf '\033]2;build-binaries\033\\'
+            - >
+              WORKFLOW=release.yml JOB="Build and Package Binaries"
+              watchexec
+              --clear=clear
+              --watch .ci-watch/release.trigger
+              --restart
+              -- scripts/watch-ci-job.sh
+        - gh-release:
+            - printf '\033]2;gh-release\033\\'
+            - >
+              WORKFLOW=release.yml JOB="Create GitHub Release"
+              watchexec
+              --clear=clear
+              --watch .ci-watch/release.trigger
+              --restart
+              -- scripts/watch-ci-job.sh
+        - chocolatey:
+            - printf '\033]2;chocolatey\033\\'
+            - >
+              WORKFLOW=release.yml JOB="Publish Chocolatey Package"
+              watchexec
+              --clear=clear
+              --watch .ci-watch/release.trigger
+              --restart
+              -- scripts/watch-ci-job.sh
+        - apt:
+            - printf '\033]2;apt\033\\'
+            - >
+              WORKFLOW=release.yml JOB="Publish APT Package"
+              watchexec
+              --clear=clear
+              --watch .ci-watch/release.trigger
+              --restart
+              -- scripts/watch-ci-job.sh
+        - homebrew:
+            - printf '\033]2;homebrew\033\\'
+            - >
+              WORKFLOW=release.yml JOB="Update Homebrew Formula"
+              watchexec
+              --clear=clear
+              --watch .ci-watch/release.trigger
+              --restart
+              -- scripts/watch-ci-job.sh
+        - docs-build:
+            - printf '\033]2;docs-build\033\\'
+            - >
+              WORKFLOW=deploy-docs.yml JOB="build"
+              watchexec
+              --clear=clear
+              --watch .ci-watch/deploy-docs.trigger
+              --restart
+              -- scripts/watch-ci-job.sh
+        - docs-deploy:
+            - printf '\033]2;docs-deploy\033\\'
+            - >
+              WORKFLOW=deploy-docs.yml JOB="deploy"
+              watchexec
+              --clear=clear
+              --watch .ci-watch/deploy-docs.trigger
+              --restart
+              -- scripts/watch-ci-job.sh
