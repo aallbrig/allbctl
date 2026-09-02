@@ -1,6 +1,5 @@
 ---
 title: "allbctl_status_systemctl"
-date: 2026-09-01
 description: "auto-generated reference"
 ---
 

@@ -1,6 +1,5 @@
 ---
 title: "allbctl_completion_bash"
-date: 2026-09-01
 description: "auto-generated reference"
 ---
 

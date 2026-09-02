@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/cobra/doc"
@@ -42,12 +41,14 @@ Auto-generated reference documentation for all allbctl commands and flags.
 			return fmt.Errorf("write _index.md: %w", err)
 		}
 
-		// Generate one markdown file per command with Hugo front matter prepended
+		// Generate one markdown file per command with Hugo front matter prepended.
+		// No date field: it isn't rendered anywhere for this section, and
+		// stamping wall-clock time here made `docs-check` fail on any CI run
+		// that lands on a later calendar day than the last commit.
 		prepender := func(filename string) string {
 			name := filepath.Base(filename)
 			name = strings.TrimSuffix(name, ".md")
-			return fmt.Sprintf("---\ntitle: \"%s\"\ndate: %s\ndescription: \"auto-generated reference\"\n---\n\n",
-				name, time.Now().Format("2006-01-02"))
+			return fmt.Sprintf("---\ntitle: \"%s\"\ndescription: \"auto-generated reference\"\n---\n\n", name)
 		}
 		linkHandler := func(name string) string { return name }
 

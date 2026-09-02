@@ -1,6 +1,5 @@
 ---
 title: "allbctl_status"
-date: 2026-09-01
 description: "auto-generated reference"
 ---
 

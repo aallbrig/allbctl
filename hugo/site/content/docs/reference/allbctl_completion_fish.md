@@ -1,6 +1,5 @@
 ---
 title: "allbctl_completion_fish"
-date: 2026-09-01
 description: "auto-generated reference"
 ---
 
