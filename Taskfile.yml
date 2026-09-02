@@ -77,3 +77,70 @@ tasks:
     desc: Scan for secrets with gitleaks (entrypoint for secret scanning)
     cmds:
       - gitleaks detect --source . --config .gitleaks.toml --no-banner --redact
+
+  # ── Release ───────────────────────────────────────────────────────────────────
+
+  release:major:
+    desc: Tag + push a major version bump (vX.0.0); pushing the tag triggers release.yml
+    cmds:
+      - task: _release-bump
+        vars:
+          PART: major
+
+  release:minor:
+    desc: Tag + push a minor version bump (vX.Y.0); pushing the tag triggers release.yml
+    cmds:
+      - task: _release-bump
+        vars:
+          PART: minor
+
+  release:patch:
+    desc: Tag + push a patch version bump (vX.Y.Z); pushing the tag triggers release.yml
+    cmds:
+      - task: _release-bump
+        vars:
+          PART: patch
+
+  _release-bump:
+    internal: true
+    cmds:
+      - |
+        set -euo pipefail
+
+        BRANCH=$(git rev-parse --abbrev-ref HEAD)
+        if [ "$BRANCH" != "main" ]; then
+          echo "FAIL: releases must be cut from main (currently on '$BRANCH')"
+          exit 1
+        fi
+        if ! git diff --quiet || ! git diff --cached --quiet; then
+          echo "FAIL: working tree has uncommitted changes — commit or stash first"
+          exit 1
+        fi
+
+        git fetch --tags origin >/dev/null 2>&1 || true
+
+        LATEST_TAG=$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n1)
+        LATEST_TAG=${LATEST_TAG:-v0.0.0}
+        LATEST_COMMIT=$(git rev-list -n1 "$LATEST_TAG" 2>/dev/null || echo "")
+        HEAD_COMMIT=$(git rev-parse HEAD)
+
+        if [ -n "$LATEST_COMMIT" ] && [ "$LATEST_COMMIT" = "$HEAD_COMMIT" ]; then
+          echo "FAIL: HEAD is already released as $LATEST_TAG on main — nothing new to release."
+          exit 1
+        fi
+
+        VERSION=${LATEST_TAG#v}
+        MAJOR=$(echo "$VERSION" | cut -d. -f1)
+        MINOR=$(echo "$VERSION" | cut -d. -f2)
+        PATCH=$(echo "$VERSION" | cut -d. -f3)
+
+        case "{{.PART}}" in
+          major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
+          minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
+          patch) PATCH=$((PATCH + 1)) ;;
+        esac
+
+        NEW_TAG="v${MAJOR}.${MINOR}.${PATCH}"
+        echo "Releasing {{.PART}}: $LATEST_TAG -> $NEW_TAG"
+        git tag -a "$NEW_TAG" -m "Release $NEW_TAG"
+        git push origin "$NEW_TAG"
